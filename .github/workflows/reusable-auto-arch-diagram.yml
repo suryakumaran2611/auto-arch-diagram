@@ -467,7 +467,7 @@ jobs:
 
       - name: Upload artifacts
         if: success()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: auto-arch-diagram
           path: ${{ inputs.out_dir }}/
