@@ -1926,8 +1926,9 @@ def _static_cloudformation_mermaid(files: list[Path], direction: str, limits: Li
                 templates.append(json.loads(raw))
             else:
                 # Use custom loader for CloudFormation YAML with intrinsic functions
+                # CFNLoader extends SafeLoader - safe for untrusted input
                 CFNLoader = _create_cfn_loader()
-                templates.append(yaml.load(raw, Loader=CFNLoader) or {})
+                templates.append(yaml.load(raw, Loader=CFNLoader) or {})  # nosec B506
         except Exception:
             continue
 
@@ -2006,8 +2007,9 @@ def _static_cloudformation_graph(files: list[Path], limits: Limits) -> tuple[dic
                 templates.append(json.loads(raw))
             else:
                 # Use custom loader for CloudFormation YAML with intrinsic functions
+                # CFNLoader extends SafeLoader - safe for untrusted input
                 CFNLoader = _create_cfn_loader()
-                templates.append(yaml.load(raw, Loader=CFNLoader) or {})
+                templates.append(yaml.load(raw, Loader=CFNLoader) or {})  # nosec B506
         except Exception:
             continue
 
