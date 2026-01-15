@@ -92,7 +92,7 @@ jobs:
 
     steps:
       - name: Checkout caller repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Resolve tool ref
         id: ref
@@ -106,7 +106,7 @@ jobs:
           echo "tool_ref=${TOOL_REF}" >> "$GITHUB_OUTPUT"
 
       - name: Checkout auto-arch-diagram tool
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           repository: ${{ steps.ref.outputs.tool_repo }}
           ref: ${{ steps.ref.outputs.tool_ref }}
@@ -166,7 +166,7 @@ jobs:
           echo "Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" >> artifacts/architecture-diagram.md
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: auto-arch-diagram
           path: artifacts/
@@ -174,7 +174,7 @@ jobs:
       - name: Find existing comment
         if: ${{ inputs.comment_on_pr && github.event_name == 'pull_request' }}
         id: find
-        uses: peter-evans/find-comment@v3
+        uses: peter-evans/find-comment@v4
         with:
           issue-number: ${{ github.event.pull_request.number }}
           comment-author: 'github-actions[bot]'
@@ -197,13 +197,13 @@ jobs:
       pull-requests: write
     steps:
       - name: Checkout base
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           ref: ${{ github.event.pull_request.base.sha || github.sha }}
 
       - name: Checkout PR head
         if: ${{ github.event_name == 'pull_request_target' }}
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           repository: ${{ github.event.pull_request.head.repo.full_name }}
           ref: ${{ github.event.pull_request.head.sha }}
@@ -220,7 +220,7 @@ jobs:
           echo "tool_ref=${TOOL_REF}" >> "$GITHUB_OUTPUT"
 
       - name: Checkout auto-arch-diagram tool
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           repository: ${{ steps.ref.outputs.tool_repo }}
           ref: ${{ steps.ref.outputs.tool_ref }}
@@ -358,7 +358,7 @@ jobs:
             --out-svg artifacts/architecture-diagram.svg
 
       - name: Create or update diagram PR
-        uses: peter-evans/create-pull-request@v6
+        uses: peter-evans/create-pull-request@v8
         with:
           commit-message: 'chore: update architecture diagram'
           title: 'chore: update architecture diagram'
