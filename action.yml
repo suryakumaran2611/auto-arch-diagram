@@ -2,6 +2,10 @@ name: Auto Architecture Diagram
 description: Generate professional architecture diagrams from IaC changes (Mermaid + PNG/SVG/JPEG with icons).
 author: suryakumaran2611
 
+branding:
+  icon: 'grid'
+  color: 'blue'
+
 inputs:
   changed_files:
     description: Space/newline-separated list of changed IaC files.

@@ -1,0 +1,7 @@
+theme: null
+title: Auto Architecture Diagram
+description: Generate professional architecture diagrams from IaC changes
+url: https://suryakumaran2611.github.io
+baseurl: /auto-arch-diagram
+include:
+  - index.html

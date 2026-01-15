@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Auto Architecture Diagram - Generate Cloud Diagrams from IaC</title>
+    <meta name="description" content="Automatically generate professional architecture diagrams from Terraform, CloudFormation, and other IaC files. Perfect for CI/CD pipelines.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #2563eb;
+            --primary-dark: #1d4ed8;
+            --secondary: #7c3aed;
+            --bg-dark: #0f172a;
+            --bg-card: #1e293b;
+            --text: #f8fafc;
+            --text-muted: #94a3b8;
+            --border: #334155;
+            --aws: #ff9900;
+            --azure: #0089d6;
+            --gcp: #4285f4;
+            --gradient: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-dark);
+            color: var(--text);
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 24px;
+        }
+
+        /* Navigation */
+        nav {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: rgba(15, 23, 42, 0.9);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--border);
+            z-index: 100;
+            padding: 16px 0;
+        }
+
+        nav .container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-size: 1.25rem;
+            font-weight: 700;
+            background: var(--gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 32px;
+            list-style: none;
+        }
+
+        .nav-links a {
+            color: var(--text-muted);
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.2s;
+        }
+
+        .nav-links a:hover {
+            color: var(--text);
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: var(--gradient);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 40px rgba(37, 99, 235, 0.3);
+        }
+
+        .btn-secondary {
+            background: var(--bg-card);
+            color: var(--text);
+            border: 1px solid var(--border);
+        }
+
+        .btn-secondary:hover {
+            background: var(--border);
+        }
+
+        /* Hero Section */
+        .hero {
+            padding: 160px 0 100px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 800px;
+            height: 800px;
+            background: radial-gradient(circle, rgba(37, 99, 235, 0.15) 0%, transparent 70%);
+            pointer-events: none;
+        }
+
+        .hero h1 {
+            font-size: 3.5rem;
+            font-weight: 700;
+            margin-bottom: 24px;
+            background: linear-gradient(135deg, var(--text) 0%, var(--text-muted) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .hero h1 span {
+            background: var(--gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .hero p {
+            font-size: 1.25rem;
+            color: var(--text-muted);
+            max-width: 700px;
+            margin: 0 auto 40px;
+        }
+
+        .hero-buttons {
+            display: flex;
+            gap: 16px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .cloud-badges {
+            display: flex;
+            gap: 24px;
+            justify-content: center;
+            margin-top: 60px;
+        }
+
+        .cloud-badge {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            background: var(--bg-card);
+            border-radius: 20px;
+            font-size: 0.875rem;
+            color: var(--text-muted);
+        }
+
+        .cloud-badge .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+
+        .cloud-badge.aws .dot { background: var(--aws); }
+        .cloud-badge.azure .dot { background: var(--azure); }
+        .cloud-badge.gcp .dot { background: var(--gcp); }
+
+        /* Demo Section */
+        .demo {
+            padding: 80px 0;
+        }
+
+        .demo-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 40px;
+            align-items: center;
+        }
+
+        .demo-code {
+            background: var(--bg-card);
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            overflow: hidden;
+        }
+
+        .demo-code-header {
+            display: flex;
+            gap: 8px;
+            padding: 16px;
+            background: rgba(0, 0, 0, 0.2);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .demo-code-header span {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: var(--border);
+        }
+
+        .demo-code-header span:nth-child(1) { background: #ef4444; }
+        .demo-code-header span:nth-child(2) { background: #eab308; }
+        .demo-code-header span:nth-child(3) { background: #22c55e; }
+
+        .demo-code pre {
+            padding: 20px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.875rem;
+            overflow-x: auto;
+            color: var(--text-muted);
+        }
+
+        .demo-code pre .comment { color: #6b7280; }
+        .demo-code pre .keyword { color: #c084fc; }
+        .demo-code pre .string { color: #34d399; }
+        .demo-code pre .property { color: #60a5fa; }
+
+        .demo-image {
+            background: var(--bg-card);
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            padding: 24px;
+            text-align: center;
+        }
+
+        .demo-image img {
+            max-width: 100%;
+            border-radius: 8px;
+        }
+
+        .demo-image p {
+            margin-top: 16px;
+            color: var(--text-muted);
+            font-size: 0.875rem;
+        }
+
+        /* Features Section */
+        .features {
+            padding: 100px 0;
+        }
+
+        .section-header {
+            text-align: center;
+            margin-bottom: 60px;
+        }
+
+        .section-header h2 {
+            font-size: 2.5rem;
+            margin-bottom: 16px;
+        }
+
+        .section-header p {
+            color: var(--text-muted);
+            font-size: 1.125rem;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 24px;
+        }
+
+        .feature-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 32px;
+            transition: all 0.3s;
+        }
+
+        .feature-card:hover {
+            border-color: var(--primary);
+            transform: translateY(-4px);
+        }
+
+        .feature-icon {
+            width: 48px;
+            height: 48px;
+            background: var(--gradient);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 20px;
+            font-size: 1.5rem;
+        }
+
+        .feature-card h3 {
+            font-size: 1.25rem;
+            margin-bottom: 12px;
+        }
+
+        .feature-card p {
+            color: var(--text-muted);
+            font-size: 0.95rem;
+        }
+
+        /* Usage Section */
+        .usage {
+            padding: 100px 0;
+            background: linear-gradient(180deg, transparent 0%, rgba(37, 99, 235, 0.05) 100%);
+        }
+
+        .usage-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 48px;
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .usage-card h3 {
+            font-size: 1.5rem;
+            margin-bottom: 24px;
+        }
+
+        .code-block {
+            background: var(--bg-dark);
+            border-radius: 8px;
+            padding: 20px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.875rem;
+            overflow-x: auto;
+            margin-bottom: 24px;
+        }
+
+        .code-block .comment { color: #6b7280; }
+        .code-block .key { color: #60a5fa; }
+        .code-block .string { color: #34d399; }
+        .code-block .bool { color: #f472b6; }
+
+        /* Output Formats */
+        .formats {
+            padding: 80px 0;
+        }
+
+        .formats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+        }
+
+        .format-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 24px;
+            text-align: center;
+        }
+
+        .format-card .icon {
+            font-size: 2.5rem;
+            margin-bottom: 12px;
+        }
+
+        .format-card h4 {
+            font-size: 1rem;
+            margin-bottom: 8px;
+        }
+
+        .format-card p {
+            color: var(--text-muted);
+            font-size: 0.8rem;
+        }
+
+        /* Footer */
+        footer {
+            padding: 60px 0;
+            border-top: 1px solid var(--border);
+            text-align: center;
+        }
+
+        footer p {
+            color: var(--text-muted);
+        }
+
+        footer a {
+            color: var(--primary);
+            text-decoration: none;
+        }
+
+        footer a:hover {
+            text-decoration: underline;
+        }
+
+        /* Responsive */
+        @media (max-width: 968px) {
+            .features-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            .demo-grid {
+                grid-template-columns: 1fr;
+            }
+            .formats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 640px) {
+            .hero h1 {
+                font-size: 2.5rem;
+            }
+            .features-grid {
+                grid-template-columns: 1fr;
+            }
+            .nav-links {
+                display: none;
+            }
+            .cloud-badges {
+                flex-direction: column;
+                align-items: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <nav>
+        <div class="container">
+            <div class="logo">🏗️ Auto Arch Diagram</div>
+            <ul class="nav-links">
+                <li><a href="#features">Features</a></li>
+                <li><a href="#usage">Usage</a></li>
+                <li><a href="#formats">Outputs</a></li>
+                <li><a href="https://github.com/suryakumaran2611/auto-arch-diagram">GitHub</a></li>
+            </ul>
+            <a href="https://github.com/marketplace/actions/auto-architecture-diagram" class="btn btn-primary">
+                Get Action
+            </a>
+        </div>
+    </nav>
+
+    <section class="hero">
+        <div class="container">
+            <h1>Auto-Generate <span>Architecture Diagrams</span><br>from Your IaC</h1>
+            <p>Transform Terraform, CloudFormation, and other Infrastructure-as-Code into beautiful, professional architecture diagrams. Automatically. In your CI/CD pipeline.</p>
+            <div class="hero-buttons">
+                <a href="https://github.com/marketplace/actions/auto-architecture-diagram" class="btn btn-primary">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+                    GitHub Marketplace
+                </a>
+                <a href="https://github.com/suryakumaran2611/auto-arch-diagram" class="btn btn-secondary">
+                    View Source
+                </a>
+            </div>
+            <div class="cloud-badges">
+                <div class="cloud-badge aws"><span class="dot"></span> AWS</div>
+                <div class="cloud-badge azure"><span class="dot"></span> Azure</div>
+                <div class="cloud-badge gcp"><span class="dot"></span> GCP</div>
+            </div>
+        </div>
+    </section>
+
+    <section class="demo">
+        <div class="container">
+            <div class="demo-grid">
+                <div class="demo-code">
+                    <div class="demo-code-header">
+                        <span></span><span></span><span></span>
+                    </div>
+                    <pre><code><span class="comment"># main.tf</span>
+<span class="keyword">resource</span> <span class="string">"aws_lambda_function"</span> <span class="string">"api"</span> {
+  <span class="property">function_name</span> = <span class="string">"my-api"</span>
+  <span class="property">runtime</span>       = <span class="string">"python3.11"</span>
+}
+
+<span class="keyword">resource</span> <span class="string">"aws_dynamodb_table"</span> <span class="string">"data"</span> {
+  <span class="property">name</span>     = <span class="string">"my-table"</span>
+  <span class="property">hash_key</span> = <span class="string">"id"</span>
+}
+
+<span class="keyword">resource</span> <span class="string">"aws_api_gateway_rest_api"</span> <span class="string">"gw"</span> {
+  <span class="property">name</span> = <span class="string">"my-gateway"</span>
+}</code></pre>
+                </div>
+                <div class="demo-image">
+                    <img src="https://raw.githubusercontent.com/suryakumaran2611/auto-arch-diagram/main/examples/serverless-website/architecture-diagram.png" alt="Generated Architecture Diagram" onerror="this.parentElement.innerHTML='<div style=&quot;padding:60px;color:#64748b;&quot;>📊 Diagram Preview<br><small>Auto-generated from Terraform</small></div>'">
+                    <p>↑ Auto-generated from your Terraform code</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="features" id="features">
+        <div class="container">
+            <div class="section-header">
+                <h2>Why Auto Architecture Diagram?</h2>
+                <p>Keep your documentation in sync with your infrastructure, automatically.</p>
+            </div>
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">🔄</div>
+                    <h3>Always Up-to-Date</h3>
+                    <p>Diagrams regenerate on every PR, ensuring documentation never drifts from reality.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">☁️</div>
+                    <h3>Multi-Cloud Support</h3>
+                    <p>Native support for AWS, Azure, and GCP with official cloud icons and styling.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">📝</div>
+                    <h3>Multiple Formats</h3>
+                    <p>Export to PNG, SVG, JPEG, Mermaid, and Markdown. Use anywhere.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🎨</div>
+                    <h3>Professional Icons</h3>
+                    <p>Uses official AWS, Azure, and GCP architecture icons for polished diagrams.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">⚡</div>
+                    <h3>Zero Config</h3>
+                    <p>Works out of the box. Just add to your workflow and push.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🔗</div>
+                    <h3>Smart Detection</h3>
+                    <p>Automatically detects resource relationships and dependencies from your code.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="usage" id="usage">
+        <div class="container">
+            <div class="section-header">
+                <h2>Quick Start</h2>
+                <p>Add to your GitHub Actions workflow in seconds.</p>
+            </div>
+            <div class="usage-card">
+                <h3>📋 .github/workflows/diagram.yml</h3>
+                <div class="code-block">
+<pre><span class="key">name:</span> <span class="string">Update Architecture Diagram</span>
+<span class="key">on:</span>
+  <span class="key">pull_request:</span>
+    <span class="key">paths:</span>
+      - <span class="string">'**/*.tf'</span>
+      - <span class="string">'**/*.yaml'</span>
+
+<span class="key">jobs:</span>
+  <span class="key">diagram:</span>
+    <span class="key">runs-on:</span> <span class="string">ubuntu-latest</span>
+    <span class="key">steps:</span>
+      - <span class="key">uses:</span> <span class="string">actions/checkout@v4</span>
+      
+      - <span class="key">uses:</span> <span class="string">suryakumaran2611/auto-arch-diagram@v1</span>
+        <span class="key">with:</span>
+          <span class="key">changed_files:</span> <span class="string">${{ github.event.pull_request.changed_files }}</span>
+      
+      - <span class="key">uses:</span> <span class="string">actions/upload-artifact@v4</span>
+        <span class="key">with:</span>
+          <span class="key">name:</span> <span class="string">architecture-diagram</span>
+          <span class="key">path:</span> <span class="string">artifacts/</span></pre>
+                </div>
+                <a href="https://github.com/suryakumaran2611/auto-arch-diagram#usage" class="btn btn-secondary">
+                    View Full Documentation →
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <section class="formats" id="formats">
+        <div class="container">
+            <div class="section-header">
+                <h2>Multiple Output Formats</h2>
+                <p>Export your diagrams in the format that works best for you.</p>
+            </div>
+            <div class="formats-grid">
+                <div class="format-card">
+                    <div class="icon">🖼️</div>
+                    <h4>PNG</h4>
+                    <p>High-quality raster images with transparent or white background</p>
+                </div>
+                <div class="format-card">
+                    <div class="icon">📐</div>
+                    <h4>SVG</h4>
+                    <p>Scalable vector graphics, perfect for documentation</p>
+                </div>
+                <div class="format-card">
+                    <div class="icon">🧜‍♀️</div>
+                    <h4>Mermaid</h4>
+                    <p>Renders natively in GitHub, Notion, Confluence & more</p>
+                </div>
+                <div class="format-card">
+                    <div class="icon">📄</div>
+                    <h4>Markdown</h4>
+                    <p>Ready to embed in your README or wiki</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <footer>
+        <div class="container">
+            <p>
+                Built with ❤️ by <a href="https://github.com/suryakumaran2611">@suryakumaran2611</a>
+                &nbsp;•&nbsp;
+                <a href="https://github.com/suryakumaran2611/auto-arch-diagram/blob/main/LICENSE">License</a>
+                &nbsp;•&nbsp;
+                <a href="https://github.com/suryakumaran2611/auto-arch-diagram">GitHub</a>
+            </p>
+        </div>
+    </footer>
+</body>
+</html>
