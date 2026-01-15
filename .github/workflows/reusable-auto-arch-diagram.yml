@@ -172,14 +172,24 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           if [ "${{ inputs.mode }}" = "ai" ]; then
-            pip install -r .auto-arch-diagram-tool/requirements-ai.txt
+            if [ -f .auto-arch-diagram-tool/requirements-ai.txt ]; then
+              pip install -r .auto-arch-diagram-tool/requirements-ai.txt
+            else
+              # Fallback minimal deps for AI mode
+              pip install PyYAML python-hcl2 diagrams graphviz openai
+            fi
           else
-            pip install -r .auto-arch-diagram-tool/requirements.txt
+            if [ -f .auto-arch-diagram-tool/requirements.txt ]; then
+              pip install -r .auto-arch-diagram-tool/requirements.txt
+            else
+              # Fallback minimal deps for static mode
+              pip install PyYAML python-hcl2 diagrams graphviz
+            fi
           fi
 
       - name: Determine changed IaC files
         id: changed
-        if: ${{ inputs.changed_files == '' }}
+        if: ${{ !inputs.force_full && inputs.changed_files == '' }}
         uses: tj-actions/changed-files@v45
         with:
           files: ${{ inputs.iac_globs }}
@@ -194,7 +204,7 @@ jobs:
       - name: Generate diagrams
         id: gen
         env:
-          CHANGED_IAC_FILES: ${{ inputs.force_full && '**/*' || (inputs.changed_files != '' && steps.changed_direct.outputs.all_changed_files || steps.changed.outputs.all_changed_files) }}
+          CHANGED_IAC_FILES: ${{ inputs.changed_files != '' && steps.changed_direct.outputs.all_changed_files || (inputs.force_full && '.' || steps.changed.outputs.all_changed_files) }}
           AUTO_ARCH_MODE: ${{ inputs.mode }}
           AUTO_ARCH_MODEL: ${{ inputs.model }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
@@ -432,7 +442,7 @@ jobs:
 
       - name: Generate and publish into repo paths
         env:
-          CHANGED_IAC_FILES: ${{ github.event_name == 'pull_request_target' && steps.pr_files.outputs.iac_files || steps.changed.outputs.all_changed_files }}
+          CHANGED_IAC_FILES: ${{ inputs.force_full && '.' || (github.event_name == 'pull_request_target' && steps.pr_files.outputs.iac_files || steps.changed.outputs.all_changed_files) }}
           AUTO_ARCH_MODE: ${{ inputs.mode }}
           AUTO_ARCH_MODEL: ${{ inputs.model }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
