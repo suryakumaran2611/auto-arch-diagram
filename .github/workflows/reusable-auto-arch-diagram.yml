@@ -142,6 +142,13 @@ jobs:
           REF="${{ github.workflow_ref }}"
           TOOL_REPO="${REF%%/.github/workflows/*}"
           TOOL_REF="${REF##*@}"
+          # Fallback to the canonical tool repo if the computed repo appears to be the caller repo
+          if [[ -z "${TOOL_REPO}" || "${TOOL_REPO}" == *"mlops-multi-account-terraform"* ]]; then
+            TOOL_REPO="suryakumaran2611/auto-arch-diagram"
+          fi
+          if [[ -z "${TOOL_REF}" || "${TOOL_REF}" == "@" ]]; then
+            TOOL_REF="main"
+          fi
           echo "tool_repo=${TOOL_REPO}" >> "$GITHUB_OUTPUT"
           echo "tool_ref=${TOOL_REF}" >> "$GITHUB_OUTPUT"
 
@@ -153,7 +160,7 @@ jobs:
           path: .auto-arch-diagram-tool
 
       - name: Setup Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: '3.11'
 
@@ -201,10 +208,51 @@ jobs:
         run: |
           echo "all_changed_files=${{ inputs.changed_files }}" >> "$GITHUB_OUTPUT"
 
+      - name: Collect full IaC file list (force_full)
+        id: all_iac
+        if: ${{ inputs.force_full }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Build suffix allowlist from iac_globs
+          raw='${{ inputs.iac_globs }}'
+          mapfile -t patterns < <(printf "%s\n" "${raw}")
+          suffixes=()
+          for p in "${patterns[@]}"; do
+            p_trim="${p// /}"
+            if [[ "${p_trim}" == **/*.* ]]; then
+              suf="${p_trim#**/*}"
+              suffixes+=("${suf}")
+            elif [[ "${p_trim}" == **/template.yaml || "${p_trim}" == **/template.yml ]]; then
+              suffixes+=("template.yaml" "template.yml")
+            fi
+          done
+          files=()
+          while IFS= read -r f; do
+            lf="${f,,}"
+            add=0
+            for s in "${suffixes[@]}"; do
+              s_l="${s,,}"
+              if [[ "${s_l}" == .* ]]; then
+                [[ "${lf}" == *"${s_l}" ]] && add=1 && break
+              else
+                [[ "${lf}" == */"${s_l}" ]] && add=1 && break
+              fi
+            done
+            # Pulumi patterns (broad): Pulumi.*.(yaml|yml|json|ts|py)
+            if [[ ${add} -eq 0 && ${lf} =~ (^|/)pulumi\..*\.(yaml|yml|json|ts|py)$ ]]; then
+              add=1
+            fi
+            if [[ ${add} -eq 1 ]]; then
+              files+=("${f}")
+            fi
+          done < <(git ls-files)
+          printf "all_changed_files=%s\n" "${files[*]}" >> "$GITHUB_OUTPUT"
+
       - name: Generate diagrams
         id: gen
         env:
-          CHANGED_IAC_FILES: ${{ inputs.changed_files != '' && steps.changed_direct.outputs.all_changed_files || (inputs.force_full && '.' || steps.changed.outputs.all_changed_files) }}
+          CHANGED_IAC_FILES: ${{ inputs.changed_files != '' && steps.changed_direct.outputs.all_changed_files || (inputs.force_full && steps.all_iac.outputs.all_changed_files || steps.changed.outputs.all_changed_files) }}
           AUTO_ARCH_MODE: ${{ inputs.mode }}
           AUTO_ARCH_MODEL: ${{ inputs.model }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
