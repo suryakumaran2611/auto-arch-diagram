@@ -176,9 +176,9 @@ def _maybe_publish_outputs(
     *,
     out_md: Path,
     out_mmd: Path,
-    out_png: Path,
-    out_jpg: Path,
-    out_svg: Path,
+    out_png: Path | None,
+    out_jpg: Path | None,
+    out_svg: Path | None,
 ) -> list[str]:
     """Copy generated outputs into user-configured repo paths (for committing in a follow-up PR)."""
 
@@ -187,9 +187,11 @@ def _maybe_publish_outputs(
 
     changed: list[str] = []
 
-    def publish_file(src: Path, dst_rel: str | None, *, binary: bool) -> None:
+    def publish_file(src: Path | None, dst_rel: str | None, *, binary: bool) -> None:
         nonlocal changed
         if not dst_rel:
+            return
+        if src is None:
             return
         dst = (repo_root / dst_rel).resolve()
         if not src.exists():
@@ -1428,21 +1430,32 @@ def main() -> int:
 
     out_md = repo_root / args.out_md
     out_mmd = repo_root / args.out_mmd
-    out_png = repo_root / args.out_png
-    out_jpg = repo_root / args.out_jpg
-    out_svg = repo_root / args.out_svg
+
+    out_png_raw = (args.out_png or "").strip()
+    out_jpg_raw = (args.out_jpg or "").strip()
+    out_svg_raw = (args.out_svg or "").strip()
+    out_png = (repo_root / out_png_raw) if out_png_raw else None
+    out_jpg = (repo_root / out_jpg_raw) if out_jpg_raw else None
+    out_svg = (repo_root / out_svg_raw) if out_svg_raw else None
+
     out_md.parent.mkdir(parents=True, exist_ok=True)
     out_mmd.parent.mkdir(parents=True, exist_ok=True)
-    out_png.parent.mkdir(parents=True, exist_ok=True)
-    out_jpg.parent.mkdir(parents=True, exist_ok=True)
-    out_svg.parent.mkdir(parents=True, exist_ok=True)
+    if out_png is not None:
+        out_png.parent.mkdir(parents=True, exist_ok=True)
+    if out_jpg is not None:
+        out_jpg.parent.mkdir(parents=True, exist_ok=True)
+    if out_svg is not None:
+        out_svg.parent.mkdir(parents=True, exist_ok=True)
 
     if not changed_files:
         out_md.write_text(_fallback_markdown([], "No IaC file changes detected."), encoding="utf-8")
         out_mmd.write_text("", encoding="utf-8")
-        out_png.write_bytes(b"")
-        out_jpg.write_bytes(b"")
-        out_svg.write_text("", encoding="utf-8")
+        if out_png is not None:
+            out_png.write_bytes(b"")
+        if out_jpg is not None:
+            out_jpg.write_bytes(b"")
+        if out_svg is not None:
+            out_svg.write_text("", encoding="utf-8")
         return 0
 
     selected = changed_files[: limits.max_files]
@@ -1459,9 +1472,12 @@ def main() -> int:
     if not changed_paths:
         out_md.write_text(_fallback_markdown([], "No valid IaC file paths after sanitization."), encoding="utf-8")
         out_mmd.write_text("", encoding="utf-8")
-        out_png.write_bytes(b"")
-        out_jpg.write_bytes(b"")
-        out_svg.write_text("", encoding="utf-8")
+        if out_png is not None:
+            out_png.write_bytes(b"")
+        if out_jpg is not None:
+            out_jpg.write_bytes(b"")
+        if out_svg is not None:
+            out_svg.write_text("", encoding="utf-8")
         return 0
 
     if mode != "ai":

@@ -86,6 +86,52 @@ Adjust the patterns in the workflow if your repo layout differs.
 
 ## Use in any repo (reusable workflow)
 
+### Common knobs (formats + paths)
+
+- `image_formats`: `png,jpg,svg` (default), a subset like `png,svg`, or `none` to skip icon rendering.
+- `out_dir`: where the workflow writes outputs (and uploads artifacts from).
+
+If you want to fully control file names/locations, you can also override:
+
+- `out_md`, `out_mmd`, `out_png`, `out_jpg`, `out_svg`
+
+Example: Mermaid-only (fastest, no Graphviz required):
+
+```yaml
+with:
+  mode: static
+  image_formats: none
+  out_dir: artifacts
+```
+
+Example: Custom output paths:
+
+```yaml
+with:
+  mode: static
+  image_formats: png,svg
+  out_dir: build/diagrams
+  out_md: docs/architecture/architecture-diagram.md
+  out_mmd: docs/architecture/architecture-diagram.mmd
+  out_png: docs/architecture/architecture-diagram.png
+  out_svg: docs/architecture/architecture-diagram.svg
+```
+
+### Use as a composite action (advanced)
+
+If you already have your own workflow and want a single step (instead of `workflow_call`), you can use the composite action:
+
+```yaml
+- name: Generate architecture diagram
+  uses: suryakumaran2611/auto-arch-diagram@v1
+  with:
+    changed_files: ${{ steps.changed.outputs.all_changed_files }}
+    mode: static
+    direction: LR
+    image_formats: png,svg
+    out_dir: artifacts
+```
+
 Versioning:
 
 - Create a release by pushing a semver tag like `v1.0.0`.
@@ -140,6 +186,10 @@ jobs:
       direction: LR
       render_layout: lanes
       render_bg: transparent
+      # Choose which images to render (png,jpg,svg) or disable with 'none'
+      image_formats: png,svg
+      # Where artifacts are written + uploaded from
+      out_dir: artifacts
       publish_enabled: false
       comment_on_pr: true
       create_diagram_pr: false
@@ -213,6 +263,8 @@ jobs:
       direction: LR
       render_layout: lanes
       render_bg: transparent
+      image_formats: png,svg
+      out_dir: artifacts
       publish_enabled: false
       comment_on_pr: true
       create_diagram_pr: false
@@ -228,6 +280,8 @@ jobs:
       direction: LR
       render_layout: lanes
       render_bg: transparent
+      image_formats: png,svg
+      out_dir: artifacts
       publish_enabled: true
       comment_on_pr: false
       create_diagram_pr: true

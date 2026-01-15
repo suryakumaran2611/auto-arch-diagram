@@ -1,6 +1,6 @@
 name: Auto Architecture Diagram
 description: Generate professional architecture diagrams from IaC changes (Mermaid + PNG/SVG/JPEG with icons).
-author: suryakumaran
+author: suryakumaran2611
 
 inputs:
   changed_files:
@@ -34,10 +34,36 @@ inputs:
     description: Whether to write outputs into publish.paths from .auto-arch-diagram.yml.
     required: false
     default: 'false'
+  image_formats:
+    description: >-
+      Comma-separated image formats to generate (png,jpg,svg). Use 'none' to skip image rendering.
+      Default is 'png,jpg,svg'. Markdown+Mermaid are always generated.
+    required: false
+    default: png,jpg,svg
   out_dir:
     description: Output directory for artifacts.
     required: false
     default: artifacts
+  out_md:
+    description: Output path for the generated markdown (relative to repo root). Overrides out_dir.
+    required: false
+    default: ''
+  out_mmd:
+    description: Output path for the generated mermaid file (relative to repo root). Overrides out_dir.
+    required: false
+    default: ''
+  out_png:
+    description: Output path for PNG (relative to repo root). Overrides out_dir. Ignored unless png requested.
+    required: false
+    default: ''
+  out_jpg:
+    description: Output path for JPEG (relative to repo root). Overrides out_dir. Ignored unless jpg requested.
+    required: false
+    default: ''
+  out_svg:
+    description: Output path for SVG (relative to repo root). Overrides out_dir. Ignored unless svg requested.
+    required: false
+    default: ''
 
 outputs:
   md_path:
@@ -67,6 +93,12 @@ runs:
     - name: Install Graphviz (Linux)
       shell: bash
       run: |
+        FORMATS_RAW='${{ inputs.image_formats }}'
+        FORMATS="$(echo "${FORMATS_RAW}" | tr '[:upper:]' '[:lower:]' | tr -d ' ' )"
+        if [ -z "${FORMATS}" ] || [ "${FORMATS}" = "none" ]; then
+          exit 0
+        fi
+
         if command -v apt-get >/dev/null 2>&1; then
           sudo apt-get update
           sudo apt-get install -y graphviz
@@ -91,22 +123,85 @@ runs:
         OUT_DIR="${{ inputs.out_dir }}"
         mkdir -p "${OUT_DIR}"
 
+        FORMATS_RAW='${{ inputs.image_formats }}'
+        FORMATS="$(echo "${FORMATS_RAW}" | tr '[:upper:]' '[:lower:]' | tr -d ' ' )"
+
+        OUT_MD='${{ inputs.out_md }}'
+        OUT_MMD='${{ inputs.out_mmd }}'
+        OUT_PNG='${{ inputs.out_png }}'
+        OUT_JPG='${{ inputs.out_jpg }}'
+        OUT_SVG='${{ inputs.out_svg }}'
+
+        if [ -z "${OUT_MD}" ]; then OUT_MD="${OUT_DIR}/architecture-diagram.md"; fi
+        if [ -z "${OUT_MMD}" ]; then OUT_MMD="${OUT_DIR}/architecture-diagram.mmd"; fi
+
+        if [ -z "${FORMATS}" ] || [ "${FORMATS}" = "none" ]; then
+          WANT_PNG=0
+          WANT_JPG=0
+          WANT_SVG=0
+        else
+          WANT_PNG=0
+          WANT_JPG=0
+          WANT_SVG=0
+          case ",${FORMATS}," in *,png,*) WANT_PNG=1 ;; esac
+          case ",${FORMATS}," in *,jpg,*) WANT_JPG=1 ;; esac
+          case ",${FORMATS}," in *,svg,*) WANT_SVG=1 ;; esac
+        fi
+
+        OUT_PNG_ARG=""
+        OUT_JPG_ARG=""
+        OUT_SVG_ARG=""
+        if [ "${WANT_PNG}" = "1" ]; then
+          if [ -n "${OUT_PNG}" ]; then OUT_PNG_ARG="${OUT_PNG}"; else OUT_PNG_ARG="${OUT_DIR}/architecture-diagram.png"; fi
+        fi
+        if [ "${WANT_JPG}" = "1" ]; then
+          if [ -n "${OUT_JPG}" ]; then OUT_JPG_ARG="${OUT_JPG}"; else OUT_JPG_ARG="${OUT_DIR}/architecture-diagram.jpg"; fi
+        fi
+        if [ "${WANT_SVG}" = "1" ]; then
+          if [ -n "${OUT_SVG}" ]; then OUT_SVG_ARG="${OUT_SVG}"; else OUT_SVG_ARG="${OUT_DIR}/architecture-diagram.svg"; fi
+        fi
+
         python "${GITHUB_ACTION_PATH}/tools/generate_arch_diagram.py" \
           --iac-root "${{ inputs.iac_root }}" \
           --changed-files "${{ inputs.changed_files }}" \
-          --out-md "${OUT_DIR}/architecture-diagram.md" \
-          --out-mmd "${OUT_DIR}/architecture-diagram.mmd" \
-          --out-png "${OUT_DIR}/architecture-diagram.png" \
-          --out-jpg "${OUT_DIR}/architecture-diagram.jpg" \
-          --out-svg "${OUT_DIR}/architecture-diagram.svg"
+          --out-md "${OUT_MD}" \
+          --out-mmd "${OUT_MMD}" \
+          --out-png "${OUT_PNG_ARG}" \
+          --out-jpg "${OUT_JPG_ARG}" \
+          --out-svg "${OUT_SVG_ARG}"
 
     - name: Export outputs
       id: out
       shell: bash
       run: |
         OUT_DIR="${{ inputs.out_dir }}"
-        echo "md_path=${OUT_DIR}/architecture-diagram.md" >> "$GITHUB_OUTPUT"
-        echo "mmd_path=${OUT_DIR}/architecture-diagram.mmd" >> "$GITHUB_OUTPUT"
-        echo "png_path=${OUT_DIR}/architecture-diagram.png" >> "$GITHUB_OUTPUT"
-        echo "jpg_path=${OUT_DIR}/architecture-diagram.jpg" >> "$GITHUB_OUTPUT"
-        echo "svg_path=${OUT_DIR}/architecture-diagram.svg" >> "$GITHUB_OUTPUT"
+        FORMATS_RAW='${{ inputs.image_formats }}'
+        FORMATS="$(echo "${FORMATS_RAW}" | tr '[:upper:]' '[:lower:]' | tr -d ' ' )"
+
+        MD='${{ inputs.out_md }}'
+        MMD='${{ inputs.out_mmd }}'
+        PNG='${{ inputs.out_png }}'
+        JPG='${{ inputs.out_jpg }}'
+        SVG='${{ inputs.out_svg }}'
+
+        if [ -z "${MD}" ]; then MD="${OUT_DIR}/architecture-diagram.md"; fi
+        if [ -z "${MMD}" ]; then MMD="${OUT_DIR}/architecture-diagram.mmd"; fi
+
+        WANT_PNG=0
+        WANT_JPG=0
+        WANT_SVG=0
+        if [ -n "${FORMATS}" ] && [ "${FORMATS}" != "none" ]; then
+          case ",${FORMATS}," in *,png,*) WANT_PNG=1 ;; esac
+          case ",${FORMATS}," in *,jpg,*) WANT_JPG=1 ;; esac
+          case ",${FORMATS}," in *,svg,*) WANT_SVG=1 ;; esac
+        fi
+
+        if [ "${WANT_PNG}" != "1" ]; then PNG=""; else if [ -z "${PNG}" ]; then PNG="${OUT_DIR}/architecture-diagram.png"; fi; fi
+        if [ "${WANT_JPG}" != "1" ]; then JPG=""; else if [ -z "${JPG}" ]; then JPG="${OUT_DIR}/architecture-diagram.jpg"; fi; fi
+        if [ "${WANT_SVG}" != "1" ]; then SVG=""; else if [ -z "${SVG}" ]; then SVG="${OUT_DIR}/architecture-diagram.svg"; fi; fi
+
+        echo "md_path=${MD}" >> "$GITHUB_OUTPUT"
+        echo "mmd_path=${MMD}" >> "$GITHUB_OUTPUT"
+        echo "png_path=${PNG}" >> "$GITHUB_OUTPUT"
+        echo "jpg_path=${JPG}" >> "$GITHUB_OUTPUT"
+        echo "svg_path=${SVG}" >> "$GITHUB_OUTPUT"
