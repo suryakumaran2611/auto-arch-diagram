@@ -92,7 +92,7 @@ jobs:
 
     steps:
       - name: Checkout caller repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Resolve tool ref
         id: ref
@@ -106,7 +106,7 @@ jobs:
           echo "tool_ref=${TOOL_REF}" >> "$GITHUB_OUTPUT"
 
       - name: Checkout auto-arch-diagram tool
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           repository: ${{ steps.ref.outputs.tool_repo }}
           ref: ${{ steps.ref.outputs.tool_ref }}
@@ -197,13 +197,13 @@ jobs:
       pull-requests: write
     steps:
       - name: Checkout base
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           ref: ${{ github.event.pull_request.base.sha || github.sha }}
 
       - name: Checkout PR head
         if: ${{ github.event_name == 'pull_request_target' }}
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           repository: ${{ github.event.pull_request.head.repo.full_name }}
           ref: ${{ github.event.pull_request.head.sha }}
@@ -220,7 +220,7 @@ jobs:
           echo "tool_ref=${TOOL_REF}" >> "$GITHUB_OUTPUT"
 
       - name: Checkout auto-arch-diagram tool
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           repository: ${{ steps.ref.outputs.tool_repo }}
           ref: ${{ steps.ref.outputs.tool_ref }}
