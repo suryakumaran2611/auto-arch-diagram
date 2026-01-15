@@ -90,6 +90,34 @@ Adjust the patterns in the workflow if your repo layout differs.
 
 ## Use in any repo (reusable workflow)
 
+### Inputs
+
+| Name | Type | Default | Description |
+| --- | --- | --- | --- |
+| changed_files | string | `''` | Optional space/newline-separated IaC files; if set, skips change detection. |
+| iac_globs | string | (multiple patterns) | Glob patterns to detect IaC changes. |
+| direction | string | `LR` | Diagram direction (LR/RL/TB/BT). |
+| mode | string | `static` | Generator mode (`static` or `ai`). |
+| model | string | `gpt-4o-mini` | AI model when `mode=ai`. |
+| render_layout | string | `lanes` | Icon layout (`lanes` or `providers`). |
+| render_bg | string | `transparent` | PNG/SVG background (`transparent` or `white`). |
+| image_formats | string | `png,jpg,svg` | Comma-separated formats; `none` to skip images. |
+| out_dir | string | `artifacts` | Output directory for artifacts. |
+| out_md | string | `''` | Override markdown output path. |
+| out_mmd | string | `''` | Override Mermaid output path. |
+| out_png | string | `''` | Override PNG output path. |
+| out_jpg | string | `''` | Override JPEG output path. |
+| out_svg | string | `''` | Override SVG output path. |
+| publish_enabled | boolean | `false` | Write outputs into `publish.paths` from `.auto-arch-diagram.yml`. |
+| comment_on_pr | boolean | `true` | Post/update sticky PR comment (on PR events). |
+| create_diagram_pr | boolean | `false` | Create/update a diagram update PR (needs contents:write). |
+| diagram_pr_branch_prefix | string | `auto-arch-diagram/update` | Branch prefix for diagram PRs. |
+| force_full | boolean | `false` | Force full architecture generation (ignore change detection). |
+
+### Outputs
+
+Artifacts: markdown, Mermaid, and optional PNG/JPG/SVG files under `out_dir` (default `artifacts`). When `comment_on_pr=true`, the PR comment renders the Mermaid diagram and links to artifacts. When `create_diagram_pr=true`, rendered files in `publish.paths` are committed in a dedicated PR.
+
 ### Common knobs (formats + paths)
 
 - `image_formats`: `png,jpg,svg` (default), a subset like `png,svg`, or `none` to skip icon rendering.

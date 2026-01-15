@@ -111,6 +111,11 @@ on:
         required: false
         type: string
         default: auto-arch-diagram/update
+      force_full:
+        description: "Force full architecture generation (ignore change detection)."
+        required: false
+        type: boolean
+        default: true
     secrets:
       OPENAI_API_KEY:
         required: false
@@ -189,7 +194,7 @@ jobs:
       - name: Generate diagrams
         id: gen
         env:
-          CHANGED_IAC_FILES: ${{ inputs.changed_files != '' && steps.changed_direct.outputs.all_changed_files || steps.changed.outputs.all_changed_files }}
+          CHANGED_IAC_FILES: ${{ inputs.force_full && '**/*' || (inputs.changed_files != '' && steps.changed_direct.outputs.all_changed_files || steps.changed.outputs.all_changed_files) }}
           AUTO_ARCH_MODE: ${{ inputs.mode }}
           AUTO_ARCH_MODEL: ${{ inputs.model }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
