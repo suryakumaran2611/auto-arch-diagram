@@ -1,10 +1,11 @@
 # MLOps Multi-Region AWS Architecture
 
-⚠️ **Work in Progress** - This example is currently under development due to HCL2 parser compatibility issues with multi-region provider aliases.
+Enterprise MLOps pipeline with multi-region disaster recovery across us-east-1 (primary) and us-west-2 (DR) with 46 resources.
 
-## Planned Features
+![Architecture Diagram](architecture-diagram.png)
 
-This example will demonstrate:
+## Features
+
 - **Multi-Region Architecture**: Primary (us-east-1) + DR (us-west-2)
 - **VPC Peering**: Cross-region connectivity
 - **EKS Cluster**: Kubernetes for ML workloads with GPU nodes
@@ -15,18 +16,7 @@ This example will demonstrate:
 - **Security**: Security groups, NACLs, KMS encryption
 - **Monitoring**: CloudWatch, SNS alerts
 
-## Current Status
-
-The Terraform configuration exists but diagram generation is pending parser improvements for:
-- Provider aliases (`provider = aws.us-west-2`)
-- Complex `jsonencode()` expressions
-- Multi-region VPC peering
-
-## Alternative
-
-See [../custom-icons-demo/](../custom-icons-demo/) for a working complex example with 40+ resources demonstrating all tool capabilities.
-
-## Resources Planned (46 total)
+## Resources (46 total)
 
 - VPCs (2), Subnets (4), Internet Gateway, NAT Gateway, VPC Peering
 - Security Groups (3), Network ACL
@@ -42,4 +32,10 @@ See [../custom-icons-demo/](../custom-icons-demo/) for a working complex example
 - SNS Topic, CloudWatch Log Group, KMS Key
 - IAM Roles (5)
 
-Check back in a future release for full diagram support!
+## Generate Diagram
+
+```bash
+python tools/generate_arch_diagram.py \
+  --iac-root examples/terraform/mlops-multi-region-aws \
+  --out-png examples/terraform/mlops-multi-region-aws/architecture-diagram.png
+```

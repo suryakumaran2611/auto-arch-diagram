@@ -2,11 +2,13 @@
 
 This directory contains comprehensive examples demonstrating the full capabilities of auto-arch-diagram, from simple serverless architectures to complex event-driven data pipelines with custom icons.
 
-## 🎯 Featured Example: Custom Icons Demo
+## 🎯 Featured Examples
+
+### Custom Icons Demo
 
 **[terraform/custom-icons-demo/](terraform/custom-icons-demo/)** - Complex serverless data pipeline (40+ resources)
 
-### What It Demonstrates
+![Custom Icons Demo](terraform/custom-icons-demo/architecture-diagram.png)
 
 ✅ **Custom Icon Support** - 11 specialized icons for domain-specific components  
 ✅ **VPC Grouping** - Resources organized within VPC with public/private subnet distinction  
@@ -16,47 +18,63 @@ This directory contains comprehensive examples demonstrating the full capabiliti
 ✅ **Professional Styling** - White backgrounds, colored borders, center-based edge routing  
 ✅ **Complex Topology** - Intelligent AUTO layout with no overlaps
 
-**Generated Files:**
-- PNG: 589 KB - High-quality raster
-- SVG: 827 KB - Vector with embedded base64 icons
-- JPEG: 983 KB - Compressed format
-- Mermaid: Inline flowchart diagram
-- Markdown: Architecture documentation
+---
+
+### MLOps Multi-Cloud
+
+**[terraform/mlops-multi-cloud/](terraform/mlops-multi-cloud/)** - Enterprise MLOps across AWS, Azure, and GCP (47 resources)
+
+![MLOps Multi-Cloud](terraform/mlops-multi-cloud/architecture-diagram.png)
+
+✅ **Multi-Cloud Architecture** - AWS SageMaker + Azure AKS + GCP BigQuery  
+✅ **Cross-Provider Connectivity** - SNS → Pub/Sub, Container Registry sync  
+✅ **Feature Store** - GCP BigQuery with Dataflow processing  
+✅ **ML Training** - AWS SageMaker with Step Functions orchestration  
+✅ **Model Serving** - Azure AKS cluster with Redis caching  
+✅ **Provider-Specific Styling** - AWS orange, Azure blue, GCP colors
+
+---
+
+### MLOps Multi-Region AWS
+
+**[terraform/mlops-multi-region-aws/](terraform/mlops-multi-region-aws/)** - Multi-region DR architecture (46 resources)
+
+![MLOps Multi-Region AWS](terraform/mlops-multi-region-aws/architecture-diagram.png)
+
+✅ **Multi-Region DR** - Primary (us-east-1) + Disaster Recovery (us-west-2)  
+✅ **VPC Peering** - Cross-region connectivity  
+✅ **EKS Cluster** - Kubernetes for ML workloads  
+✅ **Feature Store** - RDS Aurora + ElastiCache Redis  
+✅ **ML Pipeline** - Step Functions orchestrating SageMaker + Lambda
+
+---
+
+### Serverless Website (AWS)
+
+**[serverless-website/aws/terraform/](serverless-website/aws/terraform/)** - Simple S3 + CloudFront static hosting
+
+![AWS Serverless Website](serverless-website/aws/terraform/architecture-diagram.png)
 
 ## 📁 All Examples
 
 ### Terraform Examples
 
-#### terraform/custom-icons-demo/ ⭐
-**Complex serverless data pipeline** demonstrating all tool capabilities
-- 40+ resources with 11 custom icons
-- VPC with public/private subnets
-- Event-driven architecture (Kinesis, Lambda, EventBridge)
-- Data pipeline (S3, Glue, Athena, ElasticSearch)
-- Monitoring and alerting (CloudWatch, SNS, SQS)
+| Example | Preview | Resources | Features |
+|---------|---------|-----------|----------|
+| [custom-icons-demo](terraform/custom-icons-demo/) ⭐ | ![](terraform/custom-icons-demo/architecture-diagram.jpg) | 40+ | Custom icons, VPC, event-driven |
+| [mlops-multi-cloud](terraform/mlops-multi-cloud/) | ![](terraform/mlops-multi-cloud/architecture-diagram.jpg) | 47 | AWS + Azure + GCP |
+| [mlops-multi-region-aws](terraform/mlops-multi-region-aws/) | ![](terraform/mlops-multi-region-aws/architecture-diagram.jpg) | 46 | Multi-region DR |
+| [aws/terraform](serverless-website/aws/terraform/) | ![](serverless-website/aws/terraform/architecture-diagram.jpg) | 8 | S3 + CloudFront |
+| [azure/terraform](serverless-website/azure/terraform/) | ![](serverless-website/azure/terraform/architecture-diagram.jpg) | 7 | Storage + CDN |
+| [gcp/terraform](serverless-website/gcp/terraform/) | ![](serverless-website/gcp/terraform/architecture-diagram.jpg) | 6 | Cloud Storage + CDN |
 
-#### serverless-website/*/terraform/
-**Multi-cloud serverless static website hosting**
-- aws/ - S3 + CloudFront + ACM
-- azure/ - Storage Account + CDN
-- gcp/ - Cloud Storage + Cloud CDN
-- ibm/ - Cloud Object Storage
-- oci/ - Object Storage
+### Other IaC Examples
 
-### CloudFormation Examples
-
-#### serverless-website/aws/cloudformation/
-**AWS serverless architecture** using CloudFormation YAML
-
-### Bicep Examples
-
-#### serverless-website/azure/bicep/
-**Azure serverless architecture** using Bicep
-
-### Pulumi Examples
-
-#### serverless-website/*/pulumi/
-**Cross-platform Pulumi YAML** examples
+| Example | Format | Resources |
+|---------|--------|-----------|
+| [aws/cloudformation](serverless-website/aws/cloudformation/) | CloudFormation YAML | 8 |
+| [azure/bicep](serverless-website/azure/bicep/) | Bicep | 7 |
+| [aws/pulumi](serverless-website/aws/pulumi/) | Pulumi YAML | 8 |
 
 ## 🎨 Custom Icon Support
 
