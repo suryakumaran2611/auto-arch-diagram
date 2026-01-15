@@ -400,6 +400,156 @@
             font-size: 0.8rem;
         }
 
+        /* Gallery Section */
+        .gallery {
+            padding: 100px 0;
+            background: linear-gradient(180deg, rgba(124, 58, 237, 0.05) 0%, transparent 100%);
+        }
+
+        .gallery-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 32px;
+        }
+
+        .gallery-item {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            overflow: hidden;
+            transition: all 0.3s;
+        }
+
+        .gallery-item:hover {
+            border-color: var(--primary);
+            transform: translateY(-4px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        .gallery-item.featured {
+            grid-column: span 2;
+        }
+
+        .gallery-item img {
+            width: 100%;
+            height: auto;
+            display: block;
+            background: #1a1a2e;
+        }
+
+        .gallery-item-info {
+            padding: 20px;
+        }
+
+        .gallery-item-info h4 {
+            font-size: 1.1rem;
+            margin-bottom: 8px;
+        }
+
+        .gallery-item-info p {
+            color: var(--text-muted);
+            font-size: 0.875rem;
+            margin-bottom: 12px;
+        }
+
+        .gallery-item-info .tags {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .gallery-item-info .tag {
+            padding: 4px 10px;
+            background: var(--bg-dark);
+            border-radius: 12px;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        .gallery-item-info .tag.aws { color: var(--aws); border: 1px solid var(--aws); }
+        .gallery-item-info .tag.azure { color: var(--azure); border: 1px solid var(--azure); }
+        .gallery-item-info .tag.gcp { color: var(--gcp); border: 1px solid var(--gcp); }
+        .gallery-item-info .tag.multi { color: #a855f7; border: 1px solid #a855f7; }
+
+        @media (max-width: 968px) {
+            .gallery-grid {
+                grid-template-columns: 1fr;
+            }
+            .gallery-item.featured {
+                grid-column: span 1;
+            }
+        }
+
+        /* Custom Icons Section */
+        .custom-icons {
+            padding: 100px 0;
+            background: var(--bg-card);
+        }
+
+        .icons-showcase {
+            display: flex;
+            justify-content: center;
+            gap: 32px;
+            flex-wrap: wrap;
+            margin: 40px 0;
+        }
+
+        .icon-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+            padding: 20px;
+            background: var(--bg-dark);
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            transition: all 0.3s;
+        }
+
+        .icon-item:hover {
+            border-color: var(--primary);
+            transform: translateY(-4px);
+        }
+
+        .icon-item img {
+            width: 64px;
+            height: 64px;
+            object-fit: contain;
+        }
+
+        .icon-item span {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        .custom-icons-demo {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: var(--bg-dark);
+            border-radius: 16px;
+            border: 1px solid var(--border);
+            overflow: hidden;
+        }
+
+        .custom-icons-demo img {
+            width: 100%;
+            height: auto;
+        }
+
+        .custom-icons-demo-info {
+            padding: 24px;
+            text-align: center;
+        }
+
+        .custom-icons-demo-info h4 {
+            font-size: 1.25rem;
+            margin-bottom: 8px;
+        }
+
+        .custom-icons-demo-info p {
+            color: var(--text-muted);
+        }
+
         /* Footer */
         footer {
             padding: 60px 0;
@@ -456,8 +606,9 @@
             <div class="logo">🏗️ Auto Arch Diagram</div>
             <ul class="nav-links">
                 <li><a href="#features">Features</a></li>
+                <li><a href="#custom-icons">Custom Icons</a></li>
+                <li><a href="#gallery">Gallery</a></li>
                 <li><a href="#usage">Usage</a></li>
-                <li><a href="#formats">Outputs</a></li>
                 <li><a href="https://github.com/suryakumaran2611/auto-arch-diagram">GitHub</a></li>
             </ul>
             <a href="https://github.com/marketplace/actions/auto-architecture-diagram" class="btn btn-primary">
@@ -510,7 +661,7 @@
 }</code></pre>
                 </div>
                 <div class="demo-image">
-                    <img src="https://raw.githubusercontent.com/suryakumaran2611/auto-arch-diagram/main/examples/serverless-website/architecture-diagram.png" alt="Generated Architecture Diagram" onerror="this.parentElement.innerHTML='<div style=&quot;padding:60px;color:#64748b;&quot;>📊 Diagram Preview<br><small>Auto-generated from Terraform</small></div>'">
+                    <img src="images/aws-serverless.png" alt="Generated Architecture Diagram">
                     <p>↑ Auto-generated from your Terraform code</p>
                 </div>
             </div>
@@ -553,6 +704,48 @@
                     <div class="feature-icon">🔗</div>
                     <h3>Smart Detection</h3>
                     <p>Automatically detects resource relationships and dependencies from your code.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="custom-icons" id="custom-icons">
+        <div class="container">
+            <div class="section-header">
+                <h2>🎨 Custom Icon Support</h2>
+                <p>Beyond cloud provider icons - use custom icons for any architectural concept.</p>
+            </div>
+            <div class="icons-showcase">
+                <div class="icon-item">
+                    <img src="images/icons/datapipeline.png" alt="Data Pipeline">
+                    <span>Data Pipeline</span>
+                </div>
+                <div class="icon-item">
+                    <img src="images/icons/eventtrigger.png" alt="Event Trigger">
+                    <span>Event Trigger</span>
+                </div>
+                <div class="icon-item">
+                    <img src="images/icons/messagequeue.png" alt="Message Queue">
+                    <span>Message Queue</span>
+                </div>
+                <div class="icon-item">
+                    <img src="images/icons/streamprocessor.png" alt="Stream Processor">
+                    <span>Stream Processor</span>
+                </div>
+                <div class="icon-item">
+                    <img src="images/icons/scheduler.png" alt="Scheduler">
+                    <span>Scheduler</span>
+                </div>
+                <div class="icon-item">
+                    <img src="images/icons/searchengine.png" alt="Search Engine">
+                    <span>Search Engine</span>
+                </div>
+            </div>
+            <div class="custom-icons-demo">
+                <img src="images/custom-icons-demo.png" alt="Custom Icons Demo - Serverless Data Pipeline">
+                <div class="custom-icons-demo-info">
+                    <h4>Serverless Data Pipeline with Custom Icons</h4>
+                    <p>A complete event-driven data pipeline architecture using custom icons for abstract concepts like data streams, event triggers, and processing stages.</p>
                 </div>
             </div>
         </div>
@@ -622,6 +815,92 @@
                     <div class="icon">📄</div>
                     <h4>Markdown</h4>
                     <p>Ready to embed in your README or wiki</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="gallery" id="gallery">
+        <div class="container">
+            <div class="section-header">
+                <h2>Example Diagrams</h2>
+                <p>Real-world architecture diagrams generated automatically from Terraform code.</p>
+            </div>
+            <div class="gallery-grid">
+                <div class="gallery-item featured">
+                    <img src="images/mlops-multi-cloud.png" alt="MLOps Multi-Cloud Architecture">
+                    <div class="gallery-item-info">
+                        <h4>MLOps Multi-Cloud Pipeline</h4>
+                        <p>Complete ML operations pipeline spanning AWS, Azure, and GCP with data processing, model training, and deployment stages.</p>
+                        <div class="tags">
+                            <span class="tag multi">Multi-Cloud</span>
+                            <span class="tag aws">AWS</span>
+                            <span class="tag azure">Azure</span>
+                            <span class="tag gcp">GCP</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="gallery-item">
+                    <img src="images/aws-serverless.png" alt="AWS Serverless Website">
+                    <div class="gallery-item-info">
+                        <h4>AWS Serverless Website</h4>
+                        <p>API Gateway, Lambda, DynamoDB serverless architecture with CloudFront CDN.</p>
+                        <div class="tags">
+                            <span class="tag aws">AWS</span>
+                            <span class="tag">Serverless</span>
+                            <span class="tag">Terraform</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="gallery-item">
+                    <img src="images/azure-serverless.png" alt="Azure Serverless Website">
+                    <div class="gallery-item-info">
+                        <h4>Azure Serverless Website</h4>
+                        <p>Azure Functions with CosmosDB and API Management for serverless web apps.</p>
+                        <div class="tags">
+                            <span class="tag azure">Azure</span>
+                            <span class="tag">Serverless</span>
+                            <span class="tag">Terraform</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="gallery-item">
+                    <img src="images/gcp-serverless.png" alt="GCP Serverless Website">
+                    <div class="gallery-item-info">
+                        <h4>GCP Serverless Website</h4>
+                        <p>Cloud Functions with Firestore and Cloud Endpoints for Google Cloud.</p>
+                        <div class="tags">
+                            <span class="tag gcp">GCP</span>
+                            <span class="tag">Serverless</span>
+                            <span class="tag">Terraform</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="gallery-item featured">
+                    <img src="images/mlops-aws.png" alt="MLOps AWS Multi-Region">
+                    <div class="gallery-item-info">
+                        <h4>MLOps Multi-Region AWS</h4>
+                        <p>Enterprise ML platform with SageMaker, multi-region deployment, feature stores, and model registry.</p>
+                        <div class="tags">
+                            <span class="tag aws">AWS</span>
+                            <span class="tag">MLOps</span>
+                            <span class="tag">Multi-Region</span>
+                            <span class="tag">SageMaker</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="gallery-item featured">
+                    <img src="images/custom-icons-demo.png" alt="Custom Icons - Serverless Data Pipeline">
+                    <div class="gallery-item-info">
+                        <h4>Custom Icons: Serverless Data Pipeline</h4>
+                        <p>Event-driven data pipeline with custom icons for abstract concepts like data streams, event triggers, and stream processors.</p>
+                        <div class="tags">
+                            <span class="tag aws">AWS</span>
+                            <span class="tag multi">Custom Icons</span>
+                            <span class="tag">Event-Driven</span>
+                            <span class="tag">Serverless</span>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
