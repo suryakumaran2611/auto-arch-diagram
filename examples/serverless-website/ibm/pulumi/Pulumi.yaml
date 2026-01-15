@@ -1,0 +1,14 @@
+name: ibm-serverless-website
+runtime: yaml
+
+resources:
+  cos:
+    type: ibm:resource/instance:Instance
+    properties:
+      service: cloud-object-storage
+
+  siteBucket:
+    type: ibm:cos/bucket:Bucket
+    properties:
+      resourceInstanceId: ${cos.id}
+      bucketName: auto-arch-site

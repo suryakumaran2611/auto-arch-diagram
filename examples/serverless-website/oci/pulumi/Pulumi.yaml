@@ -1,0 +1,9 @@
+name: oci-serverless-website
+runtime: yaml
+
+resources:
+  siteBucket:
+    type: oci:objectstorage/bucket:Bucket
+    properties:
+      name: auto-arch-site
+      accessType: NoPublicAccess

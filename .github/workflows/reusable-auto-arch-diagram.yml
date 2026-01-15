@@ -1,0 +1,371 @@
+name: Reusable - Auto Architecture Diagram
+
+on:
+  workflow_call:
+    inputs:
+      changed_files:
+        description: "Optional space/newline-separated list of IaC files to diagram. If set, skips change detection."
+        required: false
+        type: string
+        default: ''
+      iac_globs:
+        description: "Newline-separated glob patterns for IaC files (used to detect changes)."
+        required: false
+        type: string
+        default: |
+          **/*.tf
+          **/*.tfvars
+          **/*.hcl
+          **/*.bicep
+          **/*.cfn.yaml
+          **/*.cfn.yml
+          **/*.cfn.json
+          **/template.yaml
+          **/template.yml
+          **/Pulumi.*.yaml
+          **/Pulumi.*.yml
+          **/Pulumi.yaml
+          **/Pulumi.yml
+          **/Pulumi.*.json
+          **/Pulumi.*.ts
+          **/Pulumi.*.py
+          **/*.cdk.ts
+          **/*.cdk.py
+      direction:
+        description: "Diagram direction (LR|RL|TB|BT)."
+        required: false
+        type: string
+        default: LR
+      mode:
+        description: "Generator mode: static (default) or ai."
+        required: false
+        type: string
+        default: static
+      model:
+        description: "AI model name (only used when mode=ai)."
+        required: false
+        type: string
+        default: gpt-4o-mini
+      render_layout:
+        description: "Icon render layout: lanes (default) or providers."
+        required: false
+        type: string
+        default: lanes
+      render_bg:
+        description: "PNG/SVG background: transparent (default) or white. JPEG is always white."
+        required: false
+        type: string
+        default: transparent
+      publish_enabled:
+        description: "Whether to write outputs into publish.paths from .auto-arch-diagram.yml."
+        required: false
+        type: boolean
+        default: false
+      comment_on_pr:
+        description: "Post/Update a sticky PR comment (only on pull_request events)."
+        required: false
+        type: boolean
+        default: true
+      create_diagram_pr:
+        description: "Create/update a separate PR committing publish.paths outputs (requires contents: write)."
+        required: false
+        type: boolean
+        default: false
+      diagram_pr_branch_prefix:
+        description: "Branch prefix for the diagram update PR."
+        required: false
+        type: string
+        default: auto-arch-diagram/update
+    secrets:
+      OPENAI_API_KEY:
+        required: false
+
+permissions:
+  contents: read
+
+jobs:
+  diagram:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+
+    steps:
+      - name: Checkout caller repo
+        uses: actions/checkout@v4
+
+      - name: Resolve tool ref
+        id: ref
+        shell: bash
+        run: |
+          # github.workflow_ref looks like: owner/repo/.github/workflows/reusable-auto-arch-diagram.yml@ref
+          REF="${{ github.workflow_ref }}"
+          TOOL_REPO="${REF%%/.github/workflows/*}"
+          TOOL_REF="${REF##*@}"
+          echo "tool_repo=${TOOL_REPO}" >> "$GITHUB_OUTPUT"
+          echo "tool_ref=${TOOL_REF}" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout auto-arch-diagram tool
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ steps.ref.outputs.tool_repo }}
+          ref: ${{ steps.ref.outputs.tool_ref }}
+          path: .auto-arch-diagram-tool
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Graphviz (for icon rendering)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y graphviz
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r .auto-arch-diagram-tool/requirements.txt
+
+      - name: Determine changed IaC files
+        id: changed
+        if: ${{ inputs.changed_files == '' }}
+        uses: tj-actions/changed-files@v45
+        with:
+          files: ${{ inputs.iac_globs }}
+
+      - name: Use provided changed files
+        id: changed_direct
+        if: ${{ inputs.changed_files != '' }}
+        shell: bash
+        run: |
+          echo "all_changed_files=${{ inputs.changed_files }}" >> "$GITHUB_OUTPUT"
+
+      - name: Generate diagrams
+        id: gen
+        env:
+          CHANGED_IAC_FILES: ${{ inputs.changed_files != '' && steps.changed_direct.outputs.all_changed_files || steps.changed.outputs.all_changed_files }}
+          AUTO_ARCH_MODE: ${{ inputs.mode }}
+          AUTO_ARCH_MODEL: ${{ inputs.model }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          AUTO_ARCH_DIRECTION: ${{ inputs.direction }}
+          AUTO_ARCH_RENDER_LAYOUT: ${{ inputs.render_layout }}
+          AUTO_ARCH_RENDER_BG: ${{ inputs.render_bg }}
+          AUTO_ARCH_PUBLISH_ENABLED: ${{ inputs.publish_enabled && 'true' || 'false' }}
+        run: |
+          python .auto-arch-diagram-tool/tools/generate_arch_diagram.py \
+            --changed-files "${CHANGED_IAC_FILES}" \
+            --out-md artifacts/architecture-diagram.md \
+            --out-mmd artifacts/architecture-diagram.mmd \
+            --out-png artifacts/architecture-diagram.png \
+            --out-jpg artifacts/architecture-diagram.jpg \
+            --out-svg artifacts/architecture-diagram.svg
+
+          echo "" >> artifacts/architecture-diagram.md
+          echo "Rendered PNG/JPEG/SVG are uploaded as workflow artifacts." >> artifacts/architecture-diagram.md
+          echo "Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" >> artifacts/architecture-diagram.md
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: auto-arch-diagram
+          path: artifacts/
+
+      - name: Find existing comment
+        if: ${{ inputs.comment_on_pr && github.event_name == 'pull_request' }}
+        id: find
+        uses: peter-evans/find-comment@v3
+        with:
+          issue-number: ${{ github.event.pull_request.number }}
+          comment-author: 'github-actions[bot]'
+          body-includes: '<!-- auto-arch-diagram -->'
+
+      - name: Create or update PR comment
+        if: ${{ inputs.comment_on_pr && github.event_name == 'pull_request' }}
+        uses: peter-evans/create-or-update-comment@v4
+        with:
+          issue-number: ${{ github.event.pull_request.number }}
+          comment-id: ${{ steps.find.outputs.comment-id }}
+          edit-mode: replace
+          body-file: artifacts/architecture-diagram.md
+
+  diagram_pr:
+    if: ${{ inputs.create_diagram_pr }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Checkout base
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.base.sha || github.sha }}
+
+      - name: Checkout PR head
+        if: ${{ github.event_name == 'pull_request_target' }}
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.event.pull_request.head.repo.full_name }}
+          ref: ${{ github.event.pull_request.head.sha }}
+          path: pr
+
+      - name: Resolve tool ref
+        id: ref
+        shell: bash
+        run: |
+          REF="${{ github.workflow_ref }}"
+          TOOL_REPO="${REF%%/.github/workflows/*}"
+          TOOL_REF="${REF##*@}"
+          echo "tool_repo=${TOOL_REPO}" >> "$GITHUB_OUTPUT"
+          echo "tool_ref=${TOOL_REF}" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout auto-arch-diagram tool
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ steps.ref.outputs.tool_repo }}
+          ref: ${{ steps.ref.outputs.tool_ref }}
+          path: .auto-arch-diagram-tool
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Graphviz (for icon rendering)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y graphviz
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r .auto-arch-diagram-tool/requirements.txt
+
+      - name: Determine changed IaC files
+        if: ${{ github.event_name != 'pull_request_target' }}
+        id: changed
+        uses: tj-actions/changed-files@v45
+        with:
+          files: ${{ inputs.iac_globs }}
+
+      - name: List changed IaC files (PR API)
+        if: ${{ github.event_name == 'pull_request_target' }}
+        id: pr_files
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const prNumber = context.payload.pull_request.number;
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+
+            // Build an allowlist from the caller's glob patterns (simple suffix-based filter).
+            const raw = `${{ inputs.iac_globs }}`;
+            const patterns = raw.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
+            const suffixes = patterns
+              .filter(p => p.startsWith('**/*.'))
+              .map(p => p.replace('**/*', '').trim());
+
+            function matches(name) {
+              const lower = name.toLowerCase();
+              for (const s of suffixes) {
+                if (s.startsWith('.')) {
+                  if (lower.endsWith(s)) return true;
+                }
+              }
+              // handle template.yml/.yaml and Pulumi.* patterns broadly
+              if (lower.endsWith('template.yml') || lower.endsWith('template.yaml')) return true;
+              if (lower.endsWith('/pulumi.yaml') || lower.endsWith('/pulumi.yml') || lower === 'pulumi.yaml' || lower === 'pulumi.yml') return true;
+              if (/\/pulumi\..*\.(yaml|yml|json|ts|py)$/i.test(name) || /^pulumi\..*\.(yaml|yml|json|ts|py)$/i.test(name)) return true;
+              return false;
+            }
+
+            let files = [];
+            for await (const resp of github.paginate.iterator(github.rest.pulls.listFiles, {
+              owner, repo, pull_number: prNumber, per_page: 100
+            })) {
+              for (const f of resp.data) {
+                if (matches(f.filename)) files.push(f.filename);
+              }
+            }
+
+            core.setOutput('iac_files', files.join(' '));
+
+      - name: Read publish add-paths
+        id: cfg
+        shell: bash
+        run: |
+          python - <<'PY'
+          import os
+          from pathlib import Path
+          try:
+            import yaml
+          except Exception:
+            yaml = None
+
+          repo_root = Path.cwd()
+          cfg_path = repo_root / '.auto-arch-diagram.yml'
+          config = {}
+          if cfg_path.exists() and yaml is not None:
+            config = yaml.safe_load(cfg_path.read_text(encoding='utf-8')) or {}
+
+          publish = (config.get('publish') or {}) if isinstance(config, dict) else {}
+          paths = publish.get('paths') or {}
+          if not isinstance(paths, dict):
+            paths = {}
+
+          ordered = [paths.get('md'), paths.get('mmd'), paths.get('png'), paths.get('jpg'), paths.get('svg')]
+          add_paths = []
+          for p in ordered:
+            if isinstance(p, str) and p.strip():
+              add_paths.append(p.strip())
+
+          seen = set()
+          add_paths = [p for p in add_paths if not (p in seen or seen.add(p))]
+
+          out_file = os.environ['GITHUB_OUTPUT']
+          with open(out_file, 'a', encoding='utf-8') as f:
+            f.write('add_paths<<EOF\n')
+            f.write('\n'.join(add_paths) + ('\n' if add_paths else ''))
+            f.write('EOF\n')
+          PY
+
+      - name: Validate publish paths
+        shell: bash
+        run: |
+          if [ -z "${{ steps.cfg.outputs.add_paths }}" ]; then
+            echo "publish.paths is empty; configure .auto-arch-diagram.yml publish.paths.* before enabling create_diagram_pr." 1>&2
+            exit 1
+          fi
+
+      - name: Generate and publish into repo paths
+        env:
+          CHANGED_IAC_FILES: ${{ github.event_name == 'pull_request_target' && steps.pr_files.outputs.iac_files || steps.changed.outputs.all_changed_files }}
+          AUTO_ARCH_MODE: ${{ inputs.mode }}
+          AUTO_ARCH_MODEL: ${{ inputs.model }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          AUTO_ARCH_DIRECTION: ${{ inputs.direction }}
+          AUTO_ARCH_RENDER_LAYOUT: ${{ inputs.render_layout }}
+          AUTO_ARCH_RENDER_BG: ${{ inputs.render_bg }}
+          AUTO_ARCH_PUBLISH_ENABLED: 'true'
+        run: |
+          python .auto-arch-diagram-tool/tools/generate_arch_diagram.py \
+            --iac-root ${{ github.event_name == 'pull_request_target' && 'pr' || '.' }} \
+            --changed-files "${CHANGED_IAC_FILES}" \
+            --out-md artifacts/architecture-diagram.md \
+            --out-mmd artifacts/architecture-diagram.mmd \
+            --out-png artifacts/architecture-diagram.png \
+            --out-jpg artifacts/architecture-diagram.jpg \
+            --out-svg artifacts/architecture-diagram.svg
+
+      - name: Create or update diagram PR
+        uses: peter-evans/create-pull-request@v6
+        with:
+          commit-message: 'chore: update architecture diagram'
+          title: 'chore: update architecture diagram'
+          body: |
+            Auto-generated architecture diagram updates.
+
+            Source run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          branch: ${{ inputs.diagram_pr_branch_prefix }}-${{ github.event.pull_request.number || github.run_id }}
+          base: ${{ github.event.pull_request.base.ref || github.ref_name }}
+          add-paths: ${{ steps.cfg.outputs.add_paths }}

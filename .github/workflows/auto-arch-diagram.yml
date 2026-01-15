@@ -1,0 +1,68 @@
+name: Auto Architecture Diagram
+
+x-iac-paths: &iac_paths
+  - '**/*.tf'
+  - '**/*.tfvars'
+  - '**/*.hcl'
+  - '**/*.bicep'
+  - '**/*.cfn.yaml'
+  - '**/*.cfn.yml'
+  - '**/*.cfn.json'
+  - '**/template.yaml'
+  - '**/template.yml'
+  - '**/Pulumi.*.yaml'
+  - '**/Pulumi.*.yml'
+  - '**/Pulumi.yaml'
+  - '**/Pulumi.yml'
+  - '**/Pulumi.*.json'
+  - '**/Pulumi.*.ts'
+  - '**/Pulumi.*.py'
+  - '**/*.cdk.ts'
+  - '**/*.cdk.py'
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths: *iac_paths
+  pull_request_target:
+    types: [opened, synchronize, reopened]
+    paths: *iac_paths
+  workflow_dispatch: {}
+
+jobs:
+  comment:
+    if: ${{ github.event_name == 'pull_request' }}
+    permissions:
+      contents: read
+      pull-requests: write
+    uses: ./.github/workflows/reusable-auto-arch-diagram.yml
+    with:
+      mode: ${{ vars.AUTO_ARCH_MODE || 'static' }}
+      model: ${{ vars.AUTO_ARCH_MODEL || 'gpt-4o-mini' }}
+      direction: ${{ vars.AUTO_ARCH_DIRECTION || 'LR' }}
+      render_layout: ${{ vars.AUTO_ARCH_RENDER_LAYOUT || 'lanes' }}
+      render_bg: ${{ vars.AUTO_ARCH_RENDER_BG || 'transparent' }}
+      publish_enabled: false
+      comment_on_pr: true
+      create_diagram_pr: false
+    secrets:
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+
+  diagram_pr:
+    if: ${{ github.event_name == 'pull_request_target' && vars.AUTO_ARCH_CREATE_DIAGRAM_PR == 'true' }}
+    permissions:
+      contents: write
+      pull-requests: write
+    uses: ./.github/workflows/reusable-auto-arch-diagram.yml
+    with:
+      mode: ${{ vars.AUTO_ARCH_MODE || 'static' }}
+      model: ${{ vars.AUTO_ARCH_MODEL || 'gpt-4o-mini' }}
+      direction: ${{ vars.AUTO_ARCH_DIRECTION || 'LR' }}
+      render_layout: ${{ vars.AUTO_ARCH_RENDER_LAYOUT || 'lanes' }}
+      render_bg: ${{ vars.AUTO_ARCH_RENDER_BG || 'transparent' }}
+      publish_enabled: true
+      comment_on_pr: false
+      create_diagram_pr: true
+      diagram_pr_branch_prefix: ${{ vars.AUTO_ARCH_DIAGRAM_PR_BRANCH_PREFIX || 'auto-arch-diagram/update' }}
+    secrets:
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}

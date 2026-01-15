@@ -1,0 +1,6 @@
+flowchart LR
+subgraph GCP[GCP]
+  pulumi_cdn["cdn\ngcp:compute/backendBucket:BackendBucket"]
+  pulumi_siteBucket["siteBucket\ngcp:storage/bucket:Bucket"]
+end
+pulumi_siteBucket --> pulumi_cdn

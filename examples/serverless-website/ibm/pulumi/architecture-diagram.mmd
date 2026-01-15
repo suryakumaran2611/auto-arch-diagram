@@ -1,0 +1,6 @@
+flowchart LR
+subgraph IBM[IBM]
+  pulumi_cos["cos\nibm:resource/instance:Instance"]
+  pulumi_siteBucket["siteBucket\nibm:cos/bucket:Bucket"]
+end
+pulumi_cos --> pulumi_siteBucket

@@ -1,0 +1,31 @@
+# CODEOWNERS
+#
+# This file defines who is automatically requested for review on PRs.
+# GitHub docs: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+#
+# Notes:
+# - Order matters: last matching pattern wins.
+# - A global rule makes every file owned (helps enforce review discipline).
+
+# Default: everything in the repo
+* @suryakumaran2611
+
+# GitHub automation / policy
+/.github/ @suryakumaran2611
+/.github/workflows/ @suryakumaran2611
+
+# Core tool + CI
+/tools/ @suryakumaran2611
+/tests/ @suryakumaran2611
+/action.yml @suryakumaran2611
+
+# Docs + examples
+/docs/ @suryakumaran2611
+/examples/ @suryakumaran2611
+
+# Dependency + config files
+/requirements*.txt @suryakumaran2611
+/.auto-arch-diagram.yml @suryakumaran2611
+/pytest.ini @suryakumaran2611
+/.gitattributes @suryakumaran2611
+/.gitignore @suryakumaran2611

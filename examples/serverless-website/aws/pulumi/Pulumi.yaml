@@ -1,0 +1,26 @@
+name: aws-serverless-website
+runtime: yaml
+
+resources:
+  siteBucket:
+    type: aws:s3/bucket:Bucket
+    properties:
+      bucketPrefix: auto-arch-site-
+
+  waf:
+    type: aws:wafv2/webAcl:WebAcl
+    properties:
+      scope: CLOUDFRONT
+
+  cdn:
+    type: aws:cloudfront/distribution:Distribution
+    properties:
+      enabled: true
+      defaultRootObject: index.html
+      origins:
+        - domainName: ${siteBucket.bucketRegionalDomainName}
+          originId: s3-site
+      defaultCacheBehavior:
+        targetOriginId: s3-site
+        viewerProtocolPolicy: redirect-to-https
+      webAclId: ${waf.arn}

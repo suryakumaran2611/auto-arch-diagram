@@ -1,0 +1,24 @@
+flowchart LR
+subgraph AWS[AWS]
+  tf_aws_cloudfront_distribution_cdn["aws_cloudfront_distribution.cdn"]
+  tf_aws_cloudfront_origin_access_control_oac["aws_cloudfront_origin_access_control.oac"]
+  tf_aws_s3_bucket_logs["aws_s3_bucket.logs"]
+  tf_aws_s3_bucket_site["aws_s3_bucket.site"]
+  tf_aws_s3_bucket_logging_site["aws_s3_bucket_logging.site"]
+  tf_aws_s3_bucket_public_access_block_site["aws_s3_bucket_public_access_block.site"]
+  tf_aws_s3_bucket_server_side_encryption_configuration_logs["aws_s3_bucket_server_side_encryption_configuration.logs"]
+  tf_aws_s3_bucket_server_side_encryption_configuration_site["aws_s3_bucket_server_side_encryption_configuration.site"]
+  tf_aws_s3_bucket_versioning_site["aws_s3_bucket_versioning.site"]
+  tf_aws_wafv2_web_acl_cdn["aws_wafv2_web_acl.cdn"]
+end
+tf_aws_cloudfront_origin_access_control_oac --> tf_aws_cloudfront_distribution_cdn
+tf_aws_s3_bucket_logs --> tf_aws_cloudfront_distribution_cdn
+tf_aws_s3_bucket_logs --> tf_aws_s3_bucket_logging_site
+tf_aws_s3_bucket_logs --> tf_aws_s3_bucket_server_side_encryption_configuration_logs
+tf_aws_s3_bucket_public_access_block_site --> tf_aws_cloudfront_distribution_cdn
+tf_aws_s3_bucket_site --> tf_aws_cloudfront_distribution_cdn
+tf_aws_s3_bucket_site --> tf_aws_s3_bucket_logging_site
+tf_aws_s3_bucket_site --> tf_aws_s3_bucket_public_access_block_site
+tf_aws_s3_bucket_site --> tf_aws_s3_bucket_server_side_encryption_configuration_site
+tf_aws_s3_bucket_site --> tf_aws_s3_bucket_versioning_site
+tf_aws_wafv2_web_acl_cdn --> tf_aws_cloudfront_distribution_cdn
