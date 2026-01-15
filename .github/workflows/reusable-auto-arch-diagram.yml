@@ -133,6 +133,8 @@ jobs:
     steps:
       - name: Checkout caller repo
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Resolve tool ref
         id: ref
@@ -140,15 +142,26 @@ jobs:
         run: |
           # github.workflow_ref looks like: owner/repo/.github/workflows/reusable-auto-arch-diagram.yml@ref
           REF="${{ github.workflow_ref }}"
+          echo "Full workflow ref: ${REF}"
+          
           TOOL_REPO="${REF%%/.github/workflows/*}"
           TOOL_REF="${REF##*@}"
+          
+          echo "Extracted repo: ${TOOL_REPO}"
+          echo "Extracted ref: ${TOOL_REF}"
+          
           # Fallback to the canonical tool repo if the computed repo appears to be the caller repo
           if [[ -z "${TOOL_REPO}" || "${TOOL_REPO}" == *"mlops-multi-account-terraform"* ]]; then
             TOOL_REPO="suryakumaran2611/auto-arch-diagram"
+            echo "Using fallback repo: ${TOOL_REPO}"
           fi
-          if [[ -z "${TOOL_REF}" || "${TOOL_REF}" == "@" ]]; then
+          if [[ -z "${TOOL_REF}" || "${TOOL_REF}" == "@" || "${TOOL_REF}" == "${REF}" ]]; then
             TOOL_REF="main"
+            echo "Using fallback ref: ${TOOL_REF}"
           fi
+          
+          echo "Final tool_repo=${TOOL_REPO}"
+          echo "Final tool_ref=${TOOL_REF}"
           echo "tool_repo=${TOOL_REPO}" >> "$GITHUB_OUTPUT"
           echo "tool_ref=${TOOL_REF}" >> "$GITHUB_OUTPUT"
 
@@ -159,8 +172,29 @@ jobs:
           ref: ${{ steps.ref.outputs.tool_ref }}
           path: .auto-arch-diagram-tool
 
+      - name: Verify tool checkout
+        shell: bash
+        run: |
+          echo "=== Verifying tool repo checkout ==="
+          echo "Expected path: .auto-arch-diagram-tool"
+          if [ -d .auto-arch-diagram-tool ]; then
+            echo "✓ Directory exists"
+            echo "Contents:"
+            ls -la .auto-arch-diagram-tool/ | head -20
+            echo ""
+            echo "Checking for requirements files:"
+            [ -f .auto-arch-diagram-tool/requirements.txt ] && echo "✓ requirements.txt found" || echo "✗ requirements.txt NOT found"
+            [ -f .auto-arch-diagram-tool/requirements-ai.txt ] && echo "✓ requirements-ai.txt found" || echo "✗ requirements-ai.txt NOT found"
+            [ -f .auto-arch-diagram-tool/tools/generate_arch_diagram.py ] && echo "✓ generator script found" || echo "✗ generator script NOT found"
+          else
+            echo "✗ Directory does NOT exist"
+            echo "Current directory contents:"
+            ls -la
+          fi
+          echo "==================================="
+
       - name: Setup Python
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
@@ -176,23 +210,36 @@ jobs:
           sudo apt-get install -y graphviz
 
       - name: Install dependencies
+        shell: bash
         run: |
+          set -e
           python -m pip install --upgrade pip
+          
+          echo "=== Installing Python dependencies ==="
+          echo "Mode: ${{ inputs.mode }}"
+          echo "Checking for requirements files..."
+          
           if [ "${{ inputs.mode }}" = "ai" ]; then
-            if [ -f .auto-arch-diagram-tool/requirements-ai.txt ]; then
-              pip install -r .auto-arch-diagram-tool/requirements-ai.txt
+            REQ_FILE=".auto-arch-diagram-tool/requirements-ai.txt"
+            if [ -f "${REQ_FILE}" ]; then
+              echo "Installing from ${REQ_FILE}"
+              pip install -r "${REQ_FILE}"
             else
-              # Fallback minimal deps for AI mode
+              echo "Requirements file not found, installing fallback deps for AI mode"
               pip install PyYAML python-hcl2 diagrams graphviz openai
             fi
           else
-            if [ -f .auto-arch-diagram-tool/requirements.txt ]; then
-              pip install -r .auto-arch-diagram-tool/requirements.txt
+            REQ_FILE=".auto-arch-diagram-tool/requirements.txt"
+            if [ -f "${REQ_FILE}" ]; then
+              echo "Installing from ${REQ_FILE}"
+              pip install -r "${REQ_FILE}"
             else
-              # Fallback minimal deps for static mode
+              echo "Requirements file not found, installing fallback deps for static mode"
               pip install PyYAML python-hcl2 diagrams graphviz
             fi
           fi
+          
+          echo "=== Dependencies installed successfully ==="
 
       - name: Determine changed IaC files
         id: changed
@@ -347,6 +394,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: ${{ github.event.pull_request.base.sha || github.sha }}
+          fetch-depth: 0
 
       - name: Checkout PR head
         if: ${{ github.event_name == 'pull_request_target' }}
@@ -361,8 +409,26 @@ jobs:
         shell: bash
         run: |
           REF="${{ github.workflow_ref }}"
+          echo "Full workflow ref: ${REF}"
+          
           TOOL_REPO="${REF%%/.github/workflows/*}"
           TOOL_REF="${REF##*@}"
+          
+          echo "Extracted repo: ${TOOL_REPO}"
+          echo "Extracted ref: ${TOOL_REF}"
+          
+          # Fallback to the canonical tool repo if the computed repo appears to be the caller repo
+          if [[ -z "${TOOL_REPO}" || "${TOOL_REPO}" == *"mlops-multi-account-terraform"* ]]; then
+            TOOL_REPO="suryakumaran2611/auto-arch-diagram"
+            echo "Using fallback repo: ${TOOL_REPO}"
+          fi
+          if [[ -z "${TOOL_REF}" || "${TOOL_REF}" == "@" || "${TOOL_REF}" == "${REF}" ]]; then
+            TOOL_REF="main"
+            echo "Using fallback ref: ${TOOL_REF}"
+          fi
+          
+          echo "Final tool_repo=${TOOL_REPO}"
+          echo "Final tool_ref=${TOOL_REF}"
           echo "tool_repo=${TOOL_REPO}" >> "$GITHUB_OUTPUT"
           echo "tool_ref=${TOOL_REF}" >> "$GITHUB_OUTPUT"
 
@@ -372,6 +438,28 @@ jobs:
           repository: ${{ steps.ref.outputs.tool_repo }}
           ref: ${{ steps.ref.outputs.tool_ref }}
           path: .auto-arch-diagram-tool
+
+      - name: Verify tool checkout
+        shell: bash
+        run: |
+          echo "=== Verifying tool repo checkout ==="
+          echo "Expected path: .auto-arch-diagram-tool"
+          if [ -d .auto-arch-diagram-tool ]; then
+            echo "✓ Directory exists"
+            echo "Contents:"
+            ls -la .auto-arch-diagram-tool/ | head -20
+            echo ""
+            echo "Checking for requirements files:"
+            [ -f .auto-arch-diagram-tool/requirements.txt ] && echo "✓ requirements.txt found" || echo "✗ requirements.txt NOT found"
+            [ -f .auto-arch-diagram-tool/requirements-ai.txt ] && echo "✓ requirements-ai.txt found" || echo "✗ requirements-ai.txt NOT found"
+            [ -f .auto-arch-diagram-tool/tools/generate_arch_diagram.py ] && echo "✓ generator script found" || echo "✗ generator script NOT found"
+          else
+            echo "✗ Directory does NOT exist"
+            echo "Current directory contents:"
+            ls -la
+            exit 1
+          fi
+          echo "==================================="
 
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -384,13 +472,36 @@ jobs:
           sudo apt-get install -y graphviz
 
       - name: Install dependencies
+        shell: bash
         run: |
+          set -e
           python -m pip install --upgrade pip
+          
+          echo "=== Installing Python dependencies ==="
+          echo "Mode: ${{ inputs.mode }}"
+          echo "Checking for requirements files..."
+          
           if [ "${{ inputs.mode }}" = "ai" ]; then
-            pip install -r .auto-arch-diagram-tool/requirements-ai.txt
+            REQ_FILE=".auto-arch-diagram-tool/requirements-ai.txt"
+            if [ -f "${REQ_FILE}" ]; then
+              echo "Installing from ${REQ_FILE}"
+              pip install -r "${REQ_FILE}"
+            else
+              echo "ERROR: Requirements file not found: ${REQ_FILE}"
+              exit 1
+            fi
           else
-            pip install -r .auto-arch-diagram-tool/requirements.txt
+            REQ_FILE=".auto-arch-diagram-tool/requirements.txt"
+            if [ -f "${REQ_FILE}" ]; then
+              echo "Installing from ${REQ_FILE}"
+              pip install -r "${REQ_FILE}"
+            else
+              echo "ERROR: Requirements file not found: ${REQ_FILE}"
+              exit 1
+            fi
           fi
+          
+          echo "=== Dependencies installed successfully ==="
 
       - name: Determine changed IaC files
         if: ${{ github.event_name != 'pull_request_target' }}
