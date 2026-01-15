@@ -1,20 +1,79 @@
-# auto-arch-diagram
+<div align="center">
+
+# 🏗️ auto-arch-diagram
+
+**Transform Infrastructure-as-Code into Beautiful Architecture Diagrams**
 
 [![Python Tests](https://github.com/suryakumaran2611/auto-arch-diagram/actions/workflows/python-tests.yml/badge.svg)](https://github.com/suryakumaran2611/auto-arch-diagram/actions/workflows/python-tests.yml)
 [![Secret Scan](https://github.com/suryakumaran2611/auto-arch-diagram/actions/workflows/secret-scan.yml/badge.svg)](https://github.com/suryakumaran2611/auto-arch-diagram/actions/workflows/secret-scan.yml)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-🏗️ **Professional architecture diagram generation from Infrastructure-as-Code** - Automatically visualize AWS, Azure, GCP, IBM, and Oracle Cloud architectures with best-practice styling and VPC/network grouping.
+*Automatically generate professional diagrams from Terraform, CloudFormation, Bicep, and Pulumi*
+
+---
+
+### 🌟 See It In Action
+
+</div>
+
+<table>
+<tr>
+<td width="50%">
+
+**MLOps Multi-Cloud** (47 resources)
+
+![MLOps Multi-Cloud](examples/terraform/mlops-multi-cloud/architecture-diagram.png)
+
+*AWS SageMaker + Azure AKS + GCP BigQuery*
+
+</td>
+<td width="50%">
+
+**Custom Icons Demo** (40+ resources)
+
+![Custom Icons Demo](examples/terraform/custom-icons-demo/architecture-diagram.png)
+
+*Event-driven serverless with 11 custom icons*
+
+</td>
+</tr>
+<tr>
+<td width="50%">
+
+**MLOps Multi-Region AWS** (46 resources)
+
+![MLOps Multi-Region](examples/terraform/mlops-multi-region-aws/architecture-diagram.png)
+
+*Primary + DR with VPC peering*
+
+</td>
+<td width="50%">
+
+**AWS Serverless Website**
+
+![AWS Serverless](examples/serverless-website/aws/terraform/architecture-diagram.png)
+
+*S3 + CloudFront + ACM*
+
+</td>
+</tr>
+</table>
+
+---
 
 ## ✨ Key Features
 
-- 🎯 **VPC/Network Grouping**: Resources automatically organized within VPCs with public/private subnet distinction
-- 🎨 **Professional Styling**: Semi-transparent clusters, intelligent edge types (dashed security, bold data, dotted dependencies)
-- 🧠 **AUTO Layout**: 6-factor intelligent analysis chooses optimal horizontal/vertical orientation
-- 📊 **Dynamic Spacing**: Self-adjusting layout based on complexity (nodes, edges, nesting depth)
-- 🏗️ **Multi-Cloud**: 2,100+ official icons for AWS, Azure, GCP, IBM Cloud, Oracle Cloud
-- 📤 **Multiple Formats**: Mermaid (inline), PNG, SVG, JPEG with embedded base64 icons
-- 🚀 **Fast & Efficient**: Intelligent overlap prevention and edge routing
-- 🔒 **Security-First**: Secret scanning, minimal permissions, safe PR handling
+| Feature | Description |
+|---------|-------------|
+| 🎯 **VPC/Network Grouping** | Resources automatically organized within VPCs with public/private subnet distinction |
+| 🎨 **Professional Styling** | Semi-transparent clusters, intelligent edge types (dashed security, bold data, dotted dependencies) |
+| 🧠 **AUTO Layout** | 6-factor intelligent analysis chooses optimal horizontal/vertical orientation |
+| 📊 **Dynamic Spacing** | Self-adjusting layout based on complexity (nodes, edges, nesting depth) |
+| 🏗️ **Multi-Cloud** | 2,100+ official icons for AWS, Azure, GCP, IBM Cloud, Oracle Cloud |
+| 📤 **Multiple Formats** | Mermaid (inline), PNG, SVG, JPEG with embedded base64 icons |
+| 🔌 **Custom Icons** | Add your own icons for domain-specific components |
+| 🚀 **GitHub Actions** | One-line workflow integration with PR comments |
+| 🔒 **Security-First** | Secret scanning, redaction, minimal permissions |
 
 ## 🎯 Quick Start
 
@@ -250,34 +309,62 @@ env:
 | **Pulumi TS/Py** | `Pulumi.*.ts`, `Pulumi.*.py` | ⚠️ Limited (requires AI mode) |
 | **CDK** | `*.cdk.ts`, `*.cdk.py` | ⚠️ Limited (requires AI mode) |
 
-## 📊 Example Outputs
+## 📊 Example Gallery
 
-### Complex Serverless Data Pipeline (Custom Icons)
+<details>
+<summary><strong>🌐 MLOps Multi-Cloud (AWS + Azure + GCP)</strong> - Click to expand</summary>
 
-[examples/terraform/custom-icons-demo/architecture-diagram.png](examples/terraform/custom-icons-demo/architecture-diagram.png)
+![MLOps Multi-Cloud](examples/terraform/mlops-multi-cloud/architecture-diagram.png)
 
-**Demonstrates:**
-- **Custom Icon Support**: 11 custom icons for specialized components (DataPipeline, StreamProcessor, SearchEngine, etc.)
-- **Event-Driven Architecture**: API Gateway → Lambda → Kinesis → ElasticSearch workflow
-- **VPC Grouping**: Resources organized within VPC with public/private subnet distinction
-- **Multiple Data Stores**: S3, DynamoDB, ElasticSearch, Glue Catalog integration
-- **Serverless Patterns**: Lambda functions, Step Functions, EventBridge, SNS/SQS
-- **Professional Styling**: White backgrounds, colored borders, center-based edge routing
-- **Complex Topology**: 40+ resources with intelligent AUTO layout selection
+**47 Resources** spanning three cloud providers:
+- **GCP Data Layer**: BigQuery feature store, Dataflow processing, Pub/Sub events
+- **AWS Training Layer**: SageMaker, S3 model registry, Step Functions orchestration
+- **Azure Inference Layer**: AKS serving cluster, Container Registry, Cosmos DB logging
 
-**Key Features Showcased:**
-- Custom icon integration (Icon tag support)
-- Real-time streaming (Kinesis + Lambda)
-- Batch processing (S3 events + Glue Crawler)
-- Search/analytics (ElasticSearch + Athena)
-- Monitoring/alerts (CloudWatch + SNS)
-- Dead letter queue handling
+➡️ [View Terraform](examples/terraform/mlops-multi-cloud/main.tf)
 
-### All Examples
+</details>
 
-Explore [examples/terraform/](examples/terraform/) for:
-- **custom-icons-demo**: Serverless data pipeline with 11 custom icons (40+ resources)
-- **serverless-website**: Multi-cloud serverless architectures (AWS, Azure, GCP, IBM, OCI)
+<details>
+<summary><strong>🎨 Custom Icons Demo (Serverless Data Pipeline)</strong> - Click to expand</summary>
+
+![Custom Icons Demo](examples/terraform/custom-icons-demo/architecture-diagram.png)
+
+**40+ Resources** with 11 custom icons:
+- **Event-Driven**: API Gateway → Lambda → Kinesis → ElasticSearch
+- **Data Pipeline**: S3 → Glue Crawler → Athena → QuickSight
+- **Custom Icons**: DataPipeline, StreamProcessor, SearchEngine, and more
+
+➡️ [View Terraform](examples/terraform/custom-icons-demo/main.tf)
+
+</details>
+
+<details>
+<summary><strong>🌍 MLOps Multi-Region AWS (DR Architecture)</strong> - Click to expand</summary>
+
+![MLOps Multi-Region AWS](examples/terraform/mlops-multi-region-aws/architecture-diagram.png)
+
+**46 Resources** across two AWS regions:
+- **Primary (us-east-1)**: EKS cluster, RDS Aurora, S3 data lake
+- **DR (us-west-2)**: Read replicas, cross-region replication
+- **Connectivity**: VPC peering, Transit Gateway
+
+➡️ [View Terraform](examples/terraform/mlops-multi-region-aws/main.tf)
+
+</details>
+
+<details>
+<summary><strong>☁️ Multi-Cloud Serverless Websites</strong> - Click to expand</summary>
+
+| Provider | Architecture | Resources |
+|----------|--------------|----------|
+| **AWS** | ![AWS](examples/serverless-website/aws/terraform/architecture-diagram.jpg) | S3, CloudFront, ACM, Route53 |
+| **Azure** | ![Azure](examples/serverless-website/azure/terraform/architecture-diagram.jpg) | Storage, CDN, DNS |
+| **GCP** | ![GCP](examples/serverless-website/gcp/terraform/architecture-diagram.jpg) | Cloud Storage, Cloud CDN |
+
+</details>
+
+📁 **[Browse All Examples →](examples/README.md)**
 
 ## 🚀 Local Development
 
@@ -453,25 +540,16 @@ For very large diagrams (100+ resources):
 
 ## 🎓 Examples Gallery
 
-### Serverless Website Architectures
+### What You Can Generate
 
-Professional serverless website implementations across providers:
-
-- **AWS**: [terraform](examples/serverless-website/aws/terraform), [cloudformation](examples/serverless-website/aws/cloudformation)
-- **Azure**: [terraform](examples/serverless-website/azure/terraform), [bicep](examples/serverless-website/azure/bicep)
-- **GCP**: [terraform](examples/serverless-website/gcp/terraform)
-- **IBM**: [terraform](examples/serverless-website/ibm/terraform)
-- **OCI**: [terraform](examples/serverless-website/oci/terraform)
-
-See [examples/serverless-website/README.md](examples/serverless-website/README.md) for details.
-
-### Reference Architectures
-
-- **AWS Basic**: VPC with public/private subnets, ALB, EC2, RDS
-- **Multi-Cloud Complex**: AWS + Azure + GCP with cross-cloud connections
-- **Serverless**: Lambda/Functions + API Gateway + storage
-
-All examples include generated diagrams (MD, PNG, SVG).
+| Architecture Type | Example | Resources | Features |
+|-------------------|---------|-----------|----------|
+| 🌐 Multi-Cloud | [mlops-multi-cloud](examples/terraform/mlops-multi-cloud/) | 47 | AWS + Azure + GCP |
+| 🌍 Multi-Region | [mlops-multi-region-aws](examples/terraform/mlops-multi-region-aws/) | 46 | Primary + DR |
+| 🎨 Custom Icons | [custom-icons-demo](examples/terraform/custom-icons-demo/) | 40+ | 11 custom icons |
+| ☁️ AWS Serverless | [aws/terraform](examples/serverless-website/aws/terraform/) | 8 | S3 + CloudFront |
+| 🔷 Azure | [azure/terraform](examples/serverless-website/azure/terraform/) | 7 | Storage + CDN |
+| 🔶 GCP | [gcp/terraform](examples/serverless-website/gcp/terraform/) | 6 | Cloud Storage + CDN |
 
 ## 🐛 Troubleshooting
 
@@ -511,4 +589,12 @@ All examples include generated diagrams (MD, PNG, SVG).
 
 ---
 
+<div align="center">
+
 **Made with ❤️ for Infrastructure Engineers**
+
+⭐ **Star this repo** if you find it useful!
+
+[📖 Documentation](docs/) • [🐛 Report Bug](https://github.com/suryakumaran2611/auto-arch-diagram/issues) • [💡 Request Feature](https://github.com/suryakumaran2611/auto-arch-diagram/issues)
+
+</div>
