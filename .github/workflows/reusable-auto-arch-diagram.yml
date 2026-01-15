@@ -251,7 +251,7 @@ jobs:
       - name: List changed IaC files (PR API)
         if: ${{ github.event_name == 'pull_request_target' }}
         id: pr_files
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             const prNumber = context.payload.pull_request.number;

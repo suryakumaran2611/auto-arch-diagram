@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Move v<major> tag to this release
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             const fullTag = context.ref.replace('refs/tags/', '');
