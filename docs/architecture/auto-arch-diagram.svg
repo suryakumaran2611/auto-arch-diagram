@@ -39,55 +39,55 @@
 <path fill="#ebf3e7" stroke="#aeb6be" d="M222,-168C222,-168 275,-168 275,-168 281,-168 287,-174 287,-180 287,-180 287,-359 287,-359 287,-365 281,-371 275,-371 275,-371 222,-371 222,-371 216,-371 210,-365 210,-359 210,-359 210,-180 210,-180 210,-174 216,-168 222,-168"/>
 <text text-anchor="middle" x="232" y="-357.4" font-family="Sans-Serif" font-size="12.00" fill="#2d3436">AWS</text>
 </g>
-<!-- c882f6b3cd0b439e8c753beb804393ae&#45;&gt;227c8993257640ecb315fce509d07752 -->
+<!-- 3cf00f46d0574210a650466ff9ce6211&#45;&gt;6404e2d36c9b412f914395cd65d20cbb -->
 <g id="edge2" class="edge">
-<title>c882f6b3cd0b439e8c753beb804393ae&#45;&gt;227c8993257640ecb315fce509d07752</title>
+<title>3cf00f46d0574210a650466ff9ce6211&#45;&gt;6404e2d36c9b412f914395cd65d20cbb</title>
 <path fill="none" stroke="#6b7280" stroke-width="0.9" d="M178.08,-321C178.08,-321 211.18,-321 211.18,-321"/>
 <polygon fill="#6b7280" stroke="#6b7280" stroke-width="0.9" points="211.18,-323.28 217.68,-321 211.18,-318.73 211.18,-323.28"/>
 </g>
-<!-- 14c32f34e315477fb1a3de7c1cd62446&#45;&gt;c882f6b3cd0b439e8c753beb804393ae -->
+<!-- f81a5415c7af4c2fa7c2c08397040082&#45;&gt;3cf00f46d0574210a650466ff9ce6211 -->
 <g id="edge4" class="edge">
-<title>14c32f34e315477fb1a3de7c1cd62446&#45;&gt;c882f6b3cd0b439e8c753beb804393ae</title>
+<title>f81a5415c7af4c2fa7c2c08397040082&#45;&gt;3cf00f46d0574210a650466ff9ce6211</title>
 <path fill="none" stroke="#6b7280" stroke-width="0.9" d="M85.21,-383C85.21,-383 110.32,-383 110.32,-383"/>
 <polygon fill="#6b7280" stroke="#6b7280" stroke-width="0.9" points="110.32,-385.28 116.82,-383 110.32,-380.73 110.32,-385.28"/>
 </g>
-<!-- 14c32f34e315477fb1a3de7c1cd62446&#45;&gt;7191abccce25459682377322de4ef0c4 -->
+<!-- f81a5415c7af4c2fa7c2c08397040082&#45;&gt;bf0162370c484b069f9c86ce41a6e60e -->
 <g id="edge3" class="edge">
-<title>14c32f34e315477fb1a3de7c1cd62446&#45;&gt;7191abccce25459682377322de4ef0c4</title>
+<title>f81a5415c7af4c2fa7c2c08397040082&#45;&gt;bf0162370c484b069f9c86ce41a6e60e</title>
 <path fill="none" stroke="#6b7280" stroke-width="0.9" d="M55,-299.73C55,-227.68 55,-135 55,-135 55,-135 110.46,-135 110.46,-135"/>
 <polygon fill="#6b7280" stroke="#6b7280" stroke-width="0.9" points="110.46,-137.28 116.96,-135 110.46,-132.73 110.46,-137.28"/>
 </g>
-<!-- 7191abccce25459682377322de4ef0c4&#45;&gt;227c8993257640ecb315fce509d07752 -->
+<!-- bf0162370c484b069f9c86ce41a6e60e&#45;&gt;6404e2d36c9b412f914395cd65d20cbb -->
 <g id="edge1" class="edge">
-<title>7191abccce25459682377322de4ef0c4&#45;&gt;227c8993257640ecb315fce509d07752</title>
+<title>bf0162370c484b069f9c86ce41a6e60e&#45;&gt;6404e2d36c9b412f914395cd65d20cbb</title>
 <path fill="none" stroke="#6b7280" stroke-width="0.9" d="M178.08,-197C178.08,-197 211.18,-197 211.18,-197"/>
 <polygon fill="#6b7280" stroke="#6b7280" stroke-width="0.9" points="211.18,-199.28 217.68,-197 211.18,-194.73 211.18,-199.28"/>
 </g>
-<!-- c882f6b3cd0b439e8c753beb804393ae -->
+<!-- 3cf00f46d0574210a650466ff9ce6211 -->
 <g id="node1" class="node">
-<title>c882f6b3cd0b439e8c753beb804393ae</title>
-<image xlink:href="/home/suryakumaran/GitHub/auto-arch-diagram/.venv/lib/python3.12/site-packages/resources/aws/network/private-subnet.png" width="61px" height="61px" preserveAspectRatio="xMinYMin meet" x="117" y="-413.5"/>
+<title>3cf00f46d0574210a650466ff9ce6211</title>
+<image xlink:href="/home/suryakumaran/GitHub/auto-arch-diagram/venv/lib/python3.12/site-packages/resources/aws/network/private-subnet.png" width="61px" height="61px" preserveAspectRatio="xMinYMin meet" x="117" y="-413.5"/>
 <text text-anchor="middle" x="147.5" y="-312.8" font-family="Helvetica,sans-Serif" font-size="9.00" fill="#2d3436">Subnet</text>
 <text text-anchor="middle" x="147.5" y="-302.8" font-family="Helvetica,sans-Serif" font-size="9.00" fill="#2d3436">public</text>
 </g>
-<!-- 14c32f34e315477fb1a3de7c1cd62446 -->
+<!-- f81a5415c7af4c2fa7c2c08397040082 -->
 <g id="node2" class="node">
-<title>14c32f34e315477fb1a3de7c1cd62446</title>
-<image xlink:href="/home/suryakumaran/GitHub/auto-arch-diagram/.venv/lib/python3.12/site-packages/resources/aws/network/vpc.png" width="61px" height="61px" preserveAspectRatio="xMinYMin meet" x="24" y="-413.5"/>
+<title>f81a5415c7af4c2fa7c2c08397040082</title>
+<image xlink:href="/home/suryakumaran/GitHub/auto-arch-diagram/venv/lib/python3.12/site-packages/resources/aws/network/vpc.png" width="61px" height="61px" preserveAspectRatio="xMinYMin meet" x="24" y="-413.5"/>
 <text text-anchor="middle" x="54.5" y="-312.8" font-family="Helvetica,sans-Serif" font-size="9.00" fill="#2d3436">VPC</text>
 <text text-anchor="middle" x="54.5" y="-302.8" font-family="Helvetica,sans-Serif" font-size="9.00" fill="#2d3436">main</text>
 </g>
-<!-- 7191abccce25459682377322de4ef0c4 -->
+<!-- bf0162370c484b069f9c86ce41a6e60e -->
 <g id="node3" class="node">
-<title>7191abccce25459682377322de4ef0c4</title>
-<image xlink:href="/home/suryakumaran/GitHub/auto-arch-diagram/.venv/lib/python3.12/site-packages/resources/generic/compute/rack.png" width="61px" height="61px" preserveAspectRatio="xMinYMin meet" x="117" y="-165.5"/>
+<title>bf0162370c484b069f9c86ce41a6e60e</title>
+<image xlink:href="/home/suryakumaran/GitHub/auto-arch-diagram/venv/lib/python3.12/site-packages/resources/generic/compute/rack.png" width="61px" height="61px" preserveAspectRatio="xMinYMin meet" x="117" y="-165.5"/>
 <text text-anchor="middle" x="147.5" y="-64.8" font-family="Helvetica,sans-Serif" font-size="9.00" fill="#2d3436">Security Group</text>
 <text text-anchor="middle" x="147.5" y="-54.8" font-family="Helvetica,sans-Serif" font-size="9.00" fill="#2d3436">web</text>
 </g>
-<!-- 227c8993257640ecb315fce509d07752 -->
+<!-- 6404e2d36c9b412f914395cd65d20cbb -->
 <g id="node4" class="node">
-<title>227c8993257640ecb315fce509d07752</title>
-<image xlink:href="/home/suryakumaran/GitHub/auto-arch-diagram/.venv/lib/python3.12/site-packages/resources/aws/compute/ec2.png" width="61px" height="61px" preserveAspectRatio="xMinYMin meet" x="218" y="-289.5"/>
+<title>6404e2d36c9b412f914395cd65d20cbb</title>
+<image xlink:href="/home/suryakumaran/GitHub/auto-arch-diagram/venv/lib/python3.12/site-packages/resources/aws/compute/ec2.png" width="61px" height="61px" preserveAspectRatio="xMinYMin meet" x="218" y="-289.5"/>
 <text text-anchor="middle" x="248.5" y="-188.8" font-family="Helvetica,sans-Serif" font-size="9.00" fill="#2d3436">Instance</text>
 <text text-anchor="middle" x="248.5" y="-178.8" font-family="Helvetica,sans-Serif" font-size="9.00" fill="#2d3436">web</text>
 </g>
