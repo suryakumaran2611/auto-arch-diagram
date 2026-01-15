@@ -32,7 +32,7 @@ on:
           **/*.cdk.ts
           **/*.cdk.py
       direction:
-        description: "Diagram direction (LR|RL|TB|BT)."
+        description: "Diagram direction: LR (horizontal left-to-right), TB (vertical top-to-bottom), RL, BT, or AUTO (intelligent selection based on architecture)."
         required: false
         type: string
         default: LR

@@ -67,10 +67,29 @@ class RenderConfig:
     edge_routing: str = "ortho"  # ortho | spline | polyline | curved
     overlap_removal: str = "prism"  # prism | scalexy | compress | vpsc | ipsep | false
     
-    # Minimum spacing constraints (used when auto-calculating)
+    # Edge styling for different connection types (architecture best practices)
+    edge_style_security: str = "dashed"  # Security group / firewall connections
+    edge_style_data: str = "bold"  # Data flow connections
+    edge_style_dependency: str = "dotted"  # Logical dependencies
+    edge_style_network: str = "solid"  # Network connections (default)
+    
+    # Cloud provider colors (white backgrounds with colored borders only)
+    color_aws: str = "#FFFFFF"  # White background
+    color_azure: str = "#FFFFFF"  # White background
+    color_gcp: str = "#FFFFFF"  # White background
+    color_oci: str = "#FFFFFF"  # White background
+    color_ibm: str = "#FFFFFF"  # White background
+    
+    # VPC/Network colors (very light subtle backgrounds)
+    color_vpc: str = "#F8FCFF"  # Very light blue tint for VPC
+    color_public_subnet: str = "#F8FFF8"  # Very light green tint for public
+    color_private_subnet: str = "#FFFEF8"  # Very light yellow tint for private
+    color_security: str = "#FFF8F8"  # Very light red tint for security
+    
+    # Minimum spacing constraints (used when auto-calculating) - compact layout
     min_pad: float = 0.3
-    min_nodesep: float = 0.25
-    min_ranksep: float = 0.65
+    min_nodesep: float = 0.7
+    min_ranksep: float = 0.5
     
     # Complexity multipliers for auto-spacing
     complexity_scale: float = 1.5  # How much to scale spacing based on complexity
@@ -78,12 +97,12 @@ class RenderConfig:
 
     # Styling
     background: str = "transparent"  # transparent | white
-    fontname: str = "Helvetica"
-    graph_fontsize: int = 18
+    fontname: str = "Helvetica-Bold"
+    graph_fontsize: int = 12
     node_fontsize: int = 9
-    node_width: float = 0.85
-    node_height: float = 0.85
-    edge_color: str = "#6B7280"
+    node_width: float = 0.7
+    node_height: float = 0.7
+    edge_color: str = "#8D96A77B"
     edge_penwidth: float = 0.9
     edge_arrowsize: float = 0.65
 
@@ -221,20 +240,71 @@ def _embed_images_in_svg(svg_path: Path) -> None:
         # Skip if it's already a data URI or external URL.
         if ref.startswith(("data:", "http:", "https:")):
             return m.group(0)
+        
+        img_data = None
+        
+        # Strategy 1: Check relative to SVG location
         img_path = svg_path.parent / ref
-        if not img_path.exists():
+        if img_path.exists():
+            try:
+                img_data = img_path.read_bytes()
+            except Exception:
+                pass
+        
+        # Strategy 2: Try as absolute path directly
+        if img_data is None:
+            try:
+                abs_path = Path(ref)
+                if abs_path.exists() and abs_path.is_file():
+                    img_data = abs_path.read_bytes()
+            except Exception:
+                pass
+        
+        # Strategy 3: Extract from site-packages path if it contains 'resources'
+        if img_data is None and "resources" in ref:
+            try:
+                import sys
+                # Look for 'resources/' in the path and extract everything after it
+                ref_normalized = ref.replace("\\", "/")
+                if "/resources/" in ref_normalized:
+                    resource_suffix = ref_normalized.split("/resources/", 1)[1]
+                    # Try to find in site-packages
+                    for sp in sys.path:
+                        sp_path = Path(sp)
+                        if sp_path.exists():
+                            candidate = sp_path / "resources" / resource_suffix
+                            if candidate.exists():
+                                img_data = candidate.read_bytes()
+                                break
+            except Exception as e:
+                if os.getenv("AUTO_ARCH_DEBUG"):
+                    print(f"Debug: Failed to find icon in site-packages: {e}")
+        
+        if img_data is None:
+            if os.getenv("AUTO_ARCH_DEBUG"):
+                print(f"Debug: Could not find icon at: {ref}")
             return m.group(0)
+        
         try:
-            img_bytes = img_path.read_bytes()
-            b64 = base64.b64encode(img_bytes).decode("ascii")
-            # We assume PNG for diagrams; adjust if needed.
-            return f'xlink:href="data:image/png;base64,{b64}"'
+            b64 = base64.b64encode(img_data).decode("ascii")
+            # Detect MIME type from extension
+            mime = "image/png"
+            ref_lower = ref.lower()
+            if ref_lower.endswith(".jpg") or ref_lower.endswith(".jpeg"):
+                mime = "image/jpeg"
+            elif ref_lower.endswith(".svg"):
+                mime = "image/svg+xml"
+            return f'xlink:href="data:{mime};base64,{b64}"'
         except Exception:
             return m.group(0)
 
     updated = re.sub(r'xlink:href="([^"]+)"', replace_match, content)
     if updated != content:
-        svg_path.write_text(updated, encoding="utf-8")
+        try:
+            svg_path.write_text(updated, encoding="utf-8")
+        except Exception as e:
+            if os.getenv("AUTO_ARCH_DEBUG"):
+                print(f"Debug: Failed to write updated SVG: {e}")
 
 
 @dataclass
@@ -339,33 +409,121 @@ def _analyze_diagram_complexity(
     )
 
 
+def _determine_optimal_direction(
+    complexity: DiagramComplexity,
+    grouped_data: dict[str, dict[str, list[str]]],
+    layout: str,
+) -> str:
+    """Intelligently determine the best diagram direction based on architecture characteristics.
+    
+    Returns 'LR' (horizontal) or 'TB' (vertical) based on:
+    - Number of lanes/clusters (wide architectures → LR)
+    - Node distribution (many providers → LR, deep nesting → TB)
+    - Overall complexity (large diagrams often better horizontal)
+    - Edge patterns (highly connected → TB for clarity)
+    """
+    
+    # Count lanes and providers
+    lane_count = len(grouped_data)
+    provider_count = complexity.provider_count
+    
+    # Calculate cluster width (avg resources per cluster)
+    total_resources = complexity.node_count
+    avg_resources_per_cluster = total_resources / max(complexity.cluster_count, 1)
+    
+    # Decision factors (scoring system)
+    lr_score = 0
+    tb_score = 0
+    
+    # Factor 1: Wide architectures (many lanes/providers) work better horizontally
+    if lane_count >= 4 or provider_count >= 3:
+        lr_score += 2
+    elif lane_count <= 2 and provider_count <= 2:
+        tb_score += 1
+    
+    # Factor 2: Deep nesting suggests vertical layout for clarity
+    if complexity.max_cluster_depth >= 3:
+        tb_score += 2
+    else:
+        lr_score += 1
+    
+    # Factor 3: Large node counts (>30) often benefit from horizontal spread
+    if complexity.node_count > 30:
+        lr_score += 2
+    elif complexity.node_count < 15:
+        tb_score += 1
+    
+    # Factor 4: High edge density benefits from vertical to reduce crossings
+    if complexity.avg_edges_per_node > 3.0:
+        tb_score += 1
+    elif complexity.avg_edges_per_node < 2.0:
+        lr_score += 1
+    
+    # Factor 5: Many small clusters → horizontal, few large clusters → vertical
+    if avg_resources_per_cluster < 5 and complexity.cluster_count > 5:
+        lr_score += 1
+    elif avg_resources_per_cluster > 10:
+        tb_score += 1
+    
+    # Factor 6: Provider-based layout tends to work better vertically
+    if layout == "providers":
+        tb_score += 1
+    else:
+        lr_score += 1
+    
+    # Make decision based on scores
+    if lr_score > tb_score:
+        direction = "LR"
+        reason = "horizontal (wide architecture)"
+    elif tb_score > lr_score:
+        direction = "TB"
+        reason = "vertical (deep nesting)"
+    else:
+        # Tie-breaker: default to LR for most cloud architectures
+        direction = "LR"
+        reason = "horizontal (default for cloud)"
+    
+    # Debug output
+    if os.getenv("AUTO_ARCH_DEBUG"):
+        print(f"[Auto Direction] Scores: LR={lr_score}, TB={tb_score}")
+        print(f"[Auto Direction] Selected: {direction} ({reason})")
+        print(f"[Auto Direction] Factors: lanes={lane_count}, providers={provider_count}, "
+              f"nodes={complexity.node_count}, depth={complexity.max_cluster_depth}, "
+              f"edges/node={complexity.avg_edges_per_node:.1f}")
+    
+    return direction
+
+
 def _calculate_dynamic_spacing(
     complexity: DiagramComplexity,
     render: RenderConfig,
     direction: str,
 ) -> dict[str, Any]:
-    """Calculate optimal spacing parameters based on diagram complexity."""
+    """Calculate optimal spacing parameters based on diagram complexity following professional architecture best practices."""
     
     multipliers = complexity.calculate_spacing_multiplier()
     
-    # Apply multipliers to base values with complexity scaling
-    pad_value = render.min_pad * multipliers["pad"] * render.complexity_scale
-    nodesep_value = render.min_nodesep * multipliers["nodesep"] * render.complexity_scale
-    ranksep_value = render.min_ranksep * multipliers["ranksep"] * render.complexity_scale
+    # Apply multipliers to base values with compact professional scaling
+    # Best practice: conservative scaling for tight, readable diagrams
+    pad_value = render.min_pad * multipliers["pad"] * 1.1  # Minimal padding scale
+    nodesep_value = render.min_nodesep * multipliers["nodesep"] * 1.15  # Compact node separation
+    ranksep_value = render.min_ranksep * multipliers["ranksep"] * 1.2  # Tight rank separation
     
-    # Direction-specific adjustments
+    # Direction-specific adjustments - compact professional ratios
     if direction in ("LR", "RL"):
-        # Left-right layouts need more horizontal spacing
+        # Horizontal layouts: tight horizontal spacing for compact left-right flow
         nodesep_value *= 1.2
+        ranksep_value *= 1.1
     else:
-        # Top-bottom layouts need more vertical spacing
-        ranksep_value *= 1.2
+        # Vertical layouts: compact vertical spacing for efficient hierarchy
+        ranksep_value *= 1.3
+        nodesep_value *= 1.15
     
-    # Additional edge density scaling
+    # Additional edge density scaling - prevent crowding in complex diagrams
     if complexity.avg_edges_per_node > 2.5:
-        nodesep_value *= render.edge_density_scale
-        ranksep_value *= render.edge_density_scale
-        pad_value *= 1.1
+        nodesep_value *= 1.15  # Reduced from render.edge_density_scale (1.2)
+        ranksep_value *= 1.15
+        pad_value *= 1.08  # Slight padding increase
     
     return {
         "pad": round(pad_value, 2),
@@ -539,6 +697,335 @@ def _tf_category(resource_type: str) -> str:
     if any(k in t for k in ["bucket", "storage", "objectstorage", "blob", "s3"]):
         return "Storage"
     return "Other"
+
+
+def _detect_edge_type(from_res: str, to_res: str, all_resources: dict[str, dict[str, Any]]) -> str:
+    """Detect the type of connection between two resources for intelligent edge styling.
+    Returns: 'security', 'data', 'dependency', or 'network'
+    """
+    from_type = from_res.split(".", 1)[0].lower()
+    to_type = to_res.split(".", 1)[0].lower()
+    
+    # Security connections (firewall, security groups, IAM, etc.)
+    security_keywords = ["security", "firewall", "iam", "kms", "key", "policy", "role", "nsg", "nacl", "waf"]
+    if any(k in from_type or k in to_type for k in security_keywords):
+        return "security"
+    
+    # Data flow connections (databases, storage, queues, streams)
+    data_keywords = ["db", "database", "rds", "dynamodb", "sql", "storage", "bucket", "s3", "blob",
+                     "queue", "stream", "kinesis", "eventgrid", "pubsub", "cosmos", "redis", "elasticache"]
+    if any(k in from_type or k in to_type for k in data_keywords):
+        return "data"
+    
+    # Check for cross-provider connections (should be dotted for logical dependency)
+    from_provider = _guess_provider(from_type)
+    to_provider = _guess_provider(to_type)
+    if from_provider != to_provider:
+        return "dependency"
+    
+    # Default to network connection
+    return "network"
+
+
+def _get_edge_style_attrs(edge_type: str, render: RenderConfig) -> dict[str, str]:
+    """Get edge styling attributes based on connection type following architecture best practices."""
+    base_attrs = {
+        "color": render.edge_color,
+        "penwidth": str(render.edge_penwidth),
+        "arrowsize": str(render.edge_arrowsize),
+    }
+    
+    if edge_type == "security":
+        # Dashed lines for security boundaries and policies
+        base_attrs["style"] = render.edge_style_security
+        base_attrs["color"] = "#F44336"  # Red for security
+        base_attrs["penwidth"] = str(render.edge_penwidth * 1.2)
+    elif edge_type == "data":
+        # Bold lines for data flow
+        base_attrs["style"] = render.edge_style_data
+        base_attrs["color"] = "#BFDDF697"  # Blue for data
+        base_attrs["penwidth"] = str(render.edge_penwidth * 1.5)
+    elif edge_type == "dependency":
+        # Dotted lines for logical dependencies (cross-cloud, cross-region)
+        base_attrs["style"] = render.edge_style_dependency
+        base_attrs["color"] = "#9E9E9E9D"  # Gray for dependencies
+    else:  # network
+        # Solid lines for network connections (default)
+        base_attrs["style"] = render.edge_style_network
+    
+    return base_attrs
+
+
+def _get_provider_icon_path(provider: str) -> str | None:
+    """Get cloud provider logo icon path if available."""
+    repo_root = Path(__file__).resolve().parents[1]
+    icons_dir = repo_root / "icons"
+    
+    provider_lower = provider.lower()
+    
+    # Map provider names to icon filenames
+    icon_mapping = {
+        "aws": "aws/arch_aws_cloud_64@5x.png",
+        "azurerm": "azure/00559_icon_service_azure_cloud_shell.png",
+        "azure": "azure/00559_icon_service_azure_cloud_shell.png",
+        "google": "gcp/cloud.png",
+        "gcp": "gcp/cloud.png",
+    }
+    
+    # Try to find icon
+    icon_rel_path = icon_mapping.get(provider_lower)
+    if icon_rel_path:
+        icon_path = icons_dir / icon_rel_path
+        if icon_path.exists():
+            return str(icon_path)
+    
+    return None
+
+
+def _get_cluster_color(cluster_name: str, render: RenderConfig) -> str:
+    """Get appropriate color for cluster based on its type and cloud provider."""
+    name_lower = cluster_name.lower()
+    
+    # Cloud provider colors
+    if "aws" in name_lower:
+        return render.color_aws
+    if "azure" in name_lower or "azurerm" in name_lower:
+        return render.color_azure
+    if "gcp" in name_lower or "google" in name_lower:
+        return render.color_gcp
+    if "oracle" in name_lower or "oci" in name_lower:
+        return render.color_oci
+    if "ibm" in name_lower:
+        return render.color_ibm
+    
+    # Network/VPC colors
+    if any(k in name_lower for k in ["vpc", "vnet", "vcn", "network"]):
+        return render.color_vpc
+    if "public" in name_lower:
+        return render.color_public_subnet
+    if "private" in name_lower:
+        return render.color_private_subnet
+    if "security" in name_lower:
+        return render.color_security
+    
+    # Default professional light gray
+    return "#F8F9FA"
+
+
+def _detect_edge_type(from_res: str, to_res: str, all_resources: dict[str, dict[str, Any]]) -> str:
+    """Detect the type of connection between two resources for intelligent edge styling.
+    Returns: 'security', 'data', 'dependency', or 'network'
+    """
+    from_type = from_res.split(".", 1)[0].lower()
+    to_type = to_res.split(".", 1)[0].lower()
+    
+    # Security connections (firewall, security groups, IAM, etc.)
+    security_keywords = ["security", "firewall", "iam", "kms", "key", "policy", "role", "nsg", "nacl"]
+    if any(k in from_type or k in to_type for k in security_keywords):
+        return "security"
+    
+    # Data flow connections (databases, storage, queues, streams)
+    data_keywords = ["db", "database", "rds", "dynamodb", "sql", "storage", "bucket", "s3", "blob",
+                     "queue", "stream", "kinesis", "eventgrid", "pubsub", "cosmos", "redis"]
+    if any(k in from_type or k in to_type for k in data_keywords):
+        return "data"
+    
+    # Check for cross-provider or cross-region connections (should be dotted for logical dependency)
+    from_provider = _guess_provider(from_type)
+    to_provider = _guess_provider(to_type)
+    if from_provider != to_provider:
+        return "dependency"
+    
+    # Default to network connection
+    return "network"
+
+
+def _get_edge_style_attrs(edge_type: str, render: RenderConfig) -> dict[str, str]:
+    """Get edge styling attributes based on connection type following architecture best practices."""
+    base_attrs = {
+        "color": render.edge_color,
+        "penwidth": str(render.edge_penwidth),
+        "arrowsize": str(render.edge_arrowsize),
+    }
+    
+    if edge_type == "security":
+        # Dashed lines for security boundaries and policies
+        base_attrs["style"] = render.edge_style_security
+        base_attrs["color"] = "#F44336"  # Red for security
+        base_attrs["penwidth"] = str(render.edge_penwidth * 1.2)
+    elif edge_type == "data":
+        # Bold lines for data flow
+        base_attrs["style"] = render.edge_style_data
+        base_attrs["color"] = "#2196F3"  # Blue for data
+        base_attrs["penwidth"] = str(render.edge_penwidth * 1.5)
+    elif edge_type == "dependency":
+        # Dotted lines for logical dependencies (cross-cloud, cross-region)
+        base_attrs["style"] = render.edge_style_dependency
+        base_attrs["color"] = "#9E9E9E"  # Gray for dependencies
+    else:  # network
+        # Solid lines for network connections (default)
+        base_attrs["style"] = render.edge_style_network
+    
+    return base_attrs
+
+
+def _is_vpc_or_network(resource_type: str) -> bool:
+    """Check if a resource is a VPC/VNet/Network container."""
+    t = resource_type.lower()
+    # Check if it's a VPC/VNet/Network AND not a subnet or interface
+    is_network = any(k in t for k in ["vpc", "vnet", "vcn", "virtual_network"])
+    is_not_subnet = "subnet" not in t and "interface" not in t
+    return is_network and is_not_subnet
+
+
+def _is_subnet(resource_type: str) -> bool:
+    """Check if a resource is a subnet."""
+    return "subnet" in resource_type.lower()
+
+
+def _is_public_subnet(resource_name: str, resource_attrs: dict[str, Any]) -> bool:
+    """Detect if a subnet is public based on name or attributes."""
+    name_lower = resource_name.lower()
+    if "public" in name_lower or "dmz" in name_lower or "external" in name_lower:
+        return True
+    # Check attributes for public indicators
+    if isinstance(resource_attrs, dict):
+        map_public_ip = resource_attrs.get("map_public_ip_on_launch")
+        if map_public_ip is True or str(map_public_ip).lower() == "true":
+            return True
+    return False
+
+
+def _build_vpc_hierarchy(
+    all_resources: dict[str, dict[str, Any]],
+    edges: set[tuple[str, str]],
+) -> dict[str, dict[str, list[str]]]:
+    """Build VPC/network hierarchy showing which resources belong to which VPC/subnets.
+    
+    Returns: {vpc_name: {subnet_name: [resources...], 'other': [resources...]}}
+    """
+    vpc_hierarchy: dict[str, dict[str, list[str]]] = {}
+    
+    # Find all VPCs and subnets
+    vpcs: dict[str, dict[str, Any]] = {}
+    subnets: dict[str, dict[str, Any]] = {}
+    
+    for res_name, res_attrs in all_resources.items():
+        r_type = res_name.split(".", 1)[0]
+        if _is_vpc_or_network(r_type):
+            vpcs[res_name] = res_attrs
+        elif _is_subnet(r_type):
+            subnets[res_name] = res_attrs
+    
+    # Build subnet-to-VPC mapping from edges
+    subnet_to_vpc: dict[str, str] = {}
+    for src, dst in edges:
+        if src in vpcs and dst in subnets:
+            subnet_to_vpc[dst] = src
+        elif dst in vpcs and src in subnets:
+            subnet_to_vpc[src] = dst
+    
+    # Also check subnet attributes for VPC references
+    for subnet_name, subnet_attrs in subnets.items():
+        if subnet_name in subnet_to_vpc:
+            continue
+        if isinstance(subnet_attrs, dict):
+            # Check for vpc_id reference
+            vpc_ref = None
+            for key in ["vpc_id", "virtual_network_name", "vcn_id"]:
+                if key in subnet_attrs:
+                    ref_val = subnet_attrs[key]
+                    if isinstance(ref_val, str):
+                        # Extract VPC reference (e.g., "aws_vpc.main" from "${aws_vpc.main.id}")
+                        refs = _extract_tf_resource_refs(ref_val)
+                        for ref in refs:
+                            if ref in vpcs:
+                                vpc_ref = ref
+                                break
+            if vpc_ref:
+                subnet_to_vpc[subnet_name] = vpc_ref
+    
+    # Build resource-to-subnet mapping
+    resource_to_subnet: dict[str, str] = {}
+    for src, dst in edges:
+        if src in subnets and dst not in vpcs and dst not in subnets:
+            resource_to_subnet[dst] = src
+        elif dst in subnets and src not in vpcs and src not in subnets:
+            resource_to_subnet[src] = dst
+    
+    # Check resource attributes for subnet references
+    for res_name, res_attrs in all_resources.items():
+        if res_name in vpcs or res_name in subnets:
+            continue
+        if res_name in resource_to_subnet:
+            continue
+        if isinstance(res_attrs, dict):
+            subnet_ref = None
+            for key in ["subnet_id", "subnet_ids", "subnet", "subnets"]:
+                if key in res_attrs:
+                    refs = _extract_tf_resource_refs(res_attrs[key])
+                    for ref in refs:
+                        if ref in subnets:
+                            subnet_ref = ref
+                            break
+            if subnet_ref:
+                resource_to_subnet[res_name] = subnet_ref
+    
+    # Build the hierarchy
+    for vpc_name in vpcs:
+        vpc_hierarchy[vpc_name] = {}
+        # Find subnets in this VPC
+        for subnet_name, parent_vpc in subnet_to_vpc.items():
+            if parent_vpc == vpc_name:
+                vpc_hierarchy[vpc_name][subnet_name] = []
+                # Find resources in this subnet
+                for res_name, parent_subnet in resource_to_subnet.items():
+                    if parent_subnet == subnet_name:
+                        vpc_hierarchy[vpc_name][subnet_name].append(res_name)
+        
+        # Add "other" category for VPC-level resources not in subnets
+        other_resources = []
+        for src, dst in edges:
+            if src == vpc_name and dst not in subnets and dst not in vpcs:
+                if dst not in resource_to_subnet:
+                    other_resources.append(dst)
+            elif dst == vpc_name and src not in subnets and src not in vpcs:
+                if src not in resource_to_subnet:
+                    other_resources.append(src)
+        if other_resources:
+            vpc_hierarchy[vpc_name]["other"] = other_resources
+    
+    return vpc_hierarchy
+
+
+def _get_cluster_color(cluster_name: str, render: RenderConfig) -> str:
+    """Get appropriate color for cluster based on its type and cloud provider."""
+    name_lower = cluster_name.lower()
+    
+    # Cloud provider colors
+    if "aws" in name_lower:
+        return render.color_aws
+    if "azure" in name_lower:
+        return render.color_azure
+    if "gcp" in name_lower or "google" in name_lower:
+        return render.color_gcp
+    if "oracle" in name_lower or "oci" in name_lower:
+        return render.color_oci
+    if "ibm" in name_lower:
+        return render.color_ibm
+    
+    # Network/VPC colors
+    if any(k in name_lower for k in ["vpc", "vnet", "vcn", "network"]):
+        return render.color_vpc
+    if "public" in name_lower:
+        return render.color_public_subnet
+    if "private" in name_lower:
+        return render.color_private_subnet
+    if "security" in name_lower:
+        return render.color_security
+    
+    # Default subtle color
+    return "#F5F5F5"
 
 
 def _wrap_text(text: str, *, max_width: int = 14, max_lines: int = 2) -> str:
@@ -745,29 +1232,66 @@ def _icon_class_for(terraform_resource_type: str):
 
     t = terraform_resource_type.lower()
 
-    # AWS
+    # AWS - Enhanced mapping with comprehensive networking and security icons
     if t.startswith("aws_"):
         mapping = {
+            # Network resources
             "aws_vpc": ("diagrams.aws.network", "VPC"),
             "aws_subnet": ("diagrams.aws.network", "PrivateSubnet"),
             "aws_internet_gateway": ("diagrams.aws.network", "InternetGateway"),
             "aws_nat_gateway": ("diagrams.aws.network", "NATGateway"),
             "aws_route_table": ("diagrams.aws.network", "RouteTable"),
-            "aws_security_group": ("diagrams.aws.security", "SecurityGroup"),
+            "aws_route53_zone": ("diagrams.aws.network", "Route53"),
+            "aws_route53_record": ("diagrams.aws.network", "Route53"),
+            "aws_vpn_gateway": ("diagrams.aws.network", "VpnGateway"),
+            "aws_vpn_connection": ("diagrams.aws.network", "VpnConnection"),
+            "aws_customer_gateway": ("diagrams.aws.network", "CustomerGateway"),
+            "aws_vpc_peering_connection": ("diagrams.aws.network", "VPCPeering"),
+            "aws_transit_gateway": ("diagrams.aws.network", "TransitGateway"),
+            "aws_network_interface": ("diagrams.aws.network", "ElasticNetworkInterface"),
+            "aws_cloudfront_distribution": ("diagrams.aws.network", "CloudFront"),
+            "aws_api_gateway_rest_api": ("diagrams.aws.network", "APIGateway"),
+            
+            # Load balancers
             "aws_lb": ("diagrams.aws.network", "ELB"),
-            "aws_alb": ("diagrams.aws.network", "ELB"),
-            "aws_elb": ("diagrams.aws.network", "ELB"),
+            "aws_alb": ("diagrams.aws.network", "ApplicationLoadBalancer"),
+            "aws_elb": ("diagrams.aws.network", "ElasticLoadBalancing"),
+            "aws_network_load_balancer": ("diagrams.aws.network", "NetworkLoadBalancer"),
+            
+            # Security resources
+            "aws_security_group": ("diagrams.aws.security", "SecurityGroup"),
+            "aws_network_acl": ("diagrams.aws.security", "NetworkAccessControlList"),
+            "aws_iam_role": ("diagrams.aws.security", "IAMRole"),
+            "aws_iam_policy": ("diagrams.aws.security", "IAMPermissions"),
+            "aws_iam_user": ("diagrams.aws.security", "IAM"),
+            "aws_iam_group": ("diagrams.aws.security", "IAM"),
+            "aws_kms_key": ("diagrams.aws.security", "KMS"),
+            "aws_waf_web_acl": ("diagrams.aws.security", "WAF"),
+            "aws_shield_protection": ("diagrams.aws.security", "Shield"),
+            "aws_secrets_manager_secret": ("diagrams.aws.security", "SecretsManager"),
+            
+            # Compute resources
             "aws_instance": ("diagrams.aws.compute", "EC2"),
             "aws_autoscaling_group": ("diagrams.aws.compute", "AutoScaling"),
             "aws_eks_cluster": ("diagrams.aws.compute", "EKS"),
             "aws_ecs_cluster": ("diagrams.aws.compute", "ECS"),
+            "aws_ecs_service": ("diagrams.aws.compute", "ECS"),
             "aws_lambda_function": ("diagrams.aws.compute", "Lambda"),
+            "aws_batch_job_queue": ("diagrams.aws.compute", "Batch"),
+            
+            # Storage resources
             "aws_s3_bucket": ("diagrams.aws.storage", "S3"),
+            "aws_ebs_volume": ("diagrams.aws.storage", "EBS"),
+            "aws_efs_file_system": ("diagrams.aws.storage", "EFS"),
+            "aws_fsx_windows_file_system": ("diagrams.aws.storage", "Fsx"),
+            
+            # Database resources
             "aws_dynamodb_table": ("diagrams.aws.database", "Dynamodb"),
             "aws_db_instance": ("diagrams.aws.database", "RDS"),
-            "aws_rds_cluster": ("diagrams.aws.database", "RDS"),
+            "aws_rds_cluster": ("diagrams.aws.database", "Aurora"),
             "aws_elasticache_cluster": ("diagrams.aws.database", "ElastiCache"),
-            "aws_cloudfront_distribution": ("diagrams.aws.network", "CloudFront"),
+            "aws_elasticache_replication_group": ("diagrams.aws.database", "ElasticacheForRedis"),
+            "aws_redshift_cluster": ("diagrams.aws.database", "Redshift"),
         }
         module_path, class_name = mapping.get(t, ("diagrams.aws.general", "General"))
         return _import_node_class(module_path, class_name)
@@ -893,6 +1417,13 @@ def _render_icon_diagram_from_terraform(
     # Analyze diagram complexity for dynamic spacing
     complexity = _analyze_diagram_complexity(all_resources, edges, grouped_data)
     
+    # Auto-detect optimal direction if set to "auto"
+    original_direction = direction
+    if direction.upper() == "AUTO":
+        direction = _determine_optimal_direction(complexity, grouped_data, layout)
+        if os.getenv("AUTO_ARCH_DEBUG"):
+            print(f"[Auto Direction] Changed from 'auto' to '{direction}'")
+    
     # Calculate optimal spacing parameters
     spacing = _calculate_dynamic_spacing(complexity, render, direction)
     
@@ -932,43 +1463,68 @@ def _render_icon_diagram_from_terraform(
         "esep": f"+{int(final_nodesep * 10)}",  # Dynamic edge separation
         "labelloc": "t",
         "labeljust": "c",
-        # Edge routing improvements
+        # Professional edge routing from centers
         "smoothing": "spring" if complexity.edge_count > 10 else "none",
-        "mclimit": "2.0",  # Limit mincross iterations for performance
-        "nslimit": "2.0",  # Limit network simplex iterations
-        "remincross": "true",  # Remove edge crossings
-        "searchsize": "50",  # Larger search space for better layouts
+        "mclimit": "2.0",
+        "nslimit": "2.0",
+        "remincross": "true",
+        "searchsize": "50",
+        # Center-based edge connections
+        "center": "true",  # Center drawing
     }
 
-    # Make icon tiles smaller and remove the white filled box behind icons.
+    # Professional fixed-size uniform icons with label below
     node_attr = {
         "fontname": render.fontname,
         "fontsize": str(render.node_fontsize),
-        "labelloc": "b",
-        "labeljust": "c",
-        "imagescale": "true",
-        "fixedsize": "true",
+        "labelloc": "b",  # Label at bottom
+        "labeljust": "c",  # Center label
+        "imagescale": "true",  # Scale icon to fit
+        "fixedsize": "true",  # FIXED uniform size for all icons
         "width": str(render.node_width),
         "height": str(render.node_height),
         "shape": "box",
-        # Draw a subtle tile border so edges visibly terminate at node boundary.
-        "style": "rounded",
+        "style": "rounded,filled",
         "margin": "0.05",
-        "fillcolor": bgcolor if outformat in {"jpg", "jpeg"} else "transparent",
-        "color": "#D1D5DB",
-        "penwidth": "1",
+        "fillcolor": "white",
+        "color": "#B0B0B0",
+        "penwidth": "1.0",
     }
 
+    # Base edge attributes with professional center-based connections
     edge_attr = {
         "color": render.edge_color,
         "penwidth": str(render.edge_penwidth),
         "arrowsize": str(render.edge_arrowsize),
-        # Intelligent edge styling based on complexity
+        "style": render.edge_style_network,  # Default style
+        # Professional edge routing from center of borders
         "constraint": "true",  # Maintain hierarchical structure
-        "minlen": "2" if complexity.edge_count > 20 else "1",  # Longer edges for complex diagrams
-        "weight": "1",  # Default edge weight
+        "minlen": "2" if complexity.edge_count > 20 else "1",
+        "weight": "1",
+        "dir": "forward",
+        # Center-based edge connections
+        "headclip": "true",  # Clip at node boundary
+        "tailclip": "true",  # Clip at node boundary
+        "arrowhead": "normal",  # Standard arrowhead
+        "arrowtail": "none",
+        # Smooth routing
+        "decorate": "false",
+        "labeldistance": "1.5",
+        "labelangle": "0",
     }
 
+    # Build VPC hierarchy for best-practice network grouping
+    vpc_hierarchy = _build_vpc_hierarchy(all_resources, edges)
+    
+    # Track which resources are already rendered in VPCs
+    resources_in_vpcs: set[str] = set()
+    for vpc_name, subnets_dict in vpc_hierarchy.items():
+        resources_in_vpcs.add(vpc_name)
+        for subnet_name, subnet_resources in subnets_dict.items():
+            if subnet_name != "other":
+                resources_in_vpcs.add(subnet_name)
+            resources_in_vpcs.update(subnet_resources)
+    
     with Diagram(
         title,
         show=False,
@@ -979,15 +1535,113 @@ def _render_icon_diagram_from_terraform(
         node_attr=node_attr,
         edge_attr=edge_attr,
     ):
+        # Helper function to render provider icon + label cluster
+        def render_provider_cluster(provider: str, cluster_color: str, penwidth: str = "0.5"):
+            # Create provider label with colored border
+            provider_icon_path = _get_provider_icon_path(provider)
+            if provider_icon_path:
+                # Use Custom node for provider badge with icon
+                try:
+                    Custom = _import_node_class("diagrams", "Custom")
+                    if Custom:
+                        # Create invisible provider badge node
+                        provider_badge = Custom("", provider_icon_path)
+                except Exception:
+                    pass
+            
+            # Map provider to border color
+            border_colors = {
+                "AWS": "#FFE7C4B6",  # AWS orange
+                "AZURERM": "#9BD0F9B5",  # Azure blue
+                "AZURE": "#A7D6FBAF",  # Azure blue
+                "GOOGLE": "#C0D3F3BA",  # GCP blue
+                "GCP": "#AAC7F596",  # GCP blue
+                "OCI": "#FFCCCC",  # Oracle red
+                "IBM": "#BBCEF2AE",  # IBM blue
+            }
+            border_color = border_colors.get(provider.upper(), "#6C757D")
+            
+            provider_label = f"{provider} Cloud"
+            provider_cluster_attrs = {
+                "bgcolor": "#FFFFFF",  # White background
+                "style": "rounded,filled",
+                "penwidth": "2.5",  # Thicker border for visibility
+                "fontsize": "12",
+                "fontname": "Helvetica-Bold",
+                "color": border_color,  # Colored border
+                "labelloc": "t",
+                "labeljust": "l",
+            }
+            return Cluster(provider_label, graph_attr=provider_cluster_attrs)
+        
         if layout == "providers":
-            # Provider-first: AWS/Azure/GCP/... with category sub-clusters.
+            # Provider-first: AWS/Azure/GCP/... with category sub-clusters and VPC grouping.
             for provider, categories in sorted(grouped_providers.items()):
-                with Cluster(provider):
+                cluster_color = _get_cluster_color(provider, render)
+                with render_provider_cluster(provider, cluster_color, penwidth="1.5"):
+                    # First render VPC hierarchies for this provider
+                    provider_vpcs = {vpc: data for vpc, data in vpc_hierarchy.items() 
+                                    if _guess_provider(vpc.split(".", 1)[0]) == provider}
+                    
+                    for vpc_name, subnets_dict in sorted(provider_vpcs.items()):
+                        vpc_label = _tf_node_label(vpc_name)
+                        vpc_attrs = {
+                            "bgcolor": render.color_vpc,
+                            "style": "rounded,filled",
+                            "penwidth": "2.0",
+                            "color": "#5DADE2",  # AWS VPC blue border
+                            "fontsize": "11",
+                            "fontname": "Helvetica-Bold",
+                        }
+                        with Cluster(vpc_label, graph_attr=vpc_attrs):
+                            r_type, _name = vpc_name.split(".", 1)
+                            Icon = _icon_class_for(r_type) or _generic_icon_for_kind("network")
+                            node_by_res[vpc_name] = Icon(_tf_node_label(vpc_name))
+                            
+                            # Render subnets within VPC
+                            for subnet_name, subnet_resources in sorted(subnets_dict.items()):
+                                if subnet_name == "other":
+                                    # VPC-level resources not in subnets
+                                    for res in sorted(subnet_resources):
+                                        r_type, _name = res.split(".", 1)
+                                        Icon = _icon_class_for(r_type) or _generic_icon_for_kind("compute")
+                                        node_by_res[res] = Icon(_tf_node_label(res))
+                                else:
+                                    # Subnet cluster
+                                    subnet_attrs_dict = all_resources.get(subnet_name, {})
+                                    is_public = _is_public_subnet(subnet_name, subnet_attrs_dict)
+                                    subnet_color = render.color_public_subnet if is_public else render.color_private_subnet
+                                    subnet_label = _tf_node_label(subnet_name) + (" (Public)" if is_public else " (Private)")
+                                    subnet_attrs = {
+                                        "bgcolor": subnet_color,
+                                        "style": "rounded,filled,dashed" if is_public else "rounded,filled",
+                                        "penwidth": "1.5",
+                                        "color": "#28A745" if is_public else "#FFC107",  # Green for public, amber for private
+                                    }
+                                    with Cluster(subnet_label, graph_attr=subnet_attrs):
+                                        r_type, _name = subnet_name.split(".", 1)
+                                        Icon = _icon_class_for(r_type) or _generic_icon_for_kind("network")
+                                        node_by_res[subnet_name] = Icon(_tf_node_label(subnet_name))
+                                        
+                                        # Resources in subnet
+                                        for res in sorted(subnet_resources):
+                                            r_type, _name = res.split(".", 1)
+                                            Icon = _icon_class_for(r_type) or _generic_icon_for_kind("compute")
+                                            node_by_res[res] = Icon(_tf_node_label(res))
+                    
+                    # Then render category lanes for non-VPC resources
                     for lane in lanes:
-                        resources = categories.get(lane)
+                        resources = [r for r in (categories.get(lane) or []) if r not in resources_in_vpcs]
                         if not resources:
                             continue
-                        with Cluster(lane):
+                        lane_color = _get_cluster_color(lane, render)
+                        lane_cluster_attrs = {
+                            "bgcolor": lane_color,
+                            "style": "rounded,filled",
+                            "penwidth": "0.5",
+                            "color": "#CCCCCC",
+                        }
+                        with Cluster(lane, graph_attr=lane_cluster_attrs):
                             for res in sorted(resources):
                                 r_type, _name = res.split(".", 1)
                                 Icon = _icon_class_for(r_type) or _generic_icon_for_kind("compute")
@@ -998,17 +1652,95 @@ def _render_icon_diagram_from_terraform(
                 providers = grouped_lanes.get(lane) or {}
                 if not providers:
                     continue
-                with Cluster(lane):
+                lane_color = _get_cluster_color(lane, render)
+                lane_cluster_attrs = {
+                    "bgcolor": "#FFFFFF",  # White background
+                    "style": "rounded,filled",
+                    "penwidth": "1.0",
+                    "fontsize": "14",
+                    "fontname": "Helvetica-Bold",
+                    "color": "#CCCCCC",  # Light gray border
+                }
+                with Cluster(lane, graph_attr=lane_cluster_attrs):
                     for provider, resources in sorted(providers.items()):
-                        with Cluster(provider):
-                            for res in sorted(resources):
+                        # Filter out resources already in VPCs
+                        provider_resources = [r for r in resources if r not in resources_in_vpcs]
+                        
+                        # Get VPCs for this provider in this lane
+                        provider_vpcs = {vpc: data for vpc, data in vpc_hierarchy.items()
+                                        if vpc in resources and _guess_provider(vpc.split(".", 1)[0]) == provider}
+                        
+                        if not provider_resources and not provider_vpcs:
+                            continue
+                        
+                        cluster_color = _get_cluster_color(provider, render)
+                        with render_provider_cluster(provider, cluster_color, penwidth="0.5"):
+                            # First render VPCs with their hierarchies
+                            for vpc_name, subnets_dict in sorted(provider_vpcs.items()):
+                                vpc_label = _tf_node_label(vpc_name)
+                                vpc_attrs = {
+                                    "bgcolor": render.color_vpc,
+                                    "style": "rounded,filled",
+                                    "penwidth": "2.0",
+                                    "color": "#5DADE2",  # AWS VPC blue border
+                                    "fontsize": "11",
+                                    "fontname": "Helvetica-Bold",
+                                }
+                                with Cluster(vpc_label, graph_attr=vpc_attrs):
+                                    r_type, _name = vpc_name.split(".", 1)
+                                    Icon = _icon_class_for(r_type) or _generic_icon_for_kind("network")
+                                    node_by_res[vpc_name] = Icon(_tf_node_label(vpc_name))
+                                    
+                                    # Render subnets within VPC
+                                    for subnet_name, subnet_resources in sorted(subnets_dict.items()):
+                                        if subnet_name == "other":
+                                            # VPC-level resources
+                                            for res in sorted(subnet_resources):
+                                                r_type, _name = res.split(".", 1)
+                                                Icon = _icon_class_for(r_type) or _generic_icon_for_kind("compute")
+                                                node_by_res[res] = Icon(_tf_node_label(res))
+                                        else:
+                                            # Subnet cluster
+                                            subnet_attrs_dict = all_resources.get(subnet_name, {})
+                                            is_public = _is_public_subnet(subnet_name, subnet_attrs_dict)
+                                            subnet_color = render.color_public_subnet if is_public else render.color_private_subnet
+                                            subnet_label = _tf_node_label(subnet_name) + (" (Public)" if is_public else " (Private)")
+                                            subnet_attrs = {
+                                                "bgcolor": subnet_color,
+                                                "style": "rounded,filled,dashed" if is_public else "rounded,filled",
+                                                "penwidth": "1.5",
+                                                "color": "#28A745" if is_public else "#FFC107",  # Green for public, amber for private
+                                            }
+                                            with Cluster(subnet_label, graph_attr=subnet_attrs):
+                                                r_type, _name = subnet_name.split(".", 1)
+                                                Icon = _icon_class_for(r_type) or _generic_icon_for_kind("network")
+                                                node_by_res[subnet_name] = Icon(_tf_node_label(subnet_name))
+                                                
+                                                # Resources in subnet
+                                                for res in sorted(subnet_resources):
+                                                    r_type, _name = res.split(".", 1)
+                                                    Icon = _icon_class_for(r_type) or _generic_icon_for_kind("compute")
+                                                    node_by_res[res] = Icon(_tf_node_label(res))
+                            
+                            # Then render remaining resources not in VPCs
+                            for res in sorted(provider_resources):
                                 r_type, _name = res.split(".", 1)
                                 Icon = _icon_class_for(r_type) or _generic_icon_for_kind("compute")
                                 node_by_res[res] = Icon(_tf_node_label(res))
 
         for src_res, dst_res in sorted(edges):
             if src_res in node_by_res and dst_res in node_by_res:
-                node_by_res[src_res] >> node_by_res[dst_res]
+                # Detect edge type and apply intelligent styling
+                edge_type = _detect_edge_type(src_res, dst_res, all_resources)
+                edge_style_attrs = _get_edge_style_attrs(edge_type, render)
+                
+                # Try to apply custom styling using Edge object
+                try:
+                    from diagrams import Edge
+                    node_by_res[src_res] >> Edge(**edge_style_attrs) >> node_by_res[dst_res]
+                except (ImportError, TypeError, AttributeError):
+                    # Fallback to simple connection if Edge styling not supported
+                    node_by_res[src_res] >> node_by_res[dst_res]
 
     if outformat == "svg":
         _embed_images_in_svg(out_path)
@@ -1103,6 +1835,57 @@ def _static_terraform_graph(files: list[Path], limits: Limits) -> tuple[dict[str
     return all_resources, edges
 
 
+# CloudFormation intrinsic function handlers for YAML
+def _cfn_tag_constructor(loader: yaml.SafeLoader, tag_suffix: str, node: yaml.Node) -> dict[str, Any]:
+    """Generic constructor for CloudFormation intrinsic functions like !Ref, !GetAtt, etc."""
+    # Convert tag like '!Ref' to 'Ref', '!GetAtt' to 'Fn::GetAtt'
+    if tag_suffix == "Ref":
+        key = "Ref"
+    elif tag_suffix.startswith("Fn::"):
+        key = tag_suffix
+    else:
+        key = f"Fn::{tag_suffix}"
+    
+    # Handle scalar nodes
+    if isinstance(node, yaml.ScalarNode):
+        value = loader.construct_scalar(node)
+        return {key: value}
+    # Handle sequence nodes
+    elif isinstance(node, yaml.SequenceNode):
+        value = loader.construct_sequence(node)
+        return {key: value}
+    # Handle mapping nodes
+    elif isinstance(node, yaml.MappingNode):
+        value = loader.construct_mapping(node)
+        return {key: value}
+    else:
+        return {key: None}
+
+
+def _create_cfn_loader() -> type[yaml.SafeLoader]:
+    """Create a custom YAML loader that handles CloudFormation intrinsic functions."""
+    loader = type('CFNLoader', (yaml.SafeLoader,), {})
+    
+    # Register constructors for common CloudFormation intrinsic functions
+    cfn_tags = [
+        'Ref', 'GetAtt', 'Join', 'Sub', 'Select', 'Split', 'GetAZs',
+        'Base64', 'ImportValue', 'FindInMap', 'Cidr', 'Transform',
+        'If', 'Equals', 'Not', 'And', 'Or', 'Condition'
+    ]
+    
+    for tag in cfn_tags:
+        yaml_tag = f'!{tag}'
+        loader.add_constructor(yaml_tag, lambda l, n, t=tag: _cfn_tag_constructor(l, t, n))
+    
+    # Also handle the Fn:: prefix forms
+    for tag in cfn_tags:
+        if tag != 'Ref':  # Ref doesn't have Fn:: form
+            yaml_tag = f'!Fn::{tag}'
+            loader.add_constructor(yaml_tag, lambda l, n, t=f'Fn::{tag}': _cfn_tag_constructor(l, t, n))
+    
+    return loader
+
+
 def _extract_cfn_refs(value: Any) -> set[str]:
     refs: set[str] = set()
     for item in _walk(value):
@@ -1143,7 +1926,9 @@ def _static_cloudformation_mermaid(files: list[Path], direction: str, limits: Li
             if f.suffix.lower() == ".json" or name.endswith(".cfn.json"):
                 templates.append(json.loads(raw))
             else:
-                templates.append(yaml.safe_load(raw) or {})
+                # Use custom loader for CloudFormation YAML with intrinsic functions
+                CFNLoader = _create_cfn_loader()
+                templates.append(yaml.load(raw, Loader=CFNLoader) or {})
         except Exception:
             continue
 
@@ -1221,7 +2006,9 @@ def _static_cloudformation_graph(files: list[Path], limits: Limits) -> tuple[dic
             if f.suffix.lower() == ".json" or name.endswith(".cfn.json"):
                 templates.append(json.loads(raw))
             else:
-                templates.append(yaml.safe_load(raw) or {})
+                # Use custom loader for CloudFormation YAML with intrinsic functions
+                CFNLoader = _create_cfn_loader()
+                templates.append(yaml.load(raw, Loader=CFNLoader) or {})
         except Exception:
             continue
 
@@ -1436,6 +2223,96 @@ def _static_pulumi_yaml_mermaid(files: list[Path], direction: str, limits: Limit
     return mermaid, summary, assumptions
 
 
+def _render_cfn_diagram(
+    cfn_resources: dict[str, dict[str, Any]],
+    cfn_edges: set[tuple[str, str]],
+    out_path: Path,
+    cfn_direction: str,
+    cfn_pad: float,
+    cfn_nodesep: float,
+    cfn_ranksep: float,
+    cfn_complexity: Any,
+    render: Any,
+) -> None:
+    """Helper function to render CloudFormation diagram in specified format."""
+    outformat = out_path.suffix.lstrip(".").lower() or "png"
+    filename_no_ext = str(out_path.with_suffix(""))
+    node_by_id: dict[str, Any] = {}
+    
+    # Determine background color
+    desired_bg = (os.getenv("AUTO_ARCH_RENDER_BG") or render.background or "transparent").strip().lower()
+    desired_bg = "transparent" if desired_bg not in {"transparent", "white"} else desired_bg
+    bgcolor = "white" if outformat in {"jpg", "jpeg"} else desired_bg
+    
+    graph_attr = {
+        "bgcolor": bgcolor,
+        "pad": str(cfn_pad),
+        "nodesep": str(cfn_nodesep),
+        "ranksep": str(cfn_ranksep),
+        "splines": render.edge_routing,
+        "concentrate": "true" if render.concentrate else "false",
+        "fontname": render.fontname,
+        "fontsize": str(render.graph_fontsize),
+        "outputorder": "edgesfirst",
+        "overlap": render.overlap_removal,
+        "overlap_scaling": "-4" if render.overlap_removal != "false" else "0",
+        "sep": f"+{int(cfn_nodesep * 20)}",
+        "esep": f"+{int(cfn_nodesep * 10)}",
+        "labelloc": "t",
+        "labeljust": "c",
+        "smoothing": "spring" if cfn_complexity.edge_count > 10 else "none",
+        "mclimit": "2.0",
+        "nslimit": "2.0",
+        "remincross": "true",
+        "searchsize": "50",
+    }
+    node_attr = {
+        "fontname": render.fontname,
+        "fontsize": str(render.node_fontsize),
+        "labelloc": "b",
+        "labeljust": "c",
+        "imagescale": "true",
+        "fixedsize": "true",
+        "width": str(render.node_width),
+        "height": str(render.node_height),
+        "shape": "box",
+        "style": "rounded",
+        "margin": "0.05",
+        "fillcolor": bgcolor if outformat in {"jpg", "jpeg"} else "transparent",
+        "color": "#D1D5DB",
+        "penwidth": "1",
+    }
+    edge_attr = {
+        "color": render.edge_color,
+        "penwidth": str(render.edge_penwidth),
+        "arrowsize": str(render.edge_arrowsize),
+        "constraint": "true",
+        "minlen": "2" if cfn_complexity.edge_count > 20 else "1",
+        "weight": "1",
+    }
+    with Diagram(
+        "Architecture (CloudFormation)",
+        show=False,
+        direction=cfn_direction,
+        outformat=outformat,
+        filename=filename_no_ext,
+        graph_attr=graph_attr,
+        node_attr=node_attr,
+        edge_attr=edge_attr,
+    ):
+        with Cluster("CloudFormation"):
+            for rid in sorted(cfn_resources.keys()):
+                label = _wrap_text(rid, max_width=14, max_lines=2)
+                node_by_id[rid] = (_generic_icon_for_kind("compute") or (lambda x: x))(label)
+        for src, dst in sorted(cfn_edges):
+            if src in node_by_id and dst in node_by_id:
+                node_by_id[src] >> node_by_id[dst]
+    
+    # Embed images in SVG files
+    if outformat == "svg":
+        _embed_images_in_svg(out_path)
+
+
 def _static_markdown(
     changed_paths: list[Path],
     direction: str,
@@ -1528,93 +2405,48 @@ def _static_markdown(
 
     # For CloudFormation, we don't have provider-wide icon mapping yet; render a generic diagram.
     if diag_kind == "cloudformation" and cfn_resources is not None and cfn_edges is not None:
+        # Analyze CloudFormation diagram complexity once
+        grouped_simple = {"CloudFormation": {"AWS": list(cfn_resources.keys())}}
+        cfn_complexity = _analyze_diagram_complexity(cfn_resources, cfn_edges, grouped_simple)
+        
+        # Auto-detect optimal direction if set to "auto"
+        cfn_direction = direction
+        if cfn_direction.upper() == "AUTO":
+            cfn_direction = _determine_optimal_direction(cfn_complexity, grouped_simple, "lanes")
+            if os.getenv("AUTO_ARCH_DEBUG"):
+                print(f"[Auto Direction CFN] Changed from 'auto' to '{cfn_direction}'")
+        
+        cfn_spacing = _calculate_dynamic_spacing(cfn_complexity, render, cfn_direction)
+        
+        # Use auto-calculated spacing or manual overrides
+        cfn_pad = cfn_spacing["pad"] if render.pad == "auto" else float(render.pad)
+        cfn_nodesep = cfn_spacing["nodesep"] if render.nodesep == "auto" else float(render.nodesep)
+        cfn_ranksep = cfn_spacing["ranksep"] if render.ranksep == "auto" else float(render.ranksep)
+        
         try:
+            # Render PNG
             if Diagram is not None and Cluster is not None and out_png is not None:
-                outformat = out_png.suffix.lstrip(".").lower() or "png"
-                filename_no_ext = str(out_png.with_suffix(""))
-                node_by_id: dict[str, Any] = {}
-                
-                # Analyze CloudFormation diagram complexity
-                grouped_simple = {"CloudFormation": {"AWS": list(cfn_resources.keys())}}
-                cfn_complexity = _analyze_diagram_complexity(cfn_resources, cfn_edges, grouped_simple)
-                cfn_spacing = _calculate_dynamic_spacing(cfn_complexity, render, direction)
-                
-                # Use auto-calculated spacing or manual overrides
-                cfn_pad = cfn_spacing["pad"] if render.pad == "auto" else float(render.pad)
-                cfn_nodesep = cfn_spacing["nodesep"] if render.nodesep == "auto" else float(render.nodesep)
-                cfn_ranksep = cfn_spacing["ranksep"] if render.ranksep == "auto" else float(render.ranksep)
-                
-                # Determine background color
-                desired_bg = (os.getenv("AUTO_ARCH_RENDER_BG") or render.background or "transparent").strip().lower()
-                desired_bg = "transparent" if desired_bg not in {"transparent", "white"} else desired_bg
-                bgcolor = "white" if outformat in {"jpg", "jpeg"} else desired_bg
-                
-                graph_attr = {
-                    "bgcolor": bgcolor,
-                    "pad": str(cfn_pad),
-                    "nodesep": str(cfn_nodesep),
-                    "ranksep": str(cfn_ranksep),
-                    "splines": render.edge_routing,
-                    "concentrate": "true" if render.concentrate else "false",
-                    "fontname": render.fontname,
-                    "fontsize": str(render.graph_fontsize),
-                    "outputorder": "edgesfirst",
-                    "overlap": render.overlap_removal,
-                    "overlap_scaling": "-4" if render.overlap_removal != "false" else "0",
-                    "sep": f"+{int(cfn_nodesep * 20)}",
-                    "esep": f"+{int(cfn_nodesep * 10)}",
-                    "labelloc": "t",
-                    "labeljust": "c",
-                    "smoothing": "spring" if cfn_complexity.edge_count > 10 else "none",
-                    "mclimit": "2.0",
-                    "nslimit": "2.0",
-                    "remincross": "true",
-                    "searchsize": "50",
-                }
-                node_attr = {
-                    "fontname": render.fontname,
-                    "fontsize": str(render.node_fontsize),
-                    "labelloc": "b",
-                    "labeljust": "c",
-                    "imagescale": "true",
-                    "fixedsize": "true",
-                    "width": str(render.node_width),
-                    "height": str(render.node_height),
-                    "shape": "box",
-                    "style": "rounded",
-                    "margin": "0.05",
-                    "fillcolor": bgcolor if outformat in {"jpg", "jpeg"} else "transparent",
-                    "color": "#D1D5DB",
-                    "penwidth": "1",
-                }
-                edge_attr = {
-                    "color": render.edge_color,
-                    "penwidth": str(render.edge_penwidth),
-                    "arrowsize": str(render.edge_arrowsize),
-                    "constraint": "true",
-                    "minlen": "2" if cfn_complexity.edge_count > 20 else "1",
-                    "weight": "1",
-                }
-                with Diagram(
-                    "Architecture (CloudFormation)",
-                    show=False,
-                    direction=direction,
-                    outformat=outformat,
-                    filename=filename_no_ext,
-                    graph_attr=graph_attr,
-                    node_attr=node_attr,
-                    edge_attr=edge_attr,
-                ):
-                    with Cluster("CloudFormation"):
-                        for rid in sorted(cfn_resources.keys()):
-                            label = _wrap_text(rid, max_width=14, max_lines=2)
-                            node_by_id[rid] = (_generic_icon_for_kind("compute") or (lambda x: x))(label)
-                    for src, dst in sorted(cfn_edges):
-                        if src in node_by_id and dst in node_by_id:
-                            node_by_id[src] >> node_by_id[dst]
+                _render_cfn_diagram(
+                    cfn_resources, cfn_edges, out_png, cfn_direction, 
+                    cfn_pad, cfn_nodesep, cfn_ranksep, cfn_complexity, render
+                )
                 rendered_any = True
-                if outformat == "svg":
-                    _embed_images_in_svg(out_png)
+            
+            # Render JPG
+            if Diagram is not None and Cluster is not None and out_jpg is not None:
+                _render_cfn_diagram(
+                    cfn_resources, cfn_edges, out_jpg, cfn_direction,
+                    cfn_pad, cfn_nodesep, cfn_ranksep, cfn_complexity, render
+                )
+                rendered_any = True
+            
+            # Render SVG
+            if Diagram is not None and Cluster is not None and out_svg is not None:
+                _render_cfn_diagram(
+                    cfn_resources, cfn_edges, out_svg, cfn_direction,
+                    cfn_pad, cfn_nodesep, cfn_ranksep, cfn_complexity, render
+                )
+                rendered_any = True
         except Exception:
             pass
 
@@ -1779,7 +2611,7 @@ def main() -> int:
     # Direction override: CLI arg > env var > config.
     direction_override = (args.direction or os.getenv("AUTO_ARCH_DIRECTION") or "").strip().upper()
     if direction_override:
-        if direction_override not in {"LR", "RL", "TB", "BT"}:
+        if direction_override not in {"LR", "RL", "TB", "BT", "AUTO"}:
             direction_override = "LR"
         direction = direction_override
 

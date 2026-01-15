@@ -1,0 +1,39 @@
+digraph "Architecture (Terraform)" {
+	graph [bgcolor=transparent center=true concentrate=false esep="+9" fontcolor="#2D3436" fontname=Helvetica fontsize=18 label="Architecture (Terraform)" labeljust=c labelloc=t mclimit=2.0 mode=hier nodesep=0.99 normalize=true nslimit=2.0 outputorder=edgesfirst overlap=prism overlap_scaling=-4 packmode=cluster pad=0.6 rankdir=LR ranksep=2.11 remincross=true searchsize=50 sep="+19" smoothing=none splines=ortho]
+	node [color="#B0B0B0" fillcolor=white fixedsize=true fontcolor="#2D3436" fontname=Helvetica fontsize=9 height=0.85 imagescale=true labeljust=c labelloc=b margin=0.08 ordering=out orientation=0.0 penwidth=1.5 shape=box style="rounded,filled" width=0.85]
+	edge [arrowhead=normal arrowsize=0.65 arrowtail=none color="#6B7280" constraint=true decorate=false dir=forward headclip=true labelangle=0 labeldistance=1.5 minlen=1 penwidth=0.9 style=solid tailclip=true weight=1]
+	subgraph cluster_Network {
+		graph [bgcolor="#FFFFFF" color="#CCCCCC" fontname="Helvetica-Bold" fontsize=14 label=Network labeljust=l pencolor="#AEB6BE" penwidth=1.0 rankdir=LR shape=box style="rounded,filled"]
+		subgraph "cluster_AWS Cloud" {
+			graph [bgcolor="#FFFFFF" color="#FF9900" fontname="Helvetica-Bold" fontsize=12 label="AWS Cloud" labeljust=l labelloc=t pencolor="#AEB6BE" penwidth=2.5 rankdir=LR shape=box style="rounded,filled"]
+			subgraph "cluster_VPC
+main" {
+				graph [bgcolor="#F8FCFF" color="#5DADE2" fontname="Helvetica-Bold" fontsize=11 label="VPC
+main" labeljust=l pencolor="#AEB6BE" penwidth=2.0 rankdir=LR shape=box style="rounded,filled"]
+				"87258761e1544caca4450f9b302a65da" [label="VPC
+main" height=2.3 image="/home/suryakumaran/GitHub/auto-arch-diagram/venv/lib/python3.12/site-packages/resources/aws/network/vpc.png" shape=none]
+				subgraph "cluster_Subnet
+public (Public)" {
+					graph [bgcolor="#F8FFF8" color="#28A745" fontname="Sans-Serif" fontsize=12 label="Subnet
+public (Public)" labeljust=l pencolor="#AEB6BE" penwidth=1.5 rankdir=LR shape=box style="rounded,filled,dashed"]
+					a21591173ebc4b658578c01a53bf8bb7 [label="Subnet
+public" height=2.3 image="/home/suryakumaran/GitHub/auto-arch-diagram/venv/lib/python3.12/site-packages/resources/aws/network/private-subnet.png" shape=none]
+					"246aada6a5234866874eab5b87b05852" [label="Instance
+web" height=2.3 image="/home/suryakumaran/GitHub/auto-arch-diagram/venv/lib/python3.12/site-packages/resources/aws/compute/ec2.png" shape=none]
+				}
+				"429419fa747c4486bca356463d055cb6" [label="Security Group
+web" height=2.3 image="/home/suryakumaran/GitHub/auto-arch-diagram/venv/lib/python3.12/site-packages/resources/generic/compute/rack.png" shape=none]
+			}
+		}
+	}
+	subgraph cluster_Security {
+		graph [bgcolor="#FFFFFF" color="#CCCCCC" fontname="Helvetica-Bold" fontsize=14 label=Security labeljust=l pencolor="#AEB6BE" penwidth=1.0 rankdir=LR shape=box style="rounded,filled"]
+	}
+	subgraph cluster_Compute {
+		graph [bgcolor="#FFFFFF" color="#CCCCCC" fontname="Helvetica-Bold" fontsize=14 label=Compute labeljust=l pencolor="#AEB6BE" penwidth=1.0 rankdir=LR shape=box style="rounded,filled"]
+	}
+	"429419fa747c4486bca356463d055cb6" -> "246aada6a5234866874eab5b87b05852" [arrowsize=0.65 color="#F44336" dir=forward fontcolor="#2D3436" fontname="Sans-Serif" fontsize=13 penwidth=1.08 style=dashed]
+	a21591173ebc4b658578c01a53bf8bb7 -> "246aada6a5234866874eab5b87b05852" [arrowsize=0.65 color="#6B7280" dir=forward fontcolor="#2D3436" fontname="Sans-Serif" fontsize=13 penwidth=0.9 style=solid]
+	"87258761e1544caca4450f9b302a65da" -> "429419fa747c4486bca356463d055cb6" [arrowsize=0.65 color="#F44336" dir=forward fontcolor="#2D3436" fontname="Sans-Serif" fontsize=13 penwidth=1.08 style=dashed]
+	"87258761e1544caca4450f9b302a65da" -> a21591173ebc4b658578c01a53bf8bb7 [arrowsize=0.65 color="#6B7280" dir=forward fontcolor="#2D3436" fontname="Sans-Serif" fontsize=13 penwidth=0.9 style=solid]
+}

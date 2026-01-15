@@ -2,9 +2,30 @@
 
 ## Architecture Diagram (Auto)
 
-Summary: Unable to generate diagram automatically.
+Summary: Generated a dependency-oriented CloudFormation diagram from changed resources.
 
-Reason: No CloudFormation templates parsed from the changed files.
+```mermaid
+flowchart LR
+subgraph CloudFront[CloudFront]
+  cfn_CloudFrontOAC["CloudFrontOAC\nAWS::CloudFront::OriginAccessControl"]
+  cfn_Distribution["Distribution\nAWS::CloudFront::Distribution"]
+end
+subgraph S3[S3]
+  cfn_LogsBucket["LogsBucket\nAWS::S3::Bucket"]
+  cfn_SiteBucket["SiteBucket\nAWS::S3::Bucket"]
+  cfn_SiteBucketPublicAccessBlock["SiteBucketPublicAccessBlock\nAWS::S3::BucketPublicAccessBlock"]
+end
+subgraph WAFv2[WAFv2]
+  cfn_WafAcl["WafAcl\nAWS::WAFv2::WebACL"]
+end
+cfn_CloudFrontOAC --> cfn_Distribution
+cfn_LogsBucket --> cfn_Distribution
+cfn_LogsBucket --> cfn_SiteBucket
+cfn_SiteBucket --> cfn_Distribution
+cfn_SiteBucket --> cfn_SiteBucketPublicAccessBlock
+cfn_WafAcl --> cfn_Distribution
+```
 
-Changed IaC files:
-- /home/suryakumaran/GitHub/auto-arch-diagram/examples/serverless-website/aws/cloudformation/template.yaml
+Assumptions: Connections represent inferred references via Ref/GetAtt/Sub and DependsOn.
+
+Rendered diagram: available as workflow artifact

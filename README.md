@@ -3,209 +3,34 @@
 [![Python Tests](https://github.com/suryakumaran2611/auto-arch-diagram/actions/workflows/python-tests.yml/badge.svg)](https://github.com/suryakumaran2611/auto-arch-diagram/actions/workflows/python-tests.yml)
 [![Secret Scan](https://github.com/suryakumaran2611/auto-arch-diagram/actions/workflows/secret-scan.yml/badge.svg)](https://github.com/suryakumaran2611/auto-arch-diagram/actions/workflows/secret-scan.yml)
 
-A GitHub PR “agent” that generates professional architecture diagrams from Infrastructure-as-Code (IaC) changes.
+🏗️ **Professional architecture diagram generation from Infrastructure-as-Code** - Automatically visualize AWS, Azure, GCP, IBM, and Oracle Cloud architectures with best-practice styling and VPC/network grouping.
 
-**Key Features:**
-- 🎨 **Dynamic Spacing**: Automatically adjusts layout based on diagram complexity for optimal visual clarity
-- 🏗️ **Multi-Cloud Support**: AWS, Azure, GCP, IBM Cloud, Oracle Cloud with 2,100+ official icons
-- 📊 **Multiple Formats**: Mermaid (inline), PNG, SVG, JPEG diagrams
-- 🔧 **Highly Configurable**: Fine-tune spacing, routing, and styling via YAML config
-- 🚀 **Fast & Efficient**: Intelligent algorithms prevent arrow overlaps and text collisions
-- 🔒 **Security-First**: Secret scanning, dependency checks, minimal permissions
+## ✨ Key Features
 
-## How it works
+- 🎯 **VPC/Network Grouping**: Resources automatically organized within VPCs with public/private subnet distinction
+- 🎨 **Professional Styling**: Semi-transparent clusters, intelligent edge types (dashed security, bold data, dotted dependencies)
+- 🧠 **AUTO Layout**: 6-factor intelligent analysis chooses optimal horizontal/vertical orientation
+- 📊 **Dynamic Spacing**: Self-adjusting layout based on complexity (nodes, edges, nesting depth)
+- 🏗️ **Multi-Cloud**: 2,100+ official icons for AWS, Azure, GCP, IBM Cloud, Oracle Cloud
+- 📤 **Multiple Formats**: Mermaid (inline), PNG, SVG, JPEG with embedded base64 icons
+- 🚀 **Fast & Efficient**: Intelligent overlap prevention and edge routing
+- 🔒 **Security-First**: Secret scanning, minimal permissions, safe PR handling
 
-- A GitHub Actions workflow runs on PRs that change IaC files.
-- It reads the changed IaC files (with light redaction + truncation).
-- **Analyzes diagram complexity** (nodes, edges, clusters, nesting depth) to calculate optimal spacing
-- It generates a Mermaid `flowchart` diagram for inline viewing.
-- It also renders a PNG/SVG diagram using official-style provider icons (via the `diagrams` + Graphviz libraries).
-- It posts/updates a PR comment containing the Mermaid diagram and a link to the workflow run (where artifacts can be downloaded).
+## 🎯 Quick Start
 
-## Why this is useful
+### Using Reusable Workflow (Recommended)
 
-- Consistent review artifact: every IaC PR gets an architecture view without manual diagramming.
-- Security-minded defaults: minimal permissions, safe `pull_request_target` pattern for “diagram PRs”, secret scanning.
-- Reusable across repositories via `workflow_call`.
-
-## Setup (no external AI)
-
-1) Ensure the workflow exists:
-
-- [.github/workflows/auto-arch-diagram.yml](.github/workflows/auto-arch-diagram.yml)
-
-This repo also ships a reusable workflow that other repositories can call:
-
-- [.github/workflows/reusable-auto-arch-diagram.yml](.github/workflows/reusable-auto-arch-diagram.yml)
-
-Optional (commit diagrams into the repo via a separate “diagram update PR”):
-
-- Set repository variable `AUTO_ARCH_CREATE_DIAGRAM_PR=true`
-- Configure output locations in [.auto-arch-diagram.yml](.auto-arch-diagram.yml) under `publish.paths`.
-
-2) Default generator mode is `static` (no external AI). It uses parsing libraries to infer dependencies and outputs a Mermaid diagram.
-
-3) The workflow installs Graphviz to render icon-based diagrams. If Graphviz is unavailable, the Mermaid diagram is still produced.
-
-## Security scans and checks
-
-This repo includes “shift-left” security checks that run on PRs and/or on a schedule:
-
-- Secret scanning: gitleaks ([.github/workflows/secret-scan.yml](.github/workflows/secret-scan.yml))
-- Python security tooling in CI: `pip-audit` + `bandit` ([.github/workflows/python-tests.yml](.github/workflows/python-tests.yml))
-- Automated updates: Dependabot ([.github/dependabot.yml](.github/dependabot.yml))
-
-## Optional: AI mode
-
-If you want higher-quality diagrams across more IaC styles, you can enable AI mode.
-
-1) Set repo variable:
-
-- `AUTO_ARCH_MODE=ai`
-
-2) Add an OpenAI key as a repository secret:
-
-- `OPENAI_API_KEY`
-
-3) (Optional) Set the model via repo variable:
-
-- `AUTO_ARCH_MODEL` (defaults to `gpt-4o-mini`)
-
-Notes on reliability:
-
-- In workflows, `mode: ai` automatically installs [requirements-ai.txt](requirements-ai.txt) (includes `openai`).
-- In `static` mode, the tool does not require any external AI services.
-
-## Supported IaC file types
-
-The workflow triggers on common IaC file patterns, including:
-
-- Terraform: `*.tf`, `*.tfvars`, `*.hcl`
-- Bicep: `*.bicep`
-- CloudFormation: `template.yml`, `template.yaml`, `*.cfn.yml`, `*.cfn.yaml`, `*.cfn.json`
-- Pulumi: `Pulumi.*.(yaml|yml|json|ts|py)`
-- CDK: `*.cdk.ts`, `*.cdk.py`
-
-Adjust the patterns in the workflow if your repo layout differs.
-
-## Use in any repo (reusable workflow)
-
-### Inputs
-
-| Name | Type | Default | Description |
-| --- | --- | --- | --- |
-| changed_files | string | `''` | Optional space/newline-separated IaC files; if set, skips change detection. |
-| iac_globs | string | (multiple patterns) | Glob patterns to detect IaC changes. |
-| direction | string | `LR` | Diagram direction (LR/RL/TB/BT). |
-| mode | string | `static` | Generator mode (`static` or `ai`). |
-| model | string | `gpt-4o-mini` | AI model when `mode=ai`. |
-| render_layout | string | `lanes` | Icon layout (`lanes` or `providers`). |
-| render_bg | string | `transparent` | PNG/SVG background (`transparent` or `white`). |
-| image_formats | string | `png,jpg,svg` | Comma-separated formats; `none` to skip images. |
-| out_dir | string | `artifacts` | Output directory for artifacts. |
-| out_md | string | `''` | Override markdown output path. |
-| out_mmd | string | `''` | Override Mermaid output path. |
-| out_png | string | `''` | Override PNG output path. |
-| out_jpg | string | `''` | Override JPEG output path. |
-| out_svg | string | `''` | Override SVG output path. |
-| publish_enabled | boolean | `false` | Write outputs into `publish.paths` from `.auto-arch-diagram.yml`. |
-| comment_on_pr | boolean | `true` | Post/update sticky PR comment (on PR events). |
-| create_diagram_pr | boolean | `false` | Create/update a diagram update PR (needs contents:write). |
-| diagram_pr_branch_prefix | string | `auto-arch-diagram/update` | Branch prefix for diagram PRs. |
-| force_full | boolean | `false` | Force full architecture generation (ignore change detection). |
-
-### Outputs
-
-Artifacts: markdown, Mermaid, and optional PNG/JPG/SVG files under `out_dir` (default `artifacts`). When `comment_on_pr=true`, the PR comment renders the Mermaid diagram and links to artifacts. When `create_diagram_pr=true`, rendered files in `publish.paths` are committed in a dedicated PR.
-
-### Common knobs (formats + paths)
-
-- `image_formats`: `png,jpg,svg` (default), a subset like `png,svg`, or `none` to skip icon rendering.
-- `out_dir`: where the workflow writes outputs (and uploads artifacts from).
-
-If you want to fully control file names/locations, you can also override:
-
-- `out_md`, `out_mmd`, `out_png`, `out_jpg`, `out_svg`
-
-Example: Mermaid-only (fastest, no Graphviz required):
+Create `.github/workflows/auto-arch-diagram.yml` in your repository:
 
 ```yaml
-with:
-  mode: static
-  image_formats: none
-  out_dir: artifacts
-```
-
-Example: Custom output paths:
-
-```yaml
-with:
-  mode: static
-  image_formats: png,svg
-  out_dir: build/diagrams
-  out_md: docs/architecture/architecture-diagram.md
-  out_mmd: docs/architecture/architecture-diagram.mmd
-  out_png: docs/architecture/architecture-diagram.png
-  out_svg: docs/architecture/architecture-diagram.svg
-```
-
-### Use as a composite action (advanced)
-
-If you already have your own workflow and want a single step (instead of `workflow_call`), you can use the composite action:
-
-```yaml
-- name: Generate architecture diagram
-  uses: suryakumaran2611/auto-arch-diagram@v1
-  with:
-    changed_files: ${{ steps.changed.outputs.all_changed_files }}
-    mode: static
-    direction: LR
-    image_formats: png,svg
-    out_dir: artifacts
-```
-
-Versioning:
-
-- Create a release by pushing a semver tag like `v1.0.0`.
-- The workflow also maintains a moving major tag like `v1` (so callers can pin `@v1`).
-
-## Release checklist
-
-- Update [CHANGELOG.md](CHANGELOG.md) (move items from Unreleased into the new version).
-- Ensure CI is green (tests + security scans).
-- Tag and push: `git tag vX.Y.Z` then `git push origin vX.Y.Z`.
-- Confirm the GitHub Release was created and `vX` tag moved.
-
-Create `.github/workflows/auto-arch-diagram.yml` in your repo and call the reusable workflow from this repo.
-
-PR comment + artifacts:
-
-```yaml
-name: Auto Architecture Diagram
+name: Architecture Diagram
 
 on:
-
   pull_request:
-    types: [opened, synchronize, reopened]
     paths:
-      - '**/*.tf'
-      - '**/*.tfvars'
-      - '**/*.hcl'
+      - 'terraform/**/*.tf'
       - '**/*.bicep'
-      - '**/*.cfn.yaml'
-      - '**/*.cfn.yml'
-      - '**/*.cfn.json'
       - '**/template.yaml'
-      - '**/template.yml'
-      - '**/Pulumi.yaml'
-      - '**/Pulumi.yml'
-      - '**/Pulumi.*.yaml'
-      - '**/Pulumi.*.yml'
-      - '**/Pulumi.*.json'
-      - '**/Pulumi.*.ts'
-      - '**/Pulumi.*.py'
-      - '**/*.cdk.ts'
-      - '**/*.cdk.py'
 
 jobs:
   diagram:
@@ -214,312 +39,476 @@ jobs:
       pull-requests: write
     uses: suryakumaran2611/auto-arch-diagram/.github/workflows/reusable-auto-arch-diagram.yml@v1
     with:
-      mode: static
-      direction: LR
-      render_layout: lanes
-      render_bg: transparent
-      # Choose which images to render (png,jpg,svg) or disable with 'none'
+      direction: AUTO                 # Intelligent layout
       image_formats: png,svg
-      # Where artifacts are written + uploaded from
-      out_dir: artifacts
-      publish_enabled: false
       comment_on_pr: true
-      create_diagram_pr: false
 ```
 
-Optional diagram update PR (commits `publish.paths.*` back into your repo):
+### Common Configuration Patterns
 
-- Add repo variable `AUTO_ARCH_CREATE_DIAGRAM_PR=true`
-- Add `pull_request_target` trigger (write permissions) in the same workflow file.
-
-Full single-file example (recommended):
-
+**Multi-Cloud with Custom Paths**
 ```yaml
-name: Auto Architecture Diagram
+with:
+  direction: AUTO
+  image_formats: png,svg
+  iac_globs: |
+    infrastructure/terraform/**/*.tf
+    cloudformation/**/*.yaml
+  out_md: docs/architecture/diagram.md
+  out_png: docs/architecture/diagram.png
+  out_svg: docs/architecture/diagram.svg
+```
 
+**Mermaid-Only (Fastest)**
+```yaml
+with:
+  mode: static
+  image_formats: none
+  out_dir: artifacts
+```
+
+**Force Full Architecture (Ignore Changes)**
+```yaml
+with:
+  direction: AUTO
+  force_full: true
+  image_formats: png,svg,jpg
+```
+
+**With Diagram Commit PR**
+```yaml
 on:
-
-  pull_request:
-    types: [opened, synchronize, reopened]
-    paths:
-      - '**/*.tf'
-      - '**/*.tfvars'
-      - '**/*.hcl'
-      - '**/*.bicep'
-      - '**/*.cfn.yaml'
-      - '**/*.cfn.yml'
-      - '**/*.cfn.json'
-      - '**/template.yaml'
-      - '**/template.yml'
-      - '**/Pulumi.yaml'
-      - '**/Pulumi.yml'
-      - '**/Pulumi.*.yaml'
-      - '**/Pulumi.*.yml'
-      - '**/Pulumi.*.json'
-      - '**/Pulumi.*.ts'
-      - '**/Pulumi.*.py'
-      - '**/*.cdk.ts'
-      - '**/*.cdk.py'
-
   pull_request_target:
     types: [opened, synchronize, reopened]
-    paths:
-      - '**/*.tf'
-      - '**/*.tfvars'
-      - '**/*.hcl'
-      - '**/*.bicep'
-      - '**/*.cfn.yaml'
-      - '**/*.cfn.yml'
-      - '**/*.cfn.json'
-      - '**/template.yaml'
-      - '**/template.yml'
-      - '**/Pulumi.yaml'
-      - '**/Pulumi.yml'
-      - '**/Pulumi.*.yaml'
-      - '**/Pulumi.*.yml'
-      - '**/Pulumi.*.json'
-      - '**/Pulumi.*.ts'
-      - '**/Pulumi.*.py'
-      - '**/*.cdk.ts'
-      - '**/*.cdk.py'
 
 jobs:
-  comment:
-    if: ${{ github.event_name == 'pull_request' }}
-    permissions:
-      contents: read
-      pull-requests: write
-    uses: suryakumaran2611/auto-arch-diagram/.github/workflows/reusable-auto-arch-diagram.yml@v1
-    with:
-      mode: static
-      direction: LR
-      render_layout: lanes
-      render_bg: transparent
-      image_formats: png,svg
-      out_dir: artifacts
-      publish_enabled: false
-      comment_on_pr: true
-      create_diagram_pr: false
-
   diagram_pr:
-    if: ${{ github.event_name == 'pull_request_target' && vars.AUTO_ARCH_CREATE_DIAGRAM_PR == 'true' }}
     permissions:
       contents: write
       pull-requests: write
     uses: suryakumaran2611/auto-arch-diagram/.github/workflows/reusable-auto-arch-diagram.yml@v1
     with:
-      mode: static
-      direction: LR
-      render_layout: lanes
-      render_bg: transparent
+      direction: AUTO
       image_formats: png,svg
-      out_dir: artifacts
-      publish_enabled: true
-      comment_on_pr: false
+      publish_enabled: true          # Commits to publish.paths in .auto-arch-diagram.yml
       create_diagram_pr: true
-
-### Mermaid-only (no images)
-
-If you only want the PR comment Mermaid (fastest + no Graphviz dependency), set:
-
-```yaml
-with:
-  mode: static
-  image_formats: none
-  out_dir: artifacts
 ```
 
-### Use as a composite action (single workflow job)
+## 📋 Configuration Reference
 
-If you prefer not to use the reusable workflow, you can call the action directly.
+### Workflow Inputs
 
-```yaml
-jobs:
-  diagram:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      pull-requests: write
-    steps:
-      - uses: actions/checkout@v4
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `direction` | `LR` | `AUTO` (intelligent), `LR` (→), `TB` (↓), `RL` (←), `BT` (↑) |
+| `mode` | `static` | `static` (no AI) or `ai` (requires OPENAI_API_KEY) |
+| `model` | `gpt-4o-mini` | AI model when mode=ai |
+| `render_layout` | `lanes` | `lanes` (category-first) or `providers` (cloud-first) |
+| `render_bg` | `transparent` | PNG/SVG background: `transparent` or `white` |
+| `image_formats` | `png,jpg,svg` | Formats to generate (comma-separated) or `none` |
+| `iac_globs` | (multiple) | Glob patterns for IaC file detection |
+| `out_dir` | `artifacts` | Output directory for generated files |
+| `out_md` | `''` | Override markdown output path |
+| `out_mmd` | `''` | Override Mermaid output path |
+| `out_png` | `''` | Override PNG output path |
+| `out_jpg` | `''` | Override JPEG output path |
+| `out_svg` | `''` | Override SVG output path |
+| `comment_on_pr` | `true` | Post/update sticky PR comment |
+| `publish_enabled` | `false` | Write to paths in `.auto-arch-diagram.yml` |
+| `create_diagram_pr` | `false` | Create diagram update PR (needs contents:write) |
+| `force_full` | `false` | Render full architecture (ignore change detection) |
 
-      - name: Generate architecture diagram
-        id: arch
-        uses: suryakumaran2611/auto-arch-diagram@v1
-        with:
-          changed_files: ${{ github.event.pull_request.changed_files }}
-          iac_root: .
-          mode: static
-          direction: LR
-          # Generate only PNG+SVG, and put them in a custom folder
-          image_formats: png,svg
-          out_dir: artifacts
-          out_png: docs/architecture/architecture-diagram.png
-          out_svg: docs/architecture/architecture-diagram.svg
-
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: auto-arch-diagram
-          path: artifacts/
-```
-```
-
-To control which files get committed by the diagram-update PR, configure `publish.paths` in `.auto-arch-diagram.yml`:
+### Advanced Configuration (`.auto-arch-diagram.yml`)
 
 ```yaml
+# Generator mode
+generator:
+  mode: static  # static | ai
+
+# AI model (when mode=ai)
+model:
+  name: gpt-4o-mini
+
+# File limits
+limits:
+  max_files: 25
+  max_bytes_per_file: 30000
+
+# Output publishing (for diagram PRs)
 publish:
-
   enabled: true
   paths:
-    md: docs/architecture/architecture-diagram.md
-    mmd: docs/architecture/architecture-diagram.mmd
-    png: docs/architecture/architecture-diagram.png
-    jpg: docs/architecture/architecture-diagram.jpg
-    svg: docs/architecture/architecture-diagram.svg
+    md: docs/architecture/diagram.md
+    mmd: docs/architecture/diagram.mmd
+    png: docs/architecture/diagram.png
+    jpg: docs/architecture/diagram.jpg
+    svg: docs/architecture/diagram.svg
 
+# Rendering configuration
 render:
-  layout: lanes
-  bg: transparent
+  layout: lanes          # lanes | providers
+  
+  # Layout orientation - AUTO for intelligent selection
+  # direction: AUTO is set via workflow input
+  
+  # Category lanes (used when layout=lanes)
+  lanes:
+    - Network
+    - Security
+    - Containers
+    - Compute
+    - Data
+    - Storage
+    - Other
+  
+  # Spacing configuration
   graph:
-    # Auto mode (default) - spacing calculated based on diagram complexity
-    pad: auto          # Border padding
-    nodesep: auto      # Horizontal node spacing
-    ranksep: auto      # Vertical rank spacing
+    pad: auto            # auto | numeric (0.0-2.0)
+    nodesep: auto        # auto | numeric (0.0-2.0)
+    ranksep: auto        # auto | numeric (0.0-3.0)
     
-    # Or use fixed values for manual control
-    # pad: 0.5
-    # nodesep: 0.4
-    # ranksep: 1.0
+    # Auto-spacing constraints
+    min_pad: 0.4
+    min_nodesep: 0.6
+    min_ranksep: 0.9
+    complexity_scale: 1.5
+    edge_density_scale: 1.2
     
-    # Advanced: tune the auto-calculation
-    min_pad: 0.3              # Minimum padding
-    min_nodesep: 0.25         # Minimum horizontal spacing
-    min_ranksep: 0.65         # Minimum vertical spacing
-    complexity_scale: 1.5     # Overall complexity multiplier
-    edge_density_scale: 1.2   # Extra scaling for dense diagrams
-    
-    # Edge routing and overlap prevention
-    edge_routing: ortho       # ortho | spline | polyline | curved
-    overlap_removal: prism    # prism | scalexy | compress | vpsc | false
+    # Edge routing and styling
+    edge_routing: ortho         # ortho | spline | polyline | curved
+    overlap_removal: prism      # prism | scalexy | compress | vpsc | false
+    splines: ortho
+    concentrate: false
+  
+  # Styling
+  background: transparent       # transparent | white
+  fontname: Helvetica
+  graph_fontsize: 18
+  
+  # Node configuration
+  node:
+    fontsize: 9
+    width: 0.85
+    height: 0.85
+  
+  # Edge configuration
+  edge_color: "#6B7280"
+  edge_penwidth: 0.9
+  edge_arrowsize: 0.65
 ```
 
-**📚 Learn more**: See [docs/DYNAMIC_SPACING.md](docs/DYNAMIC_SPACING.md) for detailed configuration guide and best practices.
+## 🎨 Architecture Best Practices
 
-## Local run (optional)
+### VPC/Network Grouping
 
-From the repo root:
+Resources are automatically organized within their VPC/VNet/VCN containers:
 
-1) Install deps:
+- **VPC Clusters**: Automatically detect and group VPC/VNet/VCN resources
+- **Subnet Grouping**: Public subnets (dashed border) vs Private subnets (solid border)
+- **Resource Placement**: EC2, Lambda, RDS automatically placed in correct subnet
+- **Color Coding**: Semi-transparent colors (AWS orange, Azure blue, GCP green)
 
-```bash
-python -m pip install -r requirements.txt
+### Intelligent Edge Styling
+
+Connections use different styles based on relationship type:
+
+- **Solid Lines**: Network connections (default)
+- **Dashed Lines**: Security groups, firewalls, IAM policies (red)
+- **Bold Lines**: Data flow connections to databases/storage (blue)
+- **Dotted Lines**: Cross-cloud/cross-region dependencies (gray)
+
+### AUTO Direction Selection
+
+The `AUTO` mode uses 6-factor scoring to choose optimal orientation:
+
+**Horizontal (LR) favored when:**
+- Wide architectures (4+ lanes, 3+ providers)
+- Large diagrams (50+ resources)
+- Many small clusters
+- Low edge density (<2.0 edges/node)
+
+**Vertical (TB) favored when:**
+- Deep nesting (3+ levels)
+- High edge density (>3.0 edges/node)
+- Few large clusters
+- Provider-first layout
+
+**Debug output:**
+```yaml
+env:
+  AUTO_ARCH_DEBUG: "1"  # Shows scoring details
 ```
 
-2) Run the generator:
+## 🏗️ Supported IaC Types
+
+| Type | Extensions | Support Level |
+|------|------------|---------------|
+| **Terraform** | `*.tf`, `*.tfvars`, `*.hcl` | ✅ Full (VPC grouping, 50+ AWS icons) |
+| **CloudFormation** | `template.yaml`, `*.cfn.*` | ✅ Full (Ref, GetAtt, Sub, DependsOn) |
+| **Bicep** | `*.bicep` | ✅ Good (resource, dependsOn, parent) |
+| **Pulumi YAML** | `Pulumi.yaml` | ✅ Good (resources, dependsOn) |
+| **Pulumi TS/Py** | `Pulumi.*.ts`, `Pulumi.*.py` | ⚠️ Limited (requires AI mode) |
+| **CDK** | `*.cdk.ts`, `*.cdk.py` | ⚠️ Limited (requires AI mode) |
+
+## 📊 Example Outputs
+
+### Complex Serverless Data Pipeline (Custom Icons)
+
+[examples/terraform/custom-icons-demo/architecture-diagram.png](examples/terraform/custom-icons-demo/architecture-diagram.png)
+
+**Demonstrates:**
+- **Custom Icon Support**: 11 custom icons for specialized components (DataPipeline, StreamProcessor, SearchEngine, etc.)
+- **Event-Driven Architecture**: API Gateway → Lambda → Kinesis → ElasticSearch workflow
+- **VPC Grouping**: Resources organized within VPC with public/private subnet distinction
+- **Multiple Data Stores**: S3, DynamoDB, ElasticSearch, Glue Catalog integration
+- **Serverless Patterns**: Lambda functions, Step Functions, EventBridge, SNS/SQS
+- **Professional Styling**: White backgrounds, colored borders, center-based edge routing
+- **Complex Topology**: 40+ resources with intelligent AUTO layout selection
+
+**Key Features Showcased:**
+- Custom icon integration (Icon tag support)
+- Real-time streaming (Kinesis + Lambda)
+- Batch processing (S3 events + Glue Crawler)
+- Search/analytics (ElasticSearch + Athena)
+- Monitoring/alerts (CloudWatch + SNS)
+- Dead letter queue handling
+
+### All Examples
+
+Explore [examples/terraform/](examples/terraform/) for:
+- **custom-icons-demo**: Serverless data pipeline with 11 custom icons (40+ resources)
+- **serverless-website**: Multi-cloud serverless architectures (AWS, Azure, GCP, IBM, OCI)
+
+## 🚀 Local Development
+
+### Setup
 
 ```bash
-python tools/generate_arch_diagram.py --changed-files "path/to/main.tf path/to/vpc.tf"
+# Create virtual environment
+python3 -m venv venv
+source venv/bin/activate  # Windows: venv\Scripts\activate
+
+# Install dependencies
+pip install -r requirements.txt
+
+# For AI mode
+pip install -r requirements-ai.txt
 ```
 
-To run with AI mode locally:
+### Generate Diagram
 
 ```bash
-python -m pip install -r requirements-ai.txt
-set OPENAI_API_KEY=...  # PowerShell: $env:OPENAI_API_KEY="..."
-set AUTO_ARCH_MODE=ai
-python tools/generate_arch_diagram.py --changed-files "path/to/main.tf path/to/vpc.tf"
+# Basic usage
+python tools/generate_arch_diagram.py \
+  --changed-files "terraform/main.tf terraform/vpc.tf" \
+  --direction AUTO \
+  --out-md artifacts/diagram.md \
+  --out-png artifacts/diagram.png \
+  --out-svg artifacts/diagram.svg
+
+# With debug output
+export AUTO_ARCH_DEBUG=1
+python tools/generate_arch_diagram.py \
+  --changed-files "terraform/**/*.tf" \
+  --direction AUTO \
+  --out-png diagram.png
+
+# AI mode
+export AUTO_ARCH_MODE=ai
+export OPENAI_API_KEY=sk-...
+python tools/generate_arch_diagram.py \
+  --changed-files "cdk/app.ts" \
+  --direction AUTO \
+  --out-png diagram.png
 ```
 
-Output:
-
-- `artifacts/architecture-diagram.md` (PR comment body)
-- `artifacts/architecture-diagram.mmd` (raw mermaid)
-- `artifacts/architecture-diagram.png` (rendered diagram with icons, if Graphviz+diagrams available)
-- `artifacts/architecture-diagram.jpg` (rendered diagram with icons; note: JPEG has no transparency)
-- `artifacts/architecture-diagram.svg` (rendered diagram with icons, if Graphviz+diagrams available)
-
-## Unit tests
-
-- CI runs on every push/PR: [.github/workflows/python-tests.yml](.github/workflows/python-tests.yml)
-- Locally in WSL:
+### Regenerate Examples
 
 ```bash
-python3 -m venv .venv
-. .venv/bin/activate
-pip install -r requirements.txt -r requirements-dev.txt
+# Regenerate all example diagrams
+python tools/regenerate_examples.py
+
+# With custom config
+export AUTO_ARCH_PUBLISH_ENABLED=false
+python tools/regenerate_examples.py
+```
+
+### Run Tests
+
+```bash
+# Install dev dependencies
+pip install -r requirements-dev.txt
+
+# Run all tests
 pytest
+
+# Run specific test file
+pytest tests/test_static_terraform.py
+
+# Run with coverage
+pytest --cov=tools --cov-report=html
 ```
 
-## Security notes
+## 🔒 Security Features
 
-- The generator performs basic redaction of likely-secret assignments (e.g. `password=...`, `token: ...`).
-- Still, do not store secrets directly in IaC files.
-- For large changes, the tool truncates file contents to keep prompts bounded.
+### Secret Scanning
+- **gitleaks**: Scans for hardcoded secrets
+- **Redaction**: Automatic redaction of `password=`, `token:` patterns
+- **Truncation**: Large files truncated to prevent leakage
 
-Diagram PR workflow:
-
-- Uses `pull_request_target` so it can open a PR back to the base repo.
-- Checks out the generator code from the base branch, and checks out PR contents into a separate `pr/` folder (read-only usage).
-
-## Current static support
-
-- Terraform (`*.tf`, `*.hcl`): parses resources and draws edges from inferred references/depends_on.
-- CloudFormation (`template.yml|yaml`, `*.cfn.yml|yaml|json`): uses Resources + Ref/GetAtt/Sub/DependsOn.
-- Azure Bicep (`*.bicep`): best-effort parsing of `resource`, `dependsOn`, and `parent`.
-- Pulumi YAML (`Pulumi.yaml|yml`): parses `resources`, `options.dependsOn`, and `${resource.property}` references.
-
-Other IaC types (like CDK programs) are detected by the workflow but may not render a full diagram in static mode yet.
-
-## Notes on “professional icons”
-
-GitHub PR comments can render Mermaid inline, but they do not reliably support embedding arbitrary external icon sets inside Mermaid nodes.
-To keep the diagram professional, the workflow produces PNG/SVG artifacts rendered with provider icon sets using the `diagrams` library.
-
-By default, icon rendering uses an “industry standard” layout (category lanes, orthogonal edges, compact spacing, transparent PNG/SVG background). You can override this in [.auto-arch-diagram.yml](.auto-arch-diagram.yml) under `render` (for example, switch to provider-first grouping).
-
-## Example outputs
-
-Pre-generated diagrams (Mermaid + PNG + SVG) are checked in under `examples/` so you can see the expected style:
-
-- [examples/terraform/aws-basic/architecture-diagram.png](examples/terraform/aws-basic/architecture-diagram.png)
-- [examples/terraform/multi-cloud-complex/architecture-diagram.png](examples/terraform/multi-cloud-complex/architecture-diagram.png)
-
-### Showcase: complex multi-cloud + serverless website
-
-This repo includes a set of security-first “serverless website” reference implementations across providers and IaC styles:
-
-- [examples/serverless-website/README.md](examples/serverless-website/README.md)
-- Terraform examples (best icon rendering):
-  - [examples/serverless-website/aws/terraform/main.tf](examples/serverless-website/aws/terraform/main.tf)
-  - [examples/serverless-website/azure/terraform/main.tf](examples/serverless-website/azure/terraform/main.tf)
-  - [examples/serverless-website/gcp/terraform/main.tf](examples/serverless-website/gcp/terraform/main.tf)
-  - [examples/serverless-website/oci/terraform/main.tf](examples/serverless-website/oci/terraform/main.tf)
-  - [examples/serverless-website/ibm/terraform/main.tf](examples/serverless-website/ibm/terraform/main.tf)
-
-And a multi-cloud Terraform example that stresses layout and lane grouping:
-
-- [examples/terraform/multi-cloud-complex/main.tf](examples/terraform/multi-cloud-complex/main.tf)
-
-Secure serverless website examples across providers/IaC:
-
-- [examples/serverless-website/aws/terraform/main.tf](examples/serverless-website/aws/terraform/main.tf)
-- [examples/serverless-website/aws/cloudformation/template.yaml](examples/serverless-website/aws/cloudformation/template.yaml)
-- [examples/serverless-website/azure/bicep/main.bicep](examples/serverless-website/azure/bicep/main.bicep)
-- [examples/serverless-website/gcp/terraform/main.tf](examples/serverless-website/gcp/terraform/main.tf)
-
-To regenerate these locally (without touching `publish.paths` outputs), run with `AUTO_ARCH_PUBLISH_ENABLED=false`.
-
-```bash
-. .venv/bin/activate
-AUTO_ARCH_PUBLISH_ENABLED=false python tools/regenerate_examples.py
+### Minimal Permissions
+```yaml
+permissions:
+  contents: read       # Read IaC files
+  pull-requests: write # Post PR comments
 ```
 
-## Future plans
+### Safe PR Handling
+- `pull_request`: Read-only access (comments only)
+- `pull_request_target`: Write access (diagram PRs) - checks out generator from base branch
 
-- Improve static parsing coverage for additional IaC types (CDK, Pulumi programs, ARM/Bicep edge cases) while keeping “no external AI” as the default.
-- Add optional diagram post-processing: de-duplication, legend generation, grouping heuristics, and better label/edge routing for very large graphs.
-- Introduce caching to speed up repeated runs (same IaC inputs → same artifacts) and reduce workflow runtime.
-- Expand outputs (optional): standalone HTML report, per-stack/per-module diagrams, and “diff view” (what changed between before/after).
-- Provide an optional pre-commit hook / local CLI wrapper so contributors can generate diagrams before opening a PR.
+### CI Security Checks
+- `pip-audit`: Python dependency vulnerabilities
+- `bandit`: Code security issues
+- Dependabot: Automated dependency updates
 
+## 📚 Documentation
+
+- [Dynamic Spacing Guide](docs/DYNAMIC_SPACING.md) - Detailed spacing configuration
+- [Quick Start Spacing](docs/QUICK_START_SPACING.md) - Quick spacing recipes
+- [Spacing Examples](docs/SPACING_EXAMPLES.md) - Visual examples
+- [Implementation Summary](docs/IMPLEMENTATION_SUMMARY.md) - Technical details
+- [Testing Guide](TESTING.md) - Test suite documentation
+- [Changelog](CHANGELOG.md) - Version history
+
+## 🤝 Contributing
+
+We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+
+### Release Process
+
+1. Update [CHANGELOG.md](CHANGELOG.md)
+2. Ensure CI is green
+3. Create and push tag: `git tag v1.2.3 && git push origin v1.2.3`
+4. GitHub Actions creates release and moves `v1` tag
+
+## 📄 License
+
+[License](LICENSE)
+
+## 🔗 Related Projects
+
+- [diagrams](https://diagrams.mingrammer.com/) - Diagram as code library
+- [Graphviz](https://graphviz.org/) - Graph visualization
+- [Mermaid](https://mermaid.js.org/) - Markdown diagrams
+- [python-hcl2](https://github.com/amplify-education/python-hcl2) - Terraform parser
+
+## 💡 Tips & Tricks
+
+### Optimize Diagram Size
+
+For large architectures, use `force_full: false` to only render changed resources:
+```yaml
+with:
+  force_full: false
+  direction: AUTO
+```
+
+### Debug Layout Issues
+
+Enable debug output to see layout decisions:
+```yaml
+env:
+  AUTO_ARCH_DEBUG: "1"
+```
+
+Output shows:
+- Direction selection reasoning (LR vs TB)
+- Complexity metrics (nodes, edges, depth)
+- Spacing calculations (pad, nodesep, ranksep)
+- VPC/subnet grouping logic
+
+### Custom Icon Paths
+
+Add custom provider icons in `icons/{provider}/` directory:
+```
+icons/
+  aws/
+    my_custom_service.png
+  azure/
+    my_custom_service.png
+```
+
+Icon mapping: `resource_type` → `icons/{provider}/{resource_type_without_prefix}.png`
+
+Example: `aws_custom_service` → `icons/aws/custom_service.png`
+
+### Performance Tuning
+
+For very large diagrams (100+ resources):
+- Use `image_formats: png` (skip SVG/JPG)
+- Set `graph.overlap_removal: false`
+- Use `graph.edge_routing: spline` (faster than ortho)
+- Increase `limits.max_files` if needed
+
+## 🎓 Examples Gallery
+
+### Serverless Website Architectures
+
+Professional serverless website implementations across providers:
+
+- **AWS**: [terraform](examples/serverless-website/aws/terraform), [cloudformation](examples/serverless-website/aws/cloudformation)
+- **Azure**: [terraform](examples/serverless-website/azure/terraform), [bicep](examples/serverless-website/azure/bicep)
+- **GCP**: [terraform](examples/serverless-website/gcp/terraform)
+- **IBM**: [terraform](examples/serverless-website/ibm/terraform)
+- **OCI**: [terraform](examples/serverless-website/oci/terraform)
+
+See [examples/serverless-website/README.md](examples/serverless-website/README.md) for details.
+
+### Reference Architectures
+
+- **AWS Basic**: VPC with public/private subnets, ALB, EC2, RDS
+- **Multi-Cloud Complex**: AWS + Azure + GCP with cross-cloud connections
+- **Serverless**: Lambda/Functions + API Gateway + storage
+
+All examples include generated diagrams (MD, PNG, SVG).
+
+## 🐛 Troubleshooting
+
+**Issue**: Diagram not generated
+- Check workflow logs for Python errors
+- Verify Graphviz is installed (`which dot`)
+- Ensure `.tf` files are valid HCL2
+
+**Issue**: Wrong layout orientation
+- Use `direction: AUTO` for intelligent selection
+- Or manually specify `LR`, `TB`, `RL`, `BT`
+- Check `AUTO_ARCH_DEBUG=1` output
+
+**Issue**: Resources not grouped in VPC
+- Verify VPC has `vpc_id` reference in subnet
+- Check subnet has `subnet_id` reference in resource
+- Ensure resource types match patterns (aws_vpc, aws_subnet)
+
+**Issue**: Colors too light/dark
+- Adjust in `.auto-arch-diagram.yml`:
+  ```yaml
+  render:
+    # Semi-transparent colors with alpha channel
+    color_aws: "#FFE8D699"
+    color_vpc: "#E3F2FD77"
+  ```
+
+**Issue**: Too much spacing
+- Use manual spacing instead of auto:
+  ```yaml
+  render:
+    graph:
+      pad: 0.3
+      nodesep: 0.4
+      ranksep: 0.8
+  ```
+
+---
+
+**Made with ❤️ for Infrastructure Engineers**
