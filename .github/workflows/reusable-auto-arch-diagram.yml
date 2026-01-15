@@ -358,7 +358,7 @@ jobs:
             --out-svg artifacts/architecture-diagram.svg
 
       - name: Create or update diagram PR
-        uses: peter-evans/create-pull-request@v6
+        uses: peter-evans/create-pull-request@v8
         with:
           commit-message: 'chore: update architecture diagram'
           title: 'chore: update architecture diagram'
