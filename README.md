@@ -6,7 +6,7 @@
 
 [![Python Tests](https://github.com/suryakumaran2611/auto-arch-diagram/actions/workflows/python-tests.yml/badge.svg)](https://github.com/suryakumaran2611/auto-arch-diagram/actions/workflows/python-tests.yml)
 [![Secret Scan](https://github.com/suryakumaran2611/auto-arch-diagram/actions/workflows/secret-scan.yml/badge.svg)](https://github.com/suryakumaran2611/auto-arch-diagram/actions/workflows/secret-scan.yml)
-[![License: Polyform Noncommercial](https://img.shields.io/badge/License-Polyform%20NC-red.svg)](LICENSE)
+[![License: Polyform Noncommercial 1.0.0](https://img.shields.io/badge/License-Polyform%20Noncommercial%201.0.0-red.svg)](LICENSE)
 
 *Automatically generate professional diagrams from Terraform, CloudFormation, Bicep, and Pulumi*
 
