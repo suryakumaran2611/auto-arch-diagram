@@ -190,7 +190,7 @@ jobs:
       - name: Determine changed IaC files
         id: changed
         if: ${{ !inputs.force_full && inputs.changed_files == '' }}
-        uses: tj-actions/changed-files@v45
+        uses: tj-actions/changed-files@v47
         with:
           files: ${{ inputs.iac_globs }}
 
@@ -347,7 +347,7 @@ jobs:
       - name: Determine changed IaC files
         if: ${{ github.event_name != 'pull_request_target' }}
         id: changed
-        uses: tj-actions/changed-files@v45
+        uses: tj-actions/changed-files@v47
         with:
           files: ${{ inputs.iac_globs }}
 
