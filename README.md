@@ -1,21 +1,24 @@
 # auto-arch-diagram
 
 [![Python Tests](https://github.com/suryakumaran2611/auto-arch-diagram/actions/workflows/python-tests.yml/badge.svg)](https://github.com/suryakumaran2611/auto-arch-diagram/actions/workflows/python-tests.yml)
-[![CodeQL](https://github.com/suryakumaran2611/auto-arch-diagram/actions/workflows/codeql.yml/badge.svg)](https://github.com/suryakumaran2611/auto-arch-diagram/actions/workflows/codeql.yml)
-[![Dependency Review](https://github.com/suryakumaran2611/auto-arch-diagram/actions/workflows/dependency-review.yml/badge.svg)](https://github.com/suryakumaran2611/auto-arch-diagram/actions/workflows/dependency-review.yml)
 [![Secret Scan](https://github.com/suryakumaran2611/auto-arch-diagram/actions/workflows/secret-scan.yml/badge.svg)](https://github.com/suryakumaran2611/auto-arch-diagram/actions/workflows/secret-scan.yml)
 [![OSSF Scorecard](https://github.com/suryakumaran2611/auto-arch-diagram/actions/workflows/scorecard.yml/badge.svg)](https://github.com/suryakumaran2611/auto-arch-diagram/actions/workflows/scorecard.yml)
 
 A GitHub PR “agent” that generates professional architecture diagrams from Infrastructure-as-Code (IaC) changes.
 
-- PR comment output: Mermaid diagram (inline)
-- Artifact output: PNG/SVG/JPEG diagrams rendered with professional cloud icons (via Graphviz + `diagrams`)
-- Optional: opens a separate “diagram update PR” that commits generated diagrams back into your repo
+**Key Features:**
+- 🎨 **Dynamic Spacing**: Automatically adjusts layout based on diagram complexity for optimal visual clarity
+- 🏗️ **Multi-Cloud Support**: AWS, Azure, GCP, IBM Cloud, Oracle Cloud with 2,100+ official icons
+- 📊 **Multiple Formats**: Mermaid (inline), PNG, SVG, JPEG diagrams
+- 🔧 **Highly Configurable**: Fine-tune spacing, routing, and styling via YAML config
+- 🚀 **Fast & Efficient**: Intelligent algorithms prevent arrow overlaps and text collisions
+- 🔒 **Security-First**: Secret scanning, dependency checks, minimal permissions
 
 ## How it works
 
 - A GitHub Actions workflow runs on PRs that change IaC files.
 - It reads the changed IaC files (with light redaction + truncation).
+- **Analyzes diagram complexity** (nodes, edges, clusters, nesting depth) to calculate optimal spacing
 - It generates a Mermaid `flowchart` diagram for inline viewing.
 - It also renders a PNG/SVG diagram using official-style provider icons (via the `diagrams` + Graphviz libraries).
 - It posts/updates a PR comment containing the Mermaid diagram and a link to the workflow run (where artifacts can be downloaded).
@@ -49,8 +52,6 @@ Optional (commit diagrams into the repo via a separate “diagram update PR”):
 
 This repo includes “shift-left” security checks that run on PRs and/or on a schedule:
 
-- Code scanning: CodeQL ([.github/workflows/codeql.yml](.github/workflows/codeql.yml))
-- Dependency diffs: Dependency Review ([.github/workflows/dependency-review.yml](.github/workflows/dependency-review.yml))
 - Secret scanning: gitleaks ([.github/workflows/secret-scan.yml](.github/workflows/secret-scan.yml))
 - Supply-chain posture: OSSF Scorecard ([.github/workflows/scorecard.yml](.github/workflows/scorecard.yml))
 - Python security tooling in CI: `pip-audit` + `bandit` ([.github/workflows/python-tests.yml](.github/workflows/python-tests.yml))
@@ -145,7 +146,7 @@ Versioning:
 ## Release checklist
 
 - Update [CHANGELOG.md](CHANGELOG.md) (move items from Unreleased into the new version).
-- Ensure CI is green (tests + CodeQL + dependency review).
+- Ensure CI is green (tests + security scans).
 - Tag and push: `git tag vX.Y.Z` then `git push origin vX.Y.Z`.
 - Confirm the GitHub Release was created and `vX` tag moved.
 
@@ -354,7 +355,30 @@ publish:
 render:
   layout: lanes
   bg: transparent
+  graph:
+    # Auto mode (default) - spacing calculated based on diagram complexity
+    pad: auto          # Border padding
+    nodesep: auto      # Horizontal node spacing
+    ranksep: auto      # Vertical rank spacing
+    
+    # Or use fixed values for manual control
+    # pad: 0.5
+    # nodesep: 0.4
+    # ranksep: 1.0
+    
+    # Advanced: tune the auto-calculation
+    min_pad: 0.3              # Minimum padding
+    min_nodesep: 0.25         # Minimum horizontal spacing
+    min_ranksep: 0.65         # Minimum vertical spacing
+    complexity_scale: 1.5     # Overall complexity multiplier
+    edge_density_scale: 1.2   # Extra scaling for dense diagrams
+    
+    # Edge routing and overlap prevention
+    edge_routing: ortho       # ortho | spline | polyline | curved
+    overlap_removal: prism    # prism | scalexy | compress | vpsc | false
 ```
+
+**📚 Learn more**: See [docs/DYNAMIC_SPACING.md](docs/DYNAMIC_SPACING.md) for detailed configuration guide and best practices.
 
 ## Local run (optional)
 

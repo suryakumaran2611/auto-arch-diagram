@@ -1,32 +1,48 @@
 name: Auto Architecture Diagram
 
-x-iac-paths: &iac_paths
-  - '**/*.tf'
-  - '**/*.tfvars'
-  - '**/*.hcl'
-  - '**/*.bicep'
-  - '**/*.cfn.yaml'
-  - '**/*.cfn.yml'
-  - '**/*.cfn.json'
-  - '**/template.yaml'
-  - '**/template.yml'
-  - '**/Pulumi.*.yaml'
-  - '**/Pulumi.*.yml'
-  - '**/Pulumi.yaml'
-  - '**/Pulumi.yml'
-  - '**/Pulumi.*.json'
-  - '**/Pulumi.*.ts'
-  - '**/Pulumi.*.py'
-  - '**/*.cdk.ts'
-  - '**/*.cdk.py'
-
 on:
   pull_request:
     types: [opened, synchronize, reopened]
-    paths: *iac_paths
+    paths:
+      - '**/*.tf'
+      - '**/*.tfvars'
+      - '**/*.hcl'
+      - '**/*.bicep'
+      - '**/*.cfn.yaml'
+      - '**/*.cfn.yml'
+      - '**/*.cfn.json'
+      - '**/template.yaml'
+      - '**/template.yml'
+      - '**/Pulumi.*.yaml'
+      - '**/Pulumi.*.yml'
+      - '**/Pulumi.yaml'
+      - '**/Pulumi.yml'
+      - '**/Pulumi.*.json'
+      - '**/Pulumi.*.ts'
+      - '**/Pulumi.*.py'
+      - '**/*.cdk.ts'
+      - '**/*.cdk.py'
   pull_request_target:
     types: [opened, synchronize, reopened]
-    paths: *iac_paths
+    paths:
+      - '**/*.tf'
+      - '**/*.tfvars'
+      - '**/*.hcl'
+      - '**/*.bicep'
+      - '**/*.cfn.yaml'
+      - '**/*.cfn.yml'
+      - '**/*.cfn.json'
+      - '**/template.yaml'
+      - '**/template.yml'
+      - '**/Pulumi.*.yaml'
+      - '**/Pulumi.*.yml'
+      - '**/Pulumi.yaml'
+      - '**/Pulumi.yml'
+      - '**/Pulumi.*.json'
+      - '**/Pulumi.*.ts'
+      - '**/Pulumi.*.py'
+      - '**/*.cdk.ts'
+      - '**/*.cdk.py'
   workflow_dispatch: {}
 
 jobs:

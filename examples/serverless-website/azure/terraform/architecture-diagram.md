@@ -6,13 +6,13 @@ Summary: Generated a dependency-oriented Terraform diagram from changed resource
 
 ```mermaid
 flowchart LR
-subgraph Azure[Azure]
+subgraph AZURERM[AZURERM]
   tf_azurerm_cdn_endpoint_endpoint["azurerm_cdn_endpoint.endpoint"]
   tf_azurerm_cdn_profile_cdn["azurerm_cdn_profile.cdn"]
   tf_azurerm_resource_group_rg["azurerm_resource_group.rg"]
   tf_azurerm_storage_account_site["azurerm_storage_account.site"]
 end
-subgraph RANDOM[RANDOM]
+subgraph OTHER[OTHER]
   tf_random_string_suffix["random_string.suffix"]
 end
 tf_azurerm_cdn_profile_cdn --> tf_azurerm_cdn_endpoint_endpoint

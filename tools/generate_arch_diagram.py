@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import base64
 import json
 import os
 import re
@@ -54,11 +55,26 @@ class RenderConfig:
     lanes: tuple[str, ...] = ("Network", "Security", "Containers", "Compute", "Data", "Storage", "Other")
 
     # Graph tuning (Graphviz)
-    pad: float = 0.2
-    nodesep: float = 0.18
-    ranksep: float = 0.45
+    # Set to "auto" for dynamic spacing based on diagram complexity
+    # Or use specific values for manual control
+    pad: float | str = "auto"
+    nodesep: float | str = "auto"
+    ranksep: float | str = "auto"
     splines: str = "ortho"
-    concentrate: bool = True
+    concentrate: bool = False
+    
+    # Advanced layout controls for edge routing
+    edge_routing: str = "ortho"  # ortho | spline | polyline | curved
+    overlap_removal: str = "prism"  # prism | scalexy | compress | vpsc | ipsep | false
+    
+    # Minimum spacing constraints (used when auto-calculating)
+    min_pad: float = 0.3
+    min_nodesep: float = 0.25
+    min_ranksep: float = 0.65
+    
+    # Complexity multipliers for auto-spacing
+    complexity_scale: float = 1.5  # How much to scale spacing based on complexity
+    edge_density_scale: float = 1.2  # Additional scaling for high edge density
 
     # Styling
     background: str = "transparent"  # transparent | white
@@ -132,14 +148,30 @@ def _load_config(repo_root: Path) -> tuple[str, str, str, Limits, PublishPaths, 
     else:
         lanes_tuple = RenderConfig().lanes
 
+    # Helper function to parse spacing values (can be "auto" or numeric)
+    def _parse_spacing_value(value, default):
+        if isinstance(value, str) and value.strip().lower() == "auto":
+            return "auto"
+        try:
+            return float(value)
+        except (ValueError, TypeError):
+            return default
+
     render = RenderConfig(
         layout=str(render_cfg.get("layout", RenderConfig().layout)).strip().lower(),
         lanes=lanes_tuple,
-        pad=float(graph_cfg.get("pad", RenderConfig().pad)),
-        nodesep=float(graph_cfg.get("nodesep", RenderConfig().nodesep)),
-        ranksep=float(graph_cfg.get("ranksep", RenderConfig().ranksep)),
+        pad=_parse_spacing_value(graph_cfg.get("pad"), RenderConfig().pad),
+        nodesep=_parse_spacing_value(graph_cfg.get("nodesep"), RenderConfig().nodesep),
+        ranksep=_parse_spacing_value(graph_cfg.get("ranksep"), RenderConfig().ranksep),
         splines=str(graph_cfg.get("splines", RenderConfig().splines)).strip(),
         concentrate=bool(graph_cfg.get("concentrate", RenderConfig().concentrate)),
+        edge_routing=str(graph_cfg.get("edge_routing", RenderConfig().edge_routing)).strip(),
+        overlap_removal=str(graph_cfg.get("overlap_removal", RenderConfig().overlap_removal)).strip(),
+        min_pad=float(graph_cfg.get("min_pad", RenderConfig().min_pad)),
+        min_nodesep=float(graph_cfg.get("min_nodesep", RenderConfig().min_nodesep)),
+        min_ranksep=float(graph_cfg.get("min_ranksep", RenderConfig().min_ranksep)),
+        complexity_scale=float(graph_cfg.get("complexity_scale", RenderConfig().complexity_scale)),
+        edge_density_scale=float(graph_cfg.get("edge_density_scale", RenderConfig().edge_density_scale)),
         background=str(render_cfg.get("background", RenderConfig().background)).strip().lower(),
         fontname=str(render_cfg.get("fontname", RenderConfig().fontname)).strip(),
         graph_fontsize=int(render_cfg.get("graph_fontsize", RenderConfig().graph_fontsize)),
@@ -168,6 +200,200 @@ def _write_bytes_if_changed(path: Path, content: bytes) -> bool:
 
 def _write_text_if_changed(path: Path, content: str) -> bool:
     return _write_bytes_if_changed(path, content.encode("utf-8"))
+
+
+def _embed_images_in_svg(svg_path: Path) -> None:
+    """Replace xlink:href file references with embedded base64 data URIs.
+
+    This ensures icons render when the SVG is viewed outside the build host.
+    """
+
+    if not svg_path.exists():
+        return
+    try:
+        content = svg_path.read_text(encoding="utf-8")
+    except Exception:
+        return
+
+    # Find all xlink:href="..." patterns that point to PNG files.
+    def replace_match(m: re.Match[str]) -> str:
+        ref = m.group(1)
+        # Skip if it's already a data URI or external URL.
+        if ref.startswith(("data:", "http:", "https:")):
+            return m.group(0)
+        img_path = svg_path.parent / ref
+        if not img_path.exists():
+            return m.group(0)
+        try:
+            img_bytes = img_path.read_bytes()
+            b64 = base64.b64encode(img_bytes).decode("ascii")
+            # We assume PNG for diagrams; adjust if needed.
+            return f'xlink:href="data:image/png;base64,{b64}"'
+        except Exception:
+            return m.group(0)
+
+    updated = re.sub(r'xlink:href="([^"]+)"', replace_match, content)
+    if updated != content:
+        svg_path.write_text(updated, encoding="utf-8")
+
+
+@dataclass
+class DiagramComplexity:
+    """Metrics for analyzing diagram complexity and calculating optimal spacing."""
+    node_count: int
+    edge_count: int
+    cluster_count: int
+    max_cluster_depth: int
+    avg_edges_per_node: float
+    max_label_length: int
+    provider_count: int
+    
+    def calculate_spacing_multiplier(self) -> dict[str, float]:
+        """Calculate dynamic spacing multipliers based on complexity metrics."""
+        
+        # Base complexity score (0-1 scale)
+        node_complexity = min(self.node_count / 50.0, 1.0)  # 50+ nodes = max complexity
+        edge_density = min(self.avg_edges_per_node / 4.0, 1.0)  # 4+ edges/node = high density
+        cluster_complexity = min(self.cluster_count / 10.0, 1.0)  # 10+ clusters = complex
+        depth_complexity = min(self.max_cluster_depth / 3.0, 1.0)  # 3+ levels = deep nesting
+        label_complexity = min(self.max_label_length / 40.0, 1.0)  # 40+ chars = long labels
+        provider_diversity = min(self.provider_count / 3.0, 1.0)  # 3+ providers = diverse
+        
+        # Weighted average of complexity factors
+        overall_complexity = (
+            node_complexity * 0.25 +
+            edge_density * 0.25 +
+            cluster_complexity * 0.15 +
+            depth_complexity * 0.15 +
+            label_complexity * 0.10 +
+            provider_diversity * 0.10
+        )
+        
+        # Calculate multipliers (1.0 = minimum, increases with complexity)
+        # Use exponential scaling for better distribution
+        pad_multiplier = 1.0 + (overall_complexity ** 0.7) * 0.8
+        nodesep_multiplier = 1.0 + (node_complexity + edge_density) * 0.6
+        ranksep_multiplier = 1.0 + (depth_complexity + cluster_complexity) * 0.8
+        
+        # Extra boost for high edge density to prevent overlaps
+        if edge_density > 0.7:
+            nodesep_multiplier *= 1.3
+            ranksep_multiplier *= 1.2
+        
+        # Extra boost for deep nesting
+        if self.max_cluster_depth > 2:
+            ranksep_multiplier *= 1.4
+        
+        return {
+            "pad": pad_multiplier,
+            "nodesep": nodesep_multiplier,
+            "ranksep": ranksep_multiplier,
+        }
+
+
+def _analyze_diagram_complexity(
+    resources: dict[str, dict[str, Any]],
+    edges: set[tuple[str, str]],
+    grouped_data: dict[str, dict[str, list[str]]],
+) -> DiagramComplexity:
+    """Analyze infrastructure diagram to determine complexity metrics."""
+    
+    node_count = len(resources)
+    edge_count = len(edges)
+    
+    # Count clusters and determine max depth
+    cluster_count = 0
+    max_depth = 0
+    for outer_key, inner_dict in grouped_data.items():
+        if inner_dict:
+            cluster_count += len(inner_dict)
+            # Each provider within a lane creates nested clusters
+            for inner_key, resource_list in inner_dict.items():
+                if resource_list:
+                    current_depth = 2  # lane + provider
+                    max_depth = max(max_depth, current_depth)
+    
+    # Calculate edge density
+    avg_edges = edge_count / max(node_count, 1)
+    
+    # Find longest label
+    max_label_len = 0
+    for res_name in resources.keys():
+        max_label_len = max(max_label_len, len(res_name))
+    
+    # Count unique providers
+    providers = set()
+    for res_name in resources.keys():
+        r_type = res_name.split(".", 1)[0]
+        provider = _guess_provider(r_type)
+        providers.add(provider)
+    
+    return DiagramComplexity(
+        node_count=node_count,
+        edge_count=edge_count,
+        cluster_count=cluster_count,
+        max_cluster_depth=max_depth,
+        avg_edges_per_node=avg_edges,
+        max_label_length=max_label_len,
+        provider_count=len(providers),
+    )
+
+
+def _calculate_dynamic_spacing(
+    complexity: DiagramComplexity,
+    render: RenderConfig,
+    direction: str,
+) -> dict[str, Any]:
+    """Calculate optimal spacing parameters based on diagram complexity."""
+    
+    multipliers = complexity.calculate_spacing_multiplier()
+    
+    # Apply multipliers to base values with complexity scaling
+    pad_value = render.min_pad * multipliers["pad"] * render.complexity_scale
+    nodesep_value = render.min_nodesep * multipliers["nodesep"] * render.complexity_scale
+    ranksep_value = render.min_ranksep * multipliers["ranksep"] * render.complexity_scale
+    
+    # Direction-specific adjustments
+    if direction in ("LR", "RL"):
+        # Left-right layouts need more horizontal spacing
+        nodesep_value *= 1.2
+    else:
+        # Top-bottom layouts need more vertical spacing
+        ranksep_value *= 1.2
+    
+    # Additional edge density scaling
+    if complexity.avg_edges_per_node > 2.5:
+        nodesep_value *= render.edge_density_scale
+        ranksep_value *= render.edge_density_scale
+        pad_value *= 1.1
+    
+    return {
+        "pad": round(pad_value, 2),
+        "nodesep": round(nodesep_value, 2),
+        "ranksep": round(ranksep_value, 2),
+    }
+
+    def _replace(match: re.Match[str]) -> str:
+        href = match.group(1)
+        if href.startswith("data:"):
+            return match.group(0)
+        try:
+            data = Path(href).read_bytes()
+        except Exception:
+            return match.group(0)
+        mime = "image/png"
+        lower = href.lower()
+        if lower.endswith(".jpg") or lower.endswith(".jpeg"):
+            mime = "image/jpeg"
+        b64 = base64.b64encode(data).decode("ascii")
+        return f'xlink:href="data:{mime};base64,{b64}"'
+
+    new_content = re.sub(r'xlink:href="([^"]+)"', _replace, content)
+    if new_content != content:
+        try:
+            svg_path.write_text(new_content, encoding="utf-8")
+        except Exception:
+            pass
 
 
 def _maybe_publish_outputs(
@@ -410,6 +636,68 @@ def _import_node_class(module_path: str, class_name: str):
         return None
 
 
+def _guess_provider(resource_type: str) -> str:
+    """Extract provider name from Terraform resource type."""
+    t = resource_type.lower()
+    if t.startswith("aws_"):
+        return "AWS"
+    if t.startswith("azurerm_"):
+        return "AZURERM"
+    if t.startswith("google_"):
+        return "GOOGLE"
+    if t.startswith("oci_"):
+        return "OCI"
+    if t.startswith("ibm_"):
+        return "IBM"
+    return "OTHER"
+
+
+def _load_custom_icon(terraform_resource_type: str):
+    """Load a custom icon from the icons/ directory if available.
+    
+    Returns a Custom node class that uses the icon file, or None if not found.
+    """
+    if Diagram is None:
+        return None
+        
+    # Get repo root (tools/ is one level down)
+    repo_root = Path(__file__).resolve().parents[1]
+    icons_dir = repo_root / "icons"
+    
+    # Determine provider directory
+    provider = _guess_provider(terraform_resource_type).lower()
+    if provider == "azurerm":
+        provider = "azure"
+    elif provider == "other":
+        return None
+    
+    # Remove provider prefix from resource type for filename
+    t = terraform_resource_type.lower()
+    for prefix in ("aws_", "azurerm_", "google_", "oci_", "ibm_"):
+        if t.startswith(prefix):
+            t = t[len(prefix):]
+            break
+    
+    # Look for PNG icon
+    icon_path = icons_dir / provider / f"{t}.png"
+    if not icon_path.exists():
+        return None
+    
+    try:
+        # Import Custom node class from diagrams
+        Custom = _import_node_class("diagrams", "Custom")
+        if Custom is None:
+            return None
+        
+        # Return a wrapper that creates Custom nodes with our icon
+        def custom_icon_wrapper(label: str = ""):
+            return Custom(label, str(icon_path))
+        
+        return custom_icon_wrapper
+    except Exception:
+        return None
+
+
 def _ensure_generic_fallback_icons() -> None:
     global Blank, Rack, SQL, Firewall, Router, Switch, Storage, Compute, LoadBalancer
     if Diagram is None:
@@ -443,7 +731,17 @@ def _icon_class_for(terraform_resource_type: str):
 
     This aims for "professional" official-style icons via the `diagrams` library.
     If a specific icon isn't known, falls back to generic nodes.
+    
+    Resolution order:
+    1. Custom icons in icons/{provider}/ directory
+    2. Built-in diagrams library icons
+    3. Generic fallback icons
     """
+    
+    # First, try loading a custom icon
+    custom_icon = _load_custom_icon(terraform_resource_type)
+    if custom_icon is not None:
+        return custom_icon
 
     t = terraform_resource_type.lower()
 
@@ -589,21 +887,57 @@ def _render_icon_diagram_from_terraform(
         grouped_lanes.setdefault(lane, {}).setdefault(provider, []).append(res)
         grouped_providers.setdefault(provider, {}).setdefault(lane, []).append(res)
 
+    # Select the appropriate grouping based on layout
+    grouped_data = grouped_lanes if layout == "lanes" else grouped_providers
+    
+    # Analyze diagram complexity for dynamic spacing
+    complexity = _analyze_diagram_complexity(all_resources, edges, grouped_data)
+    
+    # Calculate optimal spacing parameters
+    spacing = _calculate_dynamic_spacing(complexity, render, direction)
+    
+    # Determine final spacing values (use auto-calculated or manual values)
+    final_pad = spacing["pad"] if render.pad == "auto" else float(render.pad)
+    final_nodesep = spacing["nodesep"] if render.nodesep == "auto" else float(render.nodesep)
+    final_ranksep = spacing["ranksep"] if render.ranksep == "auto" else float(render.ranksep)
+    
+    # Print spacing info for debugging
+    if os.getenv("AUTO_ARCH_DEBUG"):
+        print(f"[Diagram Complexity] Nodes: {complexity.node_count}, Edges: {complexity.edge_count}")
+        print(f"[Diagram Complexity] Clusters: {complexity.cluster_count}, Depth: {complexity.max_cluster_depth}")
+        print(f"[Diagram Complexity] Avg edges/node: {complexity.avg_edges_per_node:.2f}")
+        print(f"[Spacing] pad={final_pad}, nodesep={final_nodesep}, ranksep={final_ranksep}")
+
     # Graphviz tuning to reduce crossings and avoid oversized icon boxes.
     # Keep PNG/SVG transparent by default; JPEG cannot be transparent.
     desired_bg = (os.getenv("AUTO_ARCH_RENDER_BG") or render.background or "transparent").strip().lower()
     desired_bg = "transparent" if desired_bg not in {"transparent", "white"} else desired_bg
     bgcolor = "white" if outformat in {"jpg", "jpeg"} else desired_bg
+    
+    # Enhanced graph attributes with intelligent edge routing
     graph_attr = {
         "bgcolor": bgcolor,
-        "pad": str(render.pad),
-        "nodesep": str(render.nodesep),
-        "ranksep": str(render.ranksep),
-        "splines": render.splines,
+        "pad": str(final_pad),
+        "nodesep": str(final_nodesep),
+        "ranksep": str(final_ranksep),
+        "splines": render.edge_routing,
         "concentrate": "true" if render.concentrate else "false",
         "fontname": render.fontname,
         "fontsize": str(render.graph_fontsize),
         "outputorder": "edgesfirst",
+        # Advanced overlap and separation controls
+        "overlap": render.overlap_removal,
+        "overlap_scaling": "-4" if render.overlap_removal != "false" else "0",
+        "sep": f"+{int(final_nodesep * 20)}",  # Dynamic cluster separation
+        "esep": f"+{int(final_nodesep * 10)}",  # Dynamic edge separation
+        "labelloc": "t",
+        "labeljust": "c",
+        # Edge routing improvements
+        "smoothing": "spring" if complexity.edge_count > 10 else "none",
+        "mclimit": "2.0",  # Limit mincross iterations for performance
+        "nslimit": "2.0",  # Limit network simplex iterations
+        "remincross": "true",  # Remove edge crossings
+        "searchsize": "50",  # Larger search space for better layouts
     }
 
     # Make icon tiles smaller and remove the white filled box behind icons.
@@ -629,6 +963,10 @@ def _render_icon_diagram_from_terraform(
         "color": render.edge_color,
         "penwidth": str(render.edge_penwidth),
         "arrowsize": str(render.edge_arrowsize),
+        # Intelligent edge styling based on complexity
+        "constraint": "true",  # Maintain hierarchical structure
+        "minlen": "2" if complexity.edge_count > 20 else "1",  # Longer edges for complex diagrams
+        "weight": "1",  # Default edge weight
     }
 
     with Diagram(
@@ -671,6 +1009,9 @@ def _render_icon_diagram_from_terraform(
         for src_res, dst_res in sorted(edges):
             if src_res in node_by_res and dst_res in node_by_res:
                 node_by_res[src_res] >> node_by_res[dst_res]
+
+    if outformat == "svg":
+        _embed_images_in_svg(out_path)
 
 
 def _static_terraform_mermaid(files: list[Path], direction: str, limits: Limits) -> tuple[str, str, str]:
@@ -1192,37 +1533,67 @@ def _static_markdown(
                 outformat = out_png.suffix.lstrip(".").lower() or "png"
                 filename_no_ext = str(out_png.with_suffix(""))
                 node_by_id: dict[str, Any] = {}
+                
+                # Analyze CloudFormation diagram complexity
+                grouped_simple = {"CloudFormation": {"AWS": list(cfn_resources.keys())}}
+                cfn_complexity = _analyze_diagram_complexity(cfn_resources, cfn_edges, grouped_simple)
+                cfn_spacing = _calculate_dynamic_spacing(cfn_complexity, render, direction)
+                
+                # Use auto-calculated spacing or manual overrides
+                cfn_pad = cfn_spacing["pad"] if render.pad == "auto" else float(render.pad)
+                cfn_nodesep = cfn_spacing["nodesep"] if render.nodesep == "auto" else float(render.nodesep)
+                cfn_ranksep = cfn_spacing["ranksep"] if render.ranksep == "auto" else float(render.ranksep)
+                
+                # Determine background color
+                desired_bg = (os.getenv("AUTO_ARCH_RENDER_BG") or render.background or "transparent").strip().lower()
+                desired_bg = "transparent" if desired_bg not in {"transparent", "white"} else desired_bg
+                bgcolor = "white" if outformat in {"jpg", "jpeg"} else desired_bg
+                
                 graph_attr = {
-                    "bgcolor": "transparent",
-                    "pad": "0.2",
-                    "nodesep": "0.18",
-                    "ranksep": "0.45",
-                    "splines": "ortho",
-                    "concentrate": "true",
-                    "fontname": "Helvetica",
-                    "fontsize": "18",
+                    "bgcolor": bgcolor,
+                    "pad": str(cfn_pad),
+                    "nodesep": str(cfn_nodesep),
+                    "ranksep": str(cfn_ranksep),
+                    "splines": render.edge_routing,
+                    "concentrate": "true" if render.concentrate else "false",
+                    "fontname": render.fontname,
+                    "fontsize": str(render.graph_fontsize),
                     "outputorder": "edgesfirst",
+                    "overlap": render.overlap_removal,
+                    "overlap_scaling": "-4" if render.overlap_removal != "false" else "0",
+                    "sep": f"+{int(cfn_nodesep * 20)}",
+                    "esep": f"+{int(cfn_nodesep * 10)}",
+                    "labelloc": "t",
+                    "labeljust": "c",
+                    "smoothing": "spring" if cfn_complexity.edge_count > 10 else "none",
+                    "mclimit": "2.0",
+                    "nslimit": "2.0",
+                    "remincross": "true",
+                    "searchsize": "50",
                 }
                 node_attr = {
-                    "fontname": "Helvetica",
-                    "fontsize": "9",
+                    "fontname": render.fontname,
+                    "fontsize": str(render.node_fontsize),
                     "labelloc": "b",
                     "labeljust": "c",
                     "imagescale": "true",
                     "fixedsize": "true",
-                    "width": "0.85",
-                    "height": "0.85",
+                    "width": str(render.node_width),
+                    "height": str(render.node_height),
                     "shape": "box",
                     "style": "rounded",
                     "margin": "0.05",
-                    "fillcolor": "transparent",
+                    "fillcolor": bgcolor if outformat in {"jpg", "jpeg"} else "transparent",
                     "color": "#D1D5DB",
                     "penwidth": "1",
                 }
                 edge_attr = {
-                    "color": "#6B7280",
-                    "penwidth": "0.9",
-                    "arrowsize": "0.65",
+                    "color": render.edge_color,
+                    "penwidth": str(render.edge_penwidth),
+                    "arrowsize": str(render.edge_arrowsize),
+                    "constraint": "true",
+                    "minlen": "2" if cfn_complexity.edge_count > 20 else "1",
+                    "weight": "1",
                 }
                 with Diagram(
                     "Architecture (CloudFormation)",
@@ -1242,6 +1613,8 @@ def _static_markdown(
                         if src in node_by_id and dst in node_by_id:
                             node_by_id[src] >> node_by_id[dst]
                 rendered_any = True
+                if outformat == "svg":
+                    _embed_images_in_svg(out_png)
         except Exception:
             pass
 
