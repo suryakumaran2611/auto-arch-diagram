@@ -2,9 +2,22 @@
 
 ## Architecture Diagram (Auto)
 
-Summary: Unable to generate diagram automatically.
+Summary: Generated a dependency-oriented Terraform diagram from changed resources.
 
-Reason: No CloudFormation templates parsed from the changed files.
+```mermaid
+flowchart LR
+subgraph AWS[AWS]
+  tf_aws_instance_web["aws_instance.web"]
+  tf_aws_security_group_web["aws_security_group.web"]
+  tf_aws_subnet_public["aws_subnet.public"]
+  tf_aws_vpc_main["aws_vpc.main"]
+end
+tf_aws_security_group_web --> tf_aws_instance_web
+tf_aws_subnet_public --> tf_aws_instance_web
+tf_aws_vpc_main --> tf_aws_security_group_web
+tf_aws_vpc_main --> tf_aws_subnet_public
+```
 
-Changed IaC files:
-- /home/suryakumaran/GitHub/auto-arch-diagram/examples/terraform/mlops-multi-cloud/main.tf
+Assumptions: Connections represent inferred references (including depends_on and attribute references).
+
+Rendered diagram: available as workflow artifact
