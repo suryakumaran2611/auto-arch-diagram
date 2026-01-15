@@ -87,9 +87,9 @@ class RenderConfig:
     color_security: str = "#FFF8F8"  # Very light red tint for security
     
     # Minimum spacing constraints (used when auto-calculating) - compact layout
-    min_pad: float = 0.3
-    min_nodesep: float = 0.7
-    min_ranksep: float = 0.5
+    min_pad: float = 0.2
+    min_nodesep: float = 0.2
+    min_ranksep: float = 0.2
     
     # Complexity multipliers for auto-spacing
     complexity_scale: float = 1.5  # How much to scale spacing based on complexity
@@ -505,9 +505,9 @@ def _calculate_dynamic_spacing(
     
     # Apply multipliers to base values with compact professional scaling
     # Best practice: conservative scaling for tight, readable diagrams
-    pad_value = render.min_pad * multipliers["pad"] * 1.1  # Minimal padding scale
-    nodesep_value = render.min_nodesep * multipliers["nodesep"] * 1.15  # Compact node separation
-    ranksep_value = render.min_ranksep * multipliers["ranksep"] * 1.2  # Tight rank separation
+    pad_value = render.min_pad * multipliers["pad"] * 0.8  # Minimal padding scale
+    nodesep_value = render.min_nodesep * multipliers["nodesep"] * 0.7  # Compact node separation
+    ranksep_value = render.min_ranksep * multipliers["ranksep"] * 0.7  # Tight rank separation
     
     # Direction-specific adjustments - compact professional ratios
     if direction in ("LR", "RL"):
@@ -516,12 +516,12 @@ def _calculate_dynamic_spacing(
         ranksep_value *= 1.1
     else:
         # Vertical layouts: compact vertical spacing for efficient hierarchy
-        ranksep_value *= 1.3
-        nodesep_value *= 1.15
+        ranksep_value *= 1.0
+        nodesep_value *= 1.0
     
     # Additional edge density scaling - prevent crowding in complex diagrams
     if complexity.avg_edges_per_node > 2.5:
-        nodesep_value *= 1.15  # Reduced from render.edge_density_scale (1.2)
+        nodesep_value *= 1.0  # Reduced from render.edge_density_scale (1.2)
         ranksep_value *= 1.15
         pad_value *= 1.08  # Slight padding increase
     
@@ -1115,6 +1115,12 @@ def _tf_node_label(res_id: str) -> str:
     return f"{kind_wrapped}\n{name_wrapped}".strip()
 
 
+def _create_node_with_xlabel(icon_cls, label: str):
+    """Create a compact node with centered label below icon."""
+    # Use native label with height that accommodates icon + label
+    return icon_cls(label, height="1.2", labelloc="b", imagepos="tc")
+
+
 def _import_node_class(module_path: str, class_name: str):
     try:
         mod = __import__(module_path, fromlist=[class_name])
@@ -1470,25 +1476,18 @@ def _render_icon_diagram_from_terraform(
         "remincross": "true",
         "searchsize": "50",
         # Center-based edge connections
-        "center": "true",  # Center drawing
+        "center": "true",
+        "forcelabels": "true",  # Force xlabels to show
     }
-
-    # Professional fixed-size uniform icons with label below
+    # Compact icons - imagepos positions icon at top, label at bottom
     node_attr = {
         "fontname": render.fontname,
         "fontsize": str(render.node_fontsize),
-        "labelloc": "b",  # Label at bottom
-        "labeljust": "c",  # Center label
-        "imagescale": "true",  # Scale icon to fit
-        "fixedsize": "true",  # FIXED uniform size for all icons
-        "width": str(render.node_width),
-        "height": str(render.node_height),
-        "shape": "box",
-        "style": "rounded,filled",
-        "margin": "0.05",
-        "fillcolor": "white",
-        "color": "#B0B0B0",
-        "penwidth": "1.0",
+        "height": "0.8",
+        "width": "0.8",
+        "imagepos": "tc",
+        "labelloc": "b",
+        "imagescale": "true",
     }
 
     # Base edge attributes with professional center-based connections
@@ -1596,7 +1595,7 @@ def _render_icon_diagram_from_terraform(
                         with Cluster(vpc_label, graph_attr=vpc_attrs):
                             r_type, _name = vpc_name.split(".", 1)
                             Icon = _icon_class_for(r_type) or _generic_icon_for_kind("network")
-                            node_by_res[vpc_name] = Icon(_tf_node_label(vpc_name))
+                            node_by_res[vpc_name] = _create_node_with_xlabel(Icon, _tf_node_label(vpc_name))
                             
                             # Render subnets within VPC
                             for subnet_name, subnet_resources in sorted(subnets_dict.items()):
@@ -1605,7 +1604,7 @@ def _render_icon_diagram_from_terraform(
                                     for res in sorted(subnet_resources):
                                         r_type, _name = res.split(".", 1)
                                         Icon = _icon_class_for(r_type) or _generic_icon_for_kind("compute")
-                                        node_by_res[res] = Icon(_tf_node_label(res))
+                                        node_by_res[res] = _create_node_with_xlabel(Icon, _tf_node_label(res))
                                 else:
                                     # Subnet cluster
                                     subnet_attrs_dict = all_resources.get(subnet_name, {})
@@ -1621,13 +1620,13 @@ def _render_icon_diagram_from_terraform(
                                     with Cluster(subnet_label, graph_attr=subnet_attrs):
                                         r_type, _name = subnet_name.split(".", 1)
                                         Icon = _icon_class_for(r_type) or _generic_icon_for_kind("network")
-                                        node_by_res[subnet_name] = Icon(_tf_node_label(subnet_name))
+                                        node_by_res[subnet_name] = _create_node_with_xlabel(Icon, _tf_node_label(subnet_name))
                                         
                                         # Resources in subnet
                                         for res in sorted(subnet_resources):
                                             r_type, _name = res.split(".", 1)
                                             Icon = _icon_class_for(r_type) or _generic_icon_for_kind("compute")
-                                            node_by_res[res] = Icon(_tf_node_label(res))
+                                            node_by_res[res] = _create_node_with_xlabel(Icon, _tf_node_label(res))
                     
                     # Then render category lanes for non-VPC resources
                     for lane in lanes:
@@ -1645,7 +1644,7 @@ def _render_icon_diagram_from_terraform(
                             for res in sorted(resources):
                                 r_type, _name = res.split(".", 1)
                                 Icon = _icon_class_for(r_type) or _generic_icon_for_kind("compute")
-                                node_by_res[res] = Icon(_tf_node_label(res))
+                                node_by_res[res] = _create_node_with_xlabel(Icon, _tf_node_label(res))
         else:
             # Category lanes (industry-friendly default): Network -> Security -> Compute -> Data...
             for lane in lanes:
@@ -1689,7 +1688,7 @@ def _render_icon_diagram_from_terraform(
                                 with Cluster(vpc_label, graph_attr=vpc_attrs):
                                     r_type, _name = vpc_name.split(".", 1)
                                     Icon = _icon_class_for(r_type) or _generic_icon_for_kind("network")
-                                    node_by_res[vpc_name] = Icon(_tf_node_label(vpc_name))
+                                    node_by_res[vpc_name] = _create_node_with_xlabel(Icon, _tf_node_label(vpc_name))
                                     
                                     # Render subnets within VPC
                                     for subnet_name, subnet_resources in sorted(subnets_dict.items()):
@@ -1698,7 +1697,7 @@ def _render_icon_diagram_from_terraform(
                                             for res in sorted(subnet_resources):
                                                 r_type, _name = res.split(".", 1)
                                                 Icon = _icon_class_for(r_type) or _generic_icon_for_kind("compute")
-                                                node_by_res[res] = Icon(_tf_node_label(res))
+                                                node_by_res[res] = _create_node_with_xlabel(Icon, _tf_node_label(res))
                                         else:
                                             # Subnet cluster
                                             subnet_attrs_dict = all_resources.get(subnet_name, {})
@@ -1714,19 +1713,19 @@ def _render_icon_diagram_from_terraform(
                                             with Cluster(subnet_label, graph_attr=subnet_attrs):
                                                 r_type, _name = subnet_name.split(".", 1)
                                                 Icon = _icon_class_for(r_type) or _generic_icon_for_kind("network")
-                                                node_by_res[subnet_name] = Icon(_tf_node_label(subnet_name))
+                                                node_by_res[subnet_name] = _create_node_with_xlabel(Icon, _tf_node_label(subnet_name))
                                                 
                                                 # Resources in subnet
                                                 for res in sorted(subnet_resources):
                                                     r_type, _name = res.split(".", 1)
                                                     Icon = _icon_class_for(r_type) or _generic_icon_for_kind("compute")
-                                                    node_by_res[res] = Icon(_tf_node_label(res))
+                                                    node_by_res[res] = _create_node_with_xlabel(Icon, _tf_node_label(res))
                             
                             # Then render remaining resources not in VPCs
                             for res in sorted(provider_resources):
                                 r_type, _name = res.split(".", 1)
                                 Icon = _icon_class_for(r_type) or _generic_icon_for_kind("compute")
-                                node_by_res[res] = Icon(_tf_node_label(res))
+                                node_by_res[res] = _create_node_with_xlabel(Icon, _tf_node_label(res))
 
         for src_res, dst_res in sorted(edges):
             if src_res in node_by_res and dst_res in node_by_res:
