@@ -2480,7 +2480,8 @@ _SECRET_ASSIGNMENT_RE = re.compile(
 def _redact_likely_secrets(text: str) -> str:
     def repl(m: re.Match[str]) -> str:
         key, sep = m.group(1), m.group(2)
-        return f"{key}{sep}<REDACTED>"
+        # Use quoted string to maintain valid HCL/YAML syntax
+        return f'{key}{sep}"REDACTED"'
 
     return _SECRET_ASSIGNMENT_RE.sub(repl, text)
 
