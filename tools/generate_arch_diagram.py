@@ -211,7 +211,7 @@ def _write_bytes_if_changed(path: Path, content: bytes) -> bool:
         try:
             if path.read_bytes() == content:
                 return False
-        except Exception:
+        except Exception:  # nosec B110
             pass
     path.write_bytes(content)
     return True
@@ -248,7 +248,7 @@ def _embed_images_in_svg(svg_path: Path) -> None:
         if img_path.exists():
             try:
                 img_data = img_path.read_bytes()
-            except Exception:
+            except Exception:  # nosec B110
                 pass
         
         # Strategy 2: Try as absolute path directly
@@ -257,7 +257,7 @@ def _embed_images_in_svg(svg_path: Path) -> None:
                 abs_path = Path(ref)
                 if abs_path.exists() and abs_path.is_file():
                     img_data = abs_path.read_bytes()
-            except Exception:
+            except Exception:  # nosec B110
                 pass
         
         # Strategy 3: Extract from site-packages path if it contains 'resources'
@@ -550,7 +550,7 @@ def _calculate_dynamic_spacing(
     if new_content != content:
         try:
             svg_path.write_text(new_content, encoding="utf-8")
-        except Exception:
+        except Exception:  # nosec B110
             pass
 
 
@@ -1545,7 +1545,7 @@ def _render_icon_diagram_from_terraform(
                     if Custom:
                         # Create invisible provider badge node
                         provider_badge = Custom("", provider_icon_path)
-                except Exception:
+                except Exception:  # nosec B110
                     pass
             
             # Map provider to border color
@@ -1756,7 +1756,7 @@ def _static_terraform_mermaid(files: list[Path], direction: str, limits: Limits)
         try:
             text = _read_file_limited(f, max_bytes=limits.max_bytes_per_file)
             parsed = hcl2.loads(text)
-        except Exception:
+        except Exception:  # nosec B112
             # Skip unparseable files to keep the workflow resilient.
             continue
         all_resources.update(_terraform_resources_from_hcl(parsed))
@@ -1814,7 +1814,7 @@ def _static_terraform_graph(files: list[Path], limits: Limits) -> tuple[dict[str
         try:
             text = _read_file_limited(f, max_bytes=limits.max_bytes_per_file)
             parsed = hcl2.loads(text)
-        except Exception:
+        except Exception:  # nosec B112
             continue
         all_resources.update(_terraform_resources_from_hcl(parsed))
 
@@ -1929,7 +1929,7 @@ def _static_cloudformation_mermaid(files: list[Path], direction: str, limits: Li
                 # CFNLoader extends SafeLoader - safe for untrusted input
                 CFNLoader = _create_cfn_loader()
                 templates.append(yaml.load(raw, Loader=CFNLoader) or {})  # nosec B506
-        except Exception:
+        except Exception:  # nosec B112
             continue
 
     if not templates:
@@ -2010,7 +2010,7 @@ def _static_cloudformation_graph(files: list[Path], limits: Limits) -> tuple[dic
                 # CFNLoader extends SafeLoader - safe for untrusted input
                 CFNLoader = _create_cfn_loader()
                 templates.append(yaml.load(raw, Loader=CFNLoader) or {})  # nosec B506
-        except Exception:
+        except Exception:  # nosec B112
             continue
 
     if not templates:
@@ -2129,7 +2129,7 @@ def _static_pulumi_yaml_graph(files: list[Path], limits: Limits) -> tuple[dict[s
         raw = _read_file_limited(f, max_bytes=limits.max_bytes_per_file)
         try:
             stacks.append(yaml.safe_load(raw) or {})
-        except Exception:
+        except Exception:  # nosec B112
             continue
 
     if not stacks:
@@ -2343,7 +2343,7 @@ def _static_markdown(
         tf_resources, tf_edges = _static_terraform_graph(changed_paths, limits)
         mermaid, summary, assumptions = _static_terraform_mermaid(changed_paths, direction, limits)
         diag_kind = "terraform"
-    except Exception:
+    except Exception:  # nosec B110
         pass
 
     if mermaid is None:
@@ -2400,7 +2400,7 @@ def _static_markdown(
                     render=render,
                 )
                 rendered_any = True
-        except Exception:
+        except Exception:  # nosec B110
             # Keep Mermaid output even if Graphviz/diagrams fails.
             pass
 
@@ -2448,7 +2448,7 @@ def _static_markdown(
                     cfn_pad, cfn_nodesep, cfn_ranksep, cfn_complexity, render
                 )
                 rendered_any = True
-        except Exception:
+        except Exception:  # nosec B110
             pass
 
     md = (

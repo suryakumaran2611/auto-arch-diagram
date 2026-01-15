@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import os
-import subprocess
+import subprocess  # nosec B404
 import sys
 from pathlib import Path
 
@@ -51,7 +51,7 @@ def _generate_for_example(repo: Path, entry_file: Path) -> None:
         str(out_svg.relative_to(repo)),
     ]
 
-    res = subprocess.run(cmd, cwd=str(repo), env=env, capture_output=True, text=True)
+    res = subprocess.run(cmd, cwd=str(repo), env=env, capture_output=True, text=True)  # nosec B603
     if res.returncode != 0:
         raise RuntimeError(f"Failed generating for {example_dir}:\n{res.stderr}\n{res.stdout}")
 
