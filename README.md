@@ -2,7 +2,6 @@
 
 [![Python Tests](https://github.com/suryakumaran2611/auto-arch-diagram/actions/workflows/python-tests.yml/badge.svg)](https://github.com/suryakumaran2611/auto-arch-diagram/actions/workflows/python-tests.yml)
 [![Secret Scan](https://github.com/suryakumaran2611/auto-arch-diagram/actions/workflows/secret-scan.yml/badge.svg)](https://github.com/suryakumaran2611/auto-arch-diagram/actions/workflows/secret-scan.yml)
-[![OSSF Scorecard](https://github.com/suryakumaran2611/auto-arch-diagram/actions/workflows/scorecard.yml/badge.svg)](https://github.com/suryakumaran2611/auto-arch-diagram/actions/workflows/scorecard.yml)
 
 A GitHub PR “agent” that generates professional architecture diagrams from Infrastructure-as-Code (IaC) changes.
 
@@ -53,7 +52,6 @@ Optional (commit diagrams into the repo via a separate “diagram update PR”):
 This repo includes “shift-left” security checks that run on PRs and/or on a schedule:
 
 - Secret scanning: gitleaks ([.github/workflows/secret-scan.yml](.github/workflows/secret-scan.yml))
-- Supply-chain posture: OSSF Scorecard ([.github/workflows/scorecard.yml](.github/workflows/scorecard.yml))
 - Python security tooling in CI: `pip-audit` + `bandit` ([.github/workflows/python-tests.yml](.github/workflows/python-tests.yml))
 - Automated updates: Dependabot ([.github/dependabot.yml](.github/dependabot.yml))
 
