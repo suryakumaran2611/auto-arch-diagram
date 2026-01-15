@@ -1,0 +1,60 @@
+name: Auto Release
+
+on:
+  push:
+    branches: ["main"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Determine next version
+        id: version
+        run: |
+          git fetch --tags --force
+          last_tag=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
+          commits=$(git log ${last_tag}..HEAD --format='%s%n%b')
+
+          bump="patch"
+          if echo "$commits" | grep -qiE "BREAKING CHANGE|!:"; then
+            bump="major"
+          elif echo "$commits" | grep -qiE "^feat|\bfeat\b"; then
+            bump="minor"
+          fi
+
+          version=${last_tag#v}
+          IFS='.' read -r major minor patch <<< "$version"
+          case "$bump" in
+            major) major=$((major+1)); minor=0; patch=0 ;;
+            minor) minor=$((minor+1)); patch=0 ;;
+            patch) patch=$((patch+1)) ;;
+          esac
+          next="v${major}.${minor}.${patch}"
+          echo "bump=${bump}" >> $GITHUB_OUTPUT
+          echo "version=${next}" >> $GITHUB_OUTPUT
+
+      - name: Create tag
+        run: |
+          git tag ${{ steps.version.outputs.version }}
+          git push origin ${{ steps.version.outputs.version }}
+
+      - name: Create GitHub release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ steps.version.outputs.version }}
+          release_name: ${{ steps.version.outputs.version }}
+          draft: false
+          prerelease: false
+          body: |
+            Automatic release generated from commits since last tag.
+            Bump type: ${{ steps.version.outputs.bump }}

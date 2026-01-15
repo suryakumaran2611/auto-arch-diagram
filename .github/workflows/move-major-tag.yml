@@ -1,0 +1,55 @@
+name: Move major tag
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+permissions:
+  contents: write
+
+jobs:
+  move_tag:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Move v<major> tag to this release
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fullTag = context.ref.replace('refs/tags/', '');
+            const m = /^v(\d+)\.(\d+)\.(\d+)$/.exec(fullTag);
+            if (!m) {
+              core.info(`Not a semver tag: ${fullTag}`);
+              return;
+            }
+            const major = `v${m[1]}`;
+            const sha = context.sha;
+
+            async function upsertTag(tagName) {
+              const ref = `tags/${tagName}`;
+              try {
+                await github.rest.git.getRef({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  ref,
+                });
+                await github.rest.git.updateRef({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  ref,
+                  sha,
+                  force: true,
+                });
+                core.info(`Updated ${tagName} -> ${sha}`);
+              } catch (e) {
+                await github.rest.git.createRef({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  ref: `refs/tags/${tagName}`,
+                  sha,
+                });
+                core.info(`Created ${tagName} -> ${sha}`);
+              }
+            }
+
+            await upsertTag(major);

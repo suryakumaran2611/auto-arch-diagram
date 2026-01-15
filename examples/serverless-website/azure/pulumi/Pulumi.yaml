@@ -1,0 +1,24 @@
+name: azure-serverless-website
+runtime: yaml
+
+resources:
+  rg:
+    type: azure-native:resources:ResourceGroup
+
+  stg:
+    type: azure-native:storage:StorageAccount
+    properties:
+      resourceGroupName: ${rg.name}
+      sku:
+        name: Standard_LRS
+      kind: StorageV2
+      allowBlobPublicAccess: false
+      minimumTlsVersion: TLS1_2
+      supportsHttpsTrafficOnly: true
+
+  cdnProfile:
+    type: azure-native:cdn:Profile
+    properties:
+      resourceGroupName: ${rg.name}
+      sku:
+        name: Standard_Microsoft

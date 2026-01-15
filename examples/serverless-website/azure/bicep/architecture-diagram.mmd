@@ -1,0 +1,8 @@
+flowchart LR
+subgraph Azure[Azure]
+  bicep_cdnEndpoint["cdnEndpoint\nMicrosoft.Cdn/profiles/endpoints"]
+  bicep_cdnProfile["cdnProfile\nMicrosoft.Cdn/profiles"]
+  bicep_rg["rg\nMicrosoft.Resources/resourceGroups"]
+  bicep_stg["stg\nMicrosoft.Storage/storageAccounts"]
+end
+bicep_stg --> bicep_cdnEndpoint

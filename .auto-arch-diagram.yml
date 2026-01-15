@@ -1,0 +1,54 @@
+# Configuration for the Auto Architecture Diagram PR agent
+#
+# Notes:
+# - GitHub PR comments support Mermaid rendering in markdown.
+# - The generator intentionally redacts likely-secret values before sending content to the model.
+
+diagram:
+  format: mermaid
+  direction: LR
+
+# Optional icon-rendering controls (PNG/SVG/JPEG). Defaults follow common industry practices
+# (readable spacing, orthogonal lines, category lanes). Uncomment to override.
+#
+# render:
+#   # lanes (default) or providers
+#   layout: lanes
+#   # transparent (default for PNG/SVG) or white
+#   background: transparent
+#   lanes: [Network, Security, Containers, Compute, Data, Storage, Other]
+#   graph:
+#     pad: 0.2
+#     nodesep: 0.18
+#     ranksep: 0.45
+#     splines: ortho
+#     concentrate: true
+#   node:
+#     width: 0.85
+#     height: 0.85
+#     fontsize: 9
+
+generator:
+  # static: no external AI (uses parsers/libs)
+  # ai: uses OpenAI (requires OPENAI_API_KEY)
+  mode: static
+
+publish:
+  # When enabled, the generator writes outputs into these repo paths
+  # so a workflow can open a PR updating the diagram files.
+  enabled: true
+  paths:
+    md: docs/architecture/auto-arch-diagram.md
+    mmd: docs/architecture/auto-arch-diagram.mmd
+    png: docs/architecture/auto-arch-diagram.png
+    jpg: docs/architecture/auto-arch-diagram.jpg
+    svg: docs/architecture/auto-arch-diagram.svg
+
+model:
+  provider: openai
+  # Override in GitHub Actions via env `AUTO_ARCH_MODEL`
+  name: gpt-4o-mini
+
+limits:
+  max_files: 25
+  max_bytes_per_file: 30000

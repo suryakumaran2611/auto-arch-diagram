@@ -1,0 +1,794 @@
+name: Reusable - Auto Architecture Diagram
+
+on:
+  workflow_call:
+    inputs:
+      changed_files:
+        description: "Optional space/newline-separated list of IaC files to diagram. If set, skips change detection."
+        required: false
+        type: string
+        default: ''
+      iac_globs:
+        description: "Newline-separated glob patterns for IaC files (used to detect changes)."
+        required: false
+        type: string
+        default: |
+          **/*.tf
+          **/*.tfvars
+          **/*.hcl
+          **/*.bicep
+          **/*.cfn.yaml
+          **/*.cfn.yml
+          **/*.cfn.json
+          **/template.yaml
+          **/template.yml
+          **/Pulumi.*.yaml
+          **/Pulumi.*.yml
+          **/Pulumi.yaml
+          **/Pulumi.yml
+          **/Pulumi.*.json
+          **/Pulumi.*.ts
+          **/Pulumi.*.py
+          **/*.cdk.ts
+          **/*.cdk.py
+      direction:
+        description: "Diagram direction: LR (horizontal left-to-right), TB (vertical top-to-bottom), RL, BT, or AUTO (intelligent selection based on architecture)."
+        required: false
+        type: string
+        default: LR
+      mode:
+        description: "Generator mode: static (default) or ai."
+        required: false
+        type: string
+        default: static
+      model:
+        description: "AI model name (only used when mode=ai)."
+        required: false
+        type: string
+        default: gpt-4o-mini
+      render_layout:
+        description: "Icon render layout: lanes (default) or providers."
+        required: false
+        type: string
+        default: lanes
+      render_bg:
+        description: "PNG/SVG background: transparent (default) or white. JPEG is always white."
+        required: false
+        type: string
+        default: transparent
+      image_formats:
+        description: "Comma-separated image formats to generate: png,jpg,svg. Use 'none' to skip image rendering."
+        required: false
+        type: string
+        default: png,jpg,svg
+      out_dir:
+        description: "Output directory for artifacts (markdown/mermaid/images)."
+        required: false
+        type: string
+        default: artifacts
+      out_md:
+        description: "Override output markdown path (relative). Default is <out_dir>/architecture-diagram.md."
+        required: false
+        type: string
+        default: ''
+      out_mmd:
+        description: "Override output mermaid path (relative). Default is <out_dir>/architecture-diagram.mmd."
+        required: false
+        type: string
+        default: ''
+      out_png:
+        description: "Override output PNG path (relative). Ignored unless png requested."
+        required: false
+        type: string
+        default: ''
+      out_jpg:
+        description: "Override output JPEG path (relative). Ignored unless jpg requested."
+        required: false
+        type: string
+        default: ''
+      out_svg:
+        description: "Override output SVG path (relative). Ignored unless svg requested."
+        required: false
+        type: string
+        default: ''
+      publish_enabled:
+        description: "Whether to write outputs into publish.paths from .auto-arch-diagram.yml."
+        required: false
+        type: boolean
+        default: false
+      comment_on_pr:
+        description: "Post/Update a sticky PR comment (only on pull_request events)."
+        required: false
+        type: boolean
+        default: true
+      create_diagram_pr:
+        description: "Create/update a separate PR committing publish.paths outputs (requires contents: write)."
+        required: false
+        type: boolean
+        default: false
+      diagram_pr_branch_prefix:
+        description: "Branch prefix for the diagram update PR."
+        required: false
+        type: string
+        default: auto-arch-diagram/update
+      force_full:
+        description: "Force full architecture generation (ignore change detection)."
+        required: false
+        type: boolean
+        default: true
+    secrets:
+      OPENAI_API_KEY:
+        required: false
+
+permissions:
+  contents: read
+
+jobs:
+  diagram:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+
+    steps:
+      - name: Checkout caller repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Resolve tool ref
+        id: ref
+        shell: bash
+        run: |
+          # github.workflow_ref looks like: owner/repo/.github/workflows/reusable-auto-arch-diagram.yml@ref
+          REF="${{ github.workflow_ref }}"
+          echo "Full workflow ref: ${REF}"
+          
+          TOOL_REPO="${REF%%/.github/workflows/*}"
+          TOOL_REF="${REF##*@}"
+          
+          echo "Extracted repo: ${TOOL_REPO}"
+          echo "Extracted ref: ${TOOL_REF}"
+          
+          # Fallback to the canonical tool repo if the computed repo appears to be the caller repo
+          if [[ -z "${TOOL_REPO}" || "${TOOL_REPO}" == *"mlops-multi-account-terraform"* ]]; then
+            TOOL_REPO="suryakumaran2611/auto-arch-diagram"
+            echo "Using fallback repo: ${TOOL_REPO}"
+          fi
+          if [[ -z "${TOOL_REF}" || "${TOOL_REF}" == "@" || "${TOOL_REF}" == "${REF}" ]]; then
+            TOOL_REF="main"
+            echo "Using fallback ref: ${TOOL_REF}"
+          fi
+          
+          echo "Final tool_repo=${TOOL_REPO}"
+          echo "Final tool_ref=${TOOL_REF}"
+          echo "tool_repo=${TOOL_REPO}" >> "$GITHUB_OUTPUT"
+          echo "tool_ref=${TOOL_REF}" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout auto-arch-diagram tool
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ steps.ref.outputs.tool_repo }}
+          ref: ${{ steps.ref.outputs.tool_ref }}
+          path: .auto-arch-diagram-tool
+
+      - name: Verify tool checkout
+        shell: bash
+        run: |
+          echo "=== Verifying tool repo checkout ==="
+          echo "Expected path: .auto-arch-diagram-tool"
+          if [ -d .auto-arch-diagram-tool ]; then
+            echo "✓ Directory exists"
+            echo "Contents:"
+            ls -la .auto-arch-diagram-tool/ | head -20
+            echo ""
+            echo "Checking for requirements files:"
+            [ -f .auto-arch-diagram-tool/requirements.txt ] && echo "✓ requirements.txt found" || echo "✗ requirements.txt NOT found"
+            [ -f .auto-arch-diagram-tool/requirements-ai.txt ] && echo "✓ requirements-ai.txt found" || echo "✗ requirements-ai.txt NOT found"
+            [ -f .auto-arch-diagram-tool/tools/generate_arch_diagram.py ] && echo "✓ generator script found" || echo "✗ generator script NOT found"
+          else
+            echo "✗ Directory does NOT exist"
+            echo "Current directory contents:"
+            ls -la
+          fi
+          echo "==================================="
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Graphviz (for icon rendering)
+        run: |
+          FORMATS_RAW='${{ inputs.image_formats }}'
+          FORMATS="$(echo "${FORMATS_RAW}" | tr '[:upper:]' '[:lower:]' | tr -d ' ' )"
+          if [ -z "${FORMATS}" ] || [ "${FORMATS}" = "none" ]; then
+            exit 0
+          fi
+
+          sudo apt-get update
+          sudo apt-get install -y graphviz
+
+      - name: Install dependencies
+        shell: bash
+        run: |
+          set -e
+          python -m pip install --upgrade pip
+          
+          echo "=== Installing Python dependencies ==="
+          echo "Mode: ${{ inputs.mode }}"
+          echo "Checking for requirements files..."
+          
+          if [ "${{ inputs.mode }}" = "ai" ]; then
+            REQ_FILE=".auto-arch-diagram-tool/requirements-ai.txt"
+            if [ -f "${REQ_FILE}" ]; then
+              echo "Installing from ${REQ_FILE}"
+              pip install -r "${REQ_FILE}"
+            else
+              echo "Requirements file not found, installing fallback deps for AI mode"
+              pip install PyYAML python-hcl2 diagrams graphviz openai
+            fi
+          else
+            REQ_FILE=".auto-arch-diagram-tool/requirements.txt"
+            if [ -f "${REQ_FILE}" ]; then
+              echo "Installing from ${REQ_FILE}"
+              pip install -r "${REQ_FILE}"
+            else
+              echo "Requirements file not found, installing fallback deps for static mode"
+              pip install PyYAML python-hcl2 diagrams graphviz
+            fi
+          fi
+          
+          echo "=== Dependencies installed successfully ==="
+
+      - name: Determine changed IaC files
+        id: changed
+        if: ${{ !inputs.force_full && inputs.changed_files == '' }}
+        uses: tj-actions/changed-files@v45
+        with:
+          files: ${{ inputs.iac_globs }}
+
+      - name: Use provided changed files
+        id: changed_direct
+        if: ${{ inputs.changed_files != '' }}
+        shell: bash
+        run: |
+          echo "all_changed_files=${{ inputs.changed_files }}" >> "$GITHUB_OUTPUT"
+
+      - name: Collect full IaC file list (force_full)
+        id: all_iac
+        if: ${{ inputs.force_full }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Build pattern list from iac_globs
+          raw='${{ inputs.iac_globs }}'
+          mapfile -t patterns < <(printf "%s\n" "${raw}")
+          
+          # Function to match a file against a pattern
+          match_pattern() {
+            local file="$1"
+            local pattern="$2"
+            local file_lower="${file,,}"
+            local pattern_lower="${pattern,,}"
+            
+            # Remove any leading/trailing whitespace
+            pattern_lower="${pattern_lower// /}"
+            
+            # Handle different pattern types
+            if [[ "${pattern_lower}" == **/* ]]; then
+              # Pattern like: **/*.tf or base-infrastructure/terraform/**/*.tf
+              # Extract the directory prefix if present
+              local dir_prefix=""
+              local glob_part="${pattern_lower}"
+              
+              if [[ "${pattern_lower}" == */**/* ]]; then
+                # Has a directory prefix like: base-infrastructure/terraform/**/*.tf
+                dir_prefix="${pattern_lower%%/**/*}"
+                glob_part="${pattern_lower#*/}"
+              fi
+              
+              # Check directory prefix match
+              if [[ -n "${dir_prefix}" ]]; then
+                [[ "${file_lower}" != ${dir_prefix}/* ]] && return 1
+              fi
+              
+              # Extract and check file extension/suffix
+              if [[ "${glob_part}" == **/*.* ]]; then
+                local suffix="${glob_part##**/}"
+                suffix="${suffix#\*}"
+                [[ "${file_lower}" == *"${suffix}" ]] && return 0
+              fi
+            elif [[ "${pattern_lower}" == **/template.yaml ]] || [[ "${pattern_lower}" == **/template.yml ]]; then
+              [[ "${file_lower}" == */template.yaml ]] || [[ "${file_lower}" == */template.yml ]] || \
+              [[ "${file_lower}" == template.yaml ]] || [[ "${file_lower}" == template.yml ]] && return 0
+            fi
+            
+            return 1
+          }
+          
+          files=()
+          while IFS= read -r f; do
+            for p in "${patterns[@]}"; do
+              if match_pattern "${f}" "${p}"; then
+                files+=("${f}")
+                break
+              fi
+            done
+          done < <(git ls-files)
+          
+          echo "=== IaC Files Found ==="
+          echo "Total files: ${#files[@]}"
+          if [ ${#files[@]} -gt 0 ]; then
+            echo "Files:"
+            printf "  - %s\n" "${files[@]}"
+          else
+            echo "WARNING: No IaC files found matching the patterns!"
+            echo "Patterns used:"
+            printf "  - %s\n" "${patterns[@]}"
+          fi
+          echo "========================"
+          
+          printf "all_changed_files=%s\n" "${files[*]}" >> "$GITHUB_OUTPUT"
+
+      - name: Generate diagrams
+        id: gen
+        env:
+          CHANGED_IAC_FILES: ${{ inputs.changed_files != '' && steps.changed_direct.outputs.all_changed_files || (inputs.force_full && steps.all_iac.outputs.all_changed_files || steps.changed.outputs.all_changed_files) }}
+          AUTO_ARCH_MODE: ${{ inputs.mode }}
+          AUTO_ARCH_MODEL: ${{ inputs.model }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          AUTO_ARCH_DIRECTION: ${{ inputs.direction }}
+          AUTO_ARCH_RENDER_LAYOUT: ${{ inputs.render_layout }}
+          AUTO_ARCH_RENDER_BG: ${{ inputs.render_bg }}
+          AUTO_ARCH_PUBLISH_ENABLED: ${{ inputs.publish_enabled && 'true' || 'false' }}
+        run: |
+          set -e  # Exit on any error
+          
+          OUT_DIR='${{ inputs.out_dir }}'
+          mkdir -p "${OUT_DIR}"
+
+          FORMATS_RAW='${{ inputs.image_formats }}'
+          FORMATS="$(echo "${FORMATS_RAW}" | tr '[:upper:]' '[:lower:]' | tr -d ' ' )"
+
+          OUT_MD='${{ inputs.out_md }}'
+          OUT_MMD='${{ inputs.out_mmd }}'
+          OUT_PNG='${{ inputs.out_png }}'
+          OUT_JPG='${{ inputs.out_jpg }}'
+          OUT_SVG='${{ inputs.out_svg }}'
+
+          if [ -z "${OUT_MD}" ]; then OUT_MD="${OUT_DIR}/architecture-diagram.md"; fi
+          if [ -z "${OUT_MMD}" ]; then OUT_MMD="${OUT_DIR}/architecture-diagram.mmd"; fi
+
+          WANT_PNG=0; WANT_JPG=0; WANT_SVG=0
+          if [ -n "${FORMATS}" ] && [ "${FORMATS}" != "none" ]; then
+            case ",${FORMATS}," in *,png,*) WANT_PNG=1 ;; esac
+            case ",${FORMATS}," in *,jpg,*) WANT_JPG=1 ;; esac
+            case ",${FORMATS}," in *,svg,*) WANT_SVG=1 ;; esac
+          fi
+
+          OUT_PNG_ARG=""; OUT_JPG_ARG=""; OUT_SVG_ARG=""
+          if [ "${WANT_PNG}" = "1" ]; then
+            if [ -n "${OUT_PNG}" ]; then OUT_PNG_ARG="${OUT_PNG}"; else OUT_PNG_ARG="${OUT_DIR}/architecture-diagram.png"; fi
+          fi
+          if [ "${WANT_JPG}" = "1" ]; then
+            if [ -n "${OUT_JPG}" ]; then OUT_JPG_ARG="${OUT_JPG}"; else OUT_JPG_ARG="${OUT_DIR}/architecture-diagram.jpg"; fi
+          fi
+          if [ "${WANT_SVG}" = "1" ]; then
+            if [ -n "${OUT_SVG}" ]; then OUT_SVG_ARG="${OUT_SVG}"; else OUT_SVG_ARG="${OUT_DIR}/architecture-diagram.svg"; fi
+          fi
+          
+          echo "=== Generating Diagrams ==="
+          echo "Changed IaC Files: ${CHANGED_IAC_FILES}"
+          echo "Output MD: ${OUT_MD}"
+          echo "Output MMD: ${OUT_MMD}"
+          if [ -n "${OUT_PNG_ARG}" ]; then echo "Output PNG: ${OUT_PNG_ARG}"; fi
+          if [ -n "${OUT_JPG_ARG}" ]; then echo "Output JPG: ${OUT_JPG_ARG}"; fi
+          if [ -n "${OUT_SVG_ARG}" ]; then echo "Output SVG: ${OUT_SVG_ARG}"; fi
+          echo "========================="
+
+          python .auto-arch-diagram-tool/tools/generate_arch_diagram.py \
+            --changed-files "${CHANGED_IAC_FILES}" \
+            --out-md "${OUT_MD}" \
+            --out-mmd "${OUT_MMD}" \
+            --out-png "${OUT_PNG_ARG}" \
+            --out-jpg "${OUT_JPG_ARG}" \
+            --out-svg "${OUT_SVG_ARG}"
+
+          echo "" >> "${OUT_MD}"
+          echo "Rendered PNG/JPEG/SVG are uploaded as workflow artifacts." >> "${OUT_MD}"
+          echo "Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" >> "${OUT_MD}"
+
+          echo "md_path=${OUT_MD}" >> "$GITHUB_OUTPUT"
+          echo "mmd_path=${OUT_MMD}" >> "$GITHUB_OUTPUT"
+          echo "png_path=${OUT_PNG_ARG}" >> "$GITHUB_OUTPUT"
+          echo "jpg_path=${OUT_JPG_ARG}" >> "$GITHUB_OUTPUT"
+          echo "svg_path=${OUT_SVG_ARG}" >> "$GITHUB_OUTPUT"
+
+      - name: Validate generated files
+        shell: bash
+        run: |
+          set -e
+          echo "=== Validating generated diagram files ==="
+          
+          OUT_DIR='${{ inputs.out_dir }}'
+          MD_PATH='${{ steps.gen.outputs.md_path }}'
+          MMD_PATH='${{ steps.gen.outputs.mmd_path }}'
+          
+          # Check that the output directory exists
+          if [ ! -d "${OUT_DIR}" ]; then
+            echo "ERROR: Output directory does not exist: ${OUT_DIR}"
+            exit 1
+          fi
+          
+          # Check for required files (markdown and mermaid)
+          if [ ! -f "${MD_PATH}" ]; then
+            echo "ERROR: Markdown file was not generated: ${MD_PATH}"
+            exit 1
+          fi
+          
+          if [ ! -f "${MMD_PATH}" ]; then
+            echo "ERROR: Mermaid file was not generated: ${MMD_PATH}"
+            exit 1
+          fi
+          
+          # Check that files are not empty
+          if [ ! -s "${MD_PATH}" ]; then
+            echo "ERROR: Markdown file is empty: ${MD_PATH}"
+            exit 1
+          fi
+          
+          if [ ! -s "${MMD_PATH}" ]; then
+            echo "ERROR: Mermaid file is empty: ${MMD_PATH}"
+            exit 1
+          fi
+          
+          echo "✓ Markdown file: ${MD_PATH} ($(stat -c%s "${MD_PATH}") bytes)"
+          echo "✓ Mermaid file: ${MMD_PATH} ($(stat -c%s "${MMD_PATH}") bytes)"
+          
+          # Check optional image files if they were requested
+          PNG_PATH='${{ steps.gen.outputs.png_path }}'
+          JPG_PATH='${{ steps.gen.outputs.jpg_path }}'
+          SVG_PATH='${{ steps.gen.outputs.svg_path }}'
+          
+          if [ -n "${PNG_PATH}" ] && [ -f "${PNG_PATH}" ]; then
+            echo "✓ PNG file: ${PNG_PATH} ($(stat -c%s "${PNG_PATH}") bytes)"
+          fi
+          
+          if [ -n "${JPG_PATH}" ] && [ -f "${JPG_PATH}" ]; then
+            echo "✓ JPG file: ${JPG_PATH} ($(stat -c%s "${JPG_PATH}") bytes)"
+          fi
+          
+          if [ -n "${SVG_PATH}" ] && [ -f "${SVG_PATH}" ]; then
+            echo "✓ SVG file: ${SVG_PATH} ($(stat -c%s "${SVG_PATH}") bytes)"
+          fi
+          
+          echo "=== All required files validated successfully ==="
+
+      - name: Upload artifacts
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: auto-arch-diagram
+          path: ${{ inputs.out_dir }}/
+
+      - name: Find existing comment
+        if: ${{ inputs.comment_on_pr && github.event_name == 'pull_request' }}
+        id: find
+        uses: peter-evans/find-comment@v4
+        with:
+          issue-number: ${{ github.event.pull_request.number }}
+          comment-author: 'github-actions[bot]'
+          body-includes: '<!-- auto-arch-diagram -->'
+
+      - name: Create or update PR comment
+        if: ${{ inputs.comment_on_pr && github.event_name == 'pull_request' }}
+        uses: peter-evans/create-or-update-comment@v4
+        with:
+          issue-number: ${{ github.event.pull_request.number }}
+          comment-id: ${{ steps.find.outputs.comment-id }}
+          edit-mode: replace
+          body-file: ${{ steps.gen.outputs.md_path }}
+
+  diagram_pr:
+    if: ${{ inputs.create_diagram_pr }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Checkout base
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.base.sha || github.sha }}
+          fetch-depth: 0
+
+      - name: Checkout PR head
+        if: ${{ github.event_name == 'pull_request_target' }}
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.event.pull_request.head.repo.full_name }}
+          ref: ${{ github.event.pull_request.head.sha }}
+          path: pr
+
+      - name: Resolve tool ref
+        id: ref
+        shell: bash
+        run: |
+          REF="${{ github.workflow_ref }}"
+          echo "Full workflow ref: ${REF}"
+          
+          TOOL_REPO="${REF%%/.github/workflows/*}"
+          TOOL_REF="${REF##*@}"
+          
+          echo "Extracted repo: ${TOOL_REPO}"
+          echo "Extracted ref: ${TOOL_REF}"
+          
+          # Fallback to the canonical tool repo if the computed repo appears to be the caller repo
+          if [[ -z "${TOOL_REPO}" || "${TOOL_REPO}" == *"mlops-multi-account-terraform"* ]]; then
+            TOOL_REPO="suryakumaran2611/auto-arch-diagram"
+            echo "Using fallback repo: ${TOOL_REPO}"
+          fi
+          if [[ -z "${TOOL_REF}" || "${TOOL_REF}" == "@" || "${TOOL_REF}" == "${REF}" ]]; then
+            TOOL_REF="main"
+            echo "Using fallback ref: ${TOOL_REF}"
+          fi
+          
+          echo "Final tool_repo=${TOOL_REPO}"
+          echo "Final tool_ref=${TOOL_REF}"
+          echo "tool_repo=${TOOL_REPO}" >> "$GITHUB_OUTPUT"
+          echo "tool_ref=${TOOL_REF}" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout auto-arch-diagram tool
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ steps.ref.outputs.tool_repo }}
+          ref: ${{ steps.ref.outputs.tool_ref }}
+          path: .auto-arch-diagram-tool
+
+      - name: Verify tool checkout
+        shell: bash
+        run: |
+          echo "=== Verifying tool repo checkout ==="
+          echo "Expected path: .auto-arch-diagram-tool"
+          if [ -d .auto-arch-diagram-tool ]; then
+            echo "✓ Directory exists"
+            echo "Contents:"
+            ls -la .auto-arch-diagram-tool/ | head -20
+            echo ""
+            echo "Checking for requirements files:"
+            [ -f .auto-arch-diagram-tool/requirements.txt ] && echo "✓ requirements.txt found" || echo "✗ requirements.txt NOT found"
+            [ -f .auto-arch-diagram-tool/requirements-ai.txt ] && echo "✓ requirements-ai.txt found" || echo "✗ requirements-ai.txt NOT found"
+            [ -f .auto-arch-diagram-tool/tools/generate_arch_diagram.py ] && echo "✓ generator script found" || echo "✗ generator script NOT found"
+          else
+            echo "✗ Directory does NOT exist"
+            echo "Current directory contents:"
+            ls -la
+            exit 1
+          fi
+          echo "==================================="
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Graphviz (for icon rendering)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y graphviz
+
+      - name: Install dependencies
+        shell: bash
+        run: |
+          set -e
+          python -m pip install --upgrade pip
+          
+          echo "=== Installing Python dependencies ==="
+          echo "Mode: ${{ inputs.mode }}"
+          echo "Checking for requirements files..."
+          
+          if [ "${{ inputs.mode }}" = "ai" ]; then
+            REQ_FILE=".auto-arch-diagram-tool/requirements-ai.txt"
+            if [ -f "${REQ_FILE}" ]; then
+              echo "Installing from ${REQ_FILE}"
+              pip install -r "${REQ_FILE}"
+            else
+              echo "ERROR: Requirements file not found: ${REQ_FILE}"
+              exit 1
+            fi
+          else
+            REQ_FILE=".auto-arch-diagram-tool/requirements.txt"
+            if [ -f "${REQ_FILE}" ]; then
+              echo "Installing from ${REQ_FILE}"
+              pip install -r "${REQ_FILE}"
+            else
+              echo "ERROR: Requirements file not found: ${REQ_FILE}"
+              exit 1
+            fi
+          fi
+          
+          echo "=== Dependencies installed successfully ==="
+
+      - name: Determine changed IaC files
+        if: ${{ github.event_name != 'pull_request_target' }}
+        id: changed
+        uses: tj-actions/changed-files@v45
+        with:
+          files: ${{ inputs.iac_globs }}
+
+      - name: List changed IaC files (PR API)
+        if: ${{ github.event_name == 'pull_request_target' }}
+        id: pr_files
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const prNumber = context.payload.pull_request.number;
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+
+            // Build an allowlist from the caller's glob patterns (simple suffix-based filter).
+            const raw = `${{ inputs.iac_globs }}`;
+            const patterns = raw.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
+            const suffixes = patterns
+              .filter(p => p.startsWith('**/*.'))
+              .map(p => p.replace('**/*', '').trim());
+
+            function matches(name) {
+              const lower = name.toLowerCase();
+              for (const s of suffixes) {
+                if (s.startsWith('.')) {
+                  if (lower.endsWith(s)) return true;
+                }
+              }
+              // handle template.yml/.yaml and Pulumi.* patterns broadly
+              if (lower.endsWith('template.yml') || lower.endsWith('template.yaml')) return true;
+              if (lower.endsWith('/pulumi.yaml') || lower.endsWith('/pulumi.yml') || lower === 'pulumi.yaml' || lower === 'pulumi.yml') return true;
+              if (/\/pulumi\..*\.(yaml|yml|json|ts|py)$/i.test(name) || /^pulumi\..*\.(yaml|yml|json|ts|py)$/i.test(name)) return true;
+              return false;
+            }
+
+            let files = [];
+            for await (const resp of github.paginate.iterator(github.rest.pulls.listFiles, {
+              owner, repo, pull_number: prNumber, per_page: 100
+            })) {
+              for (const f of resp.data) {
+                if (matches(f.filename)) files.push(f.filename);
+              }
+            }
+
+            core.setOutput('iac_files', files.join(' '));
+
+      - name: Read publish add-paths
+        id: cfg
+        shell: bash
+        run: |
+          python - <<'PY'
+          import os
+          from pathlib import Path
+          try:
+            import yaml
+          except Exception:
+            yaml = None
+
+          repo_root = Path.cwd()
+          cfg_path = repo_root / '.auto-arch-diagram.yml'
+          config = {}
+          if cfg_path.exists() and yaml is not None:
+            config = yaml.safe_load(cfg_path.read_text(encoding='utf-8')) or {}
+
+          publish = (config.get('publish') or {}) if isinstance(config, dict) else {}
+          paths = publish.get('paths') or {}
+          if not isinstance(paths, dict):
+            paths = {}
+
+          ordered = [paths.get('md'), paths.get('mmd'), paths.get('png'), paths.get('jpg'), paths.get('svg')]
+          add_paths = []
+          for p in ordered:
+            if isinstance(p, str) and p.strip():
+              add_paths.append(p.strip())
+
+          seen = set()
+          add_paths = [p for p in add_paths if not (p in seen or seen.add(p))]
+
+          out_file = os.environ['GITHUB_OUTPUT']
+          with open(out_file, 'a', encoding='utf-8') as f:
+            f.write('add_paths<<EOF\n')
+            f.write('\n'.join(add_paths) + ('\n' if add_paths else ''))
+            f.write('EOF\n')
+          PY
+
+      - name: Validate publish paths
+        shell: bash
+        run: |
+          if [ -z "${{ steps.cfg.outputs.add_paths }}" ]; then
+            echo "publish.paths is empty; configure .auto-arch-diagram.yml publish.paths.* before enabling create_diagram_pr." 1>&2
+            exit 1
+          fi
+
+      - name: Generate and publish into repo paths
+        env:
+          CHANGED_IAC_FILES: ${{ inputs.force_full && '.' || (github.event_name == 'pull_request_target' && steps.pr_files.outputs.iac_files || steps.changed.outputs.all_changed_files) }}
+          AUTO_ARCH_MODE: ${{ inputs.mode }}
+          AUTO_ARCH_MODEL: ${{ inputs.model }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          AUTO_ARCH_DIRECTION: ${{ inputs.direction }}
+          AUTO_ARCH_RENDER_LAYOUT: ${{ inputs.render_layout }}
+          AUTO_ARCH_RENDER_BG: ${{ inputs.render_bg }}
+          AUTO_ARCH_PUBLISH_ENABLED: 'true'
+        run: |
+          set -e  # Exit on any error
+          
+          OUT_DIR='${{ inputs.out_dir }}'
+          mkdir -p "${OUT_DIR}"
+
+          FORMATS_RAW='${{ inputs.image_formats }}'
+          FORMATS="$(echo "${FORMATS_RAW}" | tr '[:upper:]' '[:lower:]' | tr -d ' ' )"
+
+          OUT_MD='${{ inputs.out_md }}'
+          OUT_MMD='${{ inputs.out_mmd }}'
+          OUT_PNG='${{ inputs.out_png }}'
+          OUT_JPG='${{ inputs.out_jpg }}'
+          OUT_SVG='${{ inputs.out_svg }}'
+
+          if [ -z "${OUT_MD}" ]; then OUT_MD="${OUT_DIR}/architecture-diagram.md"; fi
+          if [ -z "${OUT_MMD}" ]; then OUT_MMD="${OUT_DIR}/architecture-diagram.mmd"; fi
+
+          WANT_PNG=0; WANT_JPG=0; WANT_SVG=0
+          if [ -n "${FORMATS}" ] && [ "${FORMATS}" != "none" ]; then
+            case ",${FORMATS}," in *,png,*) WANT_PNG=1 ;; esac
+            case ",${FORMATS}," in *,jpg,*) WANT_JPG=1 ;; esac
+            case ",${FORMATS}," in *,svg,*) WANT_SVG=1 ;; esac
+          fi
+
+          OUT_PNG_ARG=""; OUT_JPG_ARG=""; OUT_SVG_ARG=""
+          if [ "${WANT_PNG}" = "1" ]; then
+            if [ -n "${OUT_PNG}" ]; then OUT_PNG_ARG="${OUT_PNG}"; else OUT_PNG_ARG="${OUT_DIR}/architecture-diagram.png"; fi
+          fi
+          if [ "${WANT_JPG}" = "1" ]; then
+            if [ -n "${OUT_JPG}" ]; then OUT_JPG_ARG="${OUT_JPG}"; else OUT_JPG_ARG="${OUT_DIR}/architecture-diagram.jpg"; fi
+          fi
+          if [ "${WANT_SVG}" = "1" ]; then
+            if [ -n "${OUT_SVG}" ]; then OUT_SVG_ARG="${OUT_SVG}"; else OUT_SVG_ARG="${OUT_DIR}/architecture-diagram.svg"; fi
+          fi
+
+          python .auto-arch-diagram-tool/tools/generate_arch_diagram.py \
+            --iac-root ${{ github.event_name == 'pull_request_target' && 'pr' || '.' }} \
+            --changed-files "${CHANGED_IAC_FILES}" \
+            --out-md "${OUT_MD}" \
+            --out-mmd "${OUT_MMD}" \
+            --out-png "${OUT_PNG_ARG}" \
+            --out-jpg "${OUT_JPG_ARG}" \
+            --out-svg "${OUT_SVG_ARG}"
+          
+          # Validate that files were created
+          echo "=== Validating generated files ==="
+          if [ ! -f "${OUT_MD}" ]; then
+            echo "ERROR: Markdown file was not generated: ${OUT_MD}"
+            exit 1
+          fi
+          
+          if [ ! -f "${OUT_MMD}" ]; then
+            echo "ERROR: Mermaid file was not generated: ${OUT_MMD}"
+            exit 1
+          fi
+          
+          if [ ! -s "${OUT_MD}" ] || [ ! -s "${OUT_MMD}" ]; then
+            echo "ERROR: Generated files are empty"
+            exit 1
+          fi
+          
+          echo "✓ Files validated successfully"
+
+      - name: Create or update diagram PR
+        uses: peter-evans/create-pull-request@v8
+        with:
+          commit-message: 'chore: update architecture diagram'
+          title: 'chore: update architecture diagram'
+          body: |
+            Auto-generated architecture diagram updates.
+
+            Source run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          branch: ${{ inputs.diagram_pr_branch_prefix }}-${{ github.event.pull_request.number || github.run_id }}
+          base: ${{ github.event.pull_request.base.ref || github.ref_name }}
+          add-paths: ${{ steps.cfg.outputs.add_paths }}

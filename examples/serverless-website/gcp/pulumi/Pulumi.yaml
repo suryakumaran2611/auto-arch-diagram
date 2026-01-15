@@ -1,0 +1,15 @@
+name: gcp-serverless-website
+runtime: yaml
+
+resources:
+  siteBucket:
+    type: gcp:storage/bucket:Bucket
+    properties:
+      location: US
+      uniformBucketLevelAccess: true
+
+  cdn:
+    type: gcp:compute/backendBucket:BackendBucket
+    properties:
+      bucketName: ${siteBucket.name}
+      enableCdn: true
