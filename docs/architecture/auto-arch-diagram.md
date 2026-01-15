@@ -20,4 +20,4 @@ tf_aws_vpc_main --> tf_aws_subnet_public
 
 Assumptions: Connections represent inferred references (including depends_on and attribute references).
 
-Rendered diagram: not available (icons require Graphviz + diagrams)
+Rendered diagram: available as workflow artifact

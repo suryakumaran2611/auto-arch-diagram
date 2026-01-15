@@ -72,6 +72,11 @@ If you want higher-quality diagrams across more IaC styles, you can enable AI mo
 
 - `AUTO_ARCH_MODEL` (defaults to `gpt-4o-mini`)
 
+Notes on reliability:
+
+- In workflows, `mode: ai` automatically installs [requirements-ai.txt](requirements-ai.txt) (includes `openai`).
+- In `static` mode, the tool does not require any external AI services.
+
 ## Supported IaC file types
 
 The workflow triggers on common IaC file patterns, including:
@@ -285,6 +290,52 @@ jobs:
       publish_enabled: true
       comment_on_pr: false
       create_diagram_pr: true
+
+### Mermaid-only (no images)
+
+If you only want the PR comment Mermaid (fastest + no Graphviz dependency), set:
+
+```yaml
+with:
+  mode: static
+  image_formats: none
+  out_dir: artifacts
+```
+
+### Use as a composite action (single workflow job)
+
+If you prefer not to use the reusable workflow, you can call the action directly.
+
+```yaml
+jobs:
+  diagram:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Generate architecture diagram
+        id: arch
+        uses: suryakumaran2611/auto-arch-diagram@v1
+        with:
+          changed_files: ${{ github.event.pull_request.changed_files }}
+          iac_root: .
+          mode: static
+          direction: LR
+          # Generate only PNG+SVG, and put them in a custom folder
+          image_formats: png,svg
+          out_dir: artifacts
+          out_png: docs/architecture/architecture-diagram.png
+          out_svg: docs/architecture/architecture-diagram.svg
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: auto-arch-diagram
+          path: artifacts/
+```
 ```
 
 To control which files get committed by the diagram-update PR, configure `publish.paths` in `.auto-arch-diagram.yml`:
