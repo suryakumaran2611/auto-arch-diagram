@@ -261,39 +261,74 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          # Build suffix allowlist from iac_globs
+          # Build pattern list from iac_globs
           raw='${{ inputs.iac_globs }}'
           mapfile -t patterns < <(printf "%s\n" "${raw}")
-          suffixes=()
-          for p in "${patterns[@]}"; do
-            p_trim="${p// /}"
-            if [[ "${p_trim}" == **/*.* ]]; then
-              suf="${p_trim#**/*}"
-              suffixes+=("${suf}")
-            elif [[ "${p_trim}" == **/template.yaml || "${p_trim}" == **/template.yml ]]; then
-              suffixes+=("template.yaml" "template.yml")
+          
+          # Function to match a file against a pattern
+          match_pattern() {
+            local file="$1"
+            local pattern="$2"
+            local file_lower="${file,,}"
+            local pattern_lower="${pattern,,}"
+            
+            # Remove any leading/trailing whitespace
+            pattern_lower="${pattern_lower// /}"
+            
+            # Handle different pattern types
+            if [[ "${pattern_lower}" == **/* ]]; then
+              # Pattern like: **/*.tf or base-infrastructure/terraform/**/*.tf
+              # Extract the directory prefix if present
+              local dir_prefix=""
+              local glob_part="${pattern_lower}"
+              
+              if [[ "${pattern_lower}" == */**/* ]]; then
+                # Has a directory prefix like: base-infrastructure/terraform/**/*.tf
+                dir_prefix="${pattern_lower%%/**/*}"
+                glob_part="${pattern_lower#*/}"
+              fi
+              
+              # Check directory prefix match
+              if [[ -n "${dir_prefix}" ]]; then
+                [[ "${file_lower}" != ${dir_prefix}/* ]] && return 1
+              fi
+              
+              # Extract and check file extension/suffix
+              if [[ "${glob_part}" == **/*.* ]]; then
+                local suffix="${glob_part##**/}"
+                suffix="${suffix#\*}"
+                [[ "${file_lower}" == *"${suffix}" ]] && return 0
+              fi
+            elif [[ "${pattern_lower}" == **/template.yaml ]] || [[ "${pattern_lower}" == **/template.yml ]]; then
+              [[ "${file_lower}" == */template.yaml ]] || [[ "${file_lower}" == */template.yml ]] || \
+              [[ "${file_lower}" == template.yaml ]] || [[ "${file_lower}" == template.yml ]] && return 0
             fi
-          done
+            
+            return 1
+          }
+          
           files=()
           while IFS= read -r f; do
-            lf="${f,,}"
-            add=0
-            for s in "${suffixes[@]}"; do
-              s_l="${s,,}"
-              if [[ "${s_l}" == .* ]]; then
-                [[ "${lf}" == *"${s_l}" ]] && add=1 && break
-              else
-                [[ "${lf}" == */"${s_l}" ]] && add=1 && break
+            for p in "${patterns[@]}"; do
+              if match_pattern "${f}" "${p}"; then
+                files+=("${f}")
+                break
               fi
             done
-            # Pulumi patterns (broad): Pulumi.*.(yaml|yml|json|ts|py)
-            if [[ ${add} -eq 0 && ${lf} =~ (^|/)pulumi\..*\.(yaml|yml|json|ts|py)$ ]]; then
-              add=1
-            fi
-            if [[ ${add} -eq 1 ]]; then
-              files+=("${f}")
-            fi
           done < <(git ls-files)
+          
+          echo "=== IaC Files Found ==="
+          echo "Total files: ${#files[@]}"
+          if [ ${#files[@]} -gt 0 ]; then
+            echo "Files:"
+            printf "  - %s\n" "${files[@]}"
+          else
+            echo "WARNING: No IaC files found matching the patterns!"
+            echo "Patterns used:"
+            printf "  - %s\n" "${patterns[@]}"
+          fi
+          echo "========================"
+          
           printf "all_changed_files=%s\n" "${files[*]}" >> "$GITHUB_OUTPUT"
 
       - name: Generate diagrams
@@ -308,6 +343,8 @@ jobs:
           AUTO_ARCH_RENDER_BG: ${{ inputs.render_bg }}
           AUTO_ARCH_PUBLISH_ENABLED: ${{ inputs.publish_enabled && 'true' || 'false' }}
         run: |
+          set -e  # Exit on any error
+          
           OUT_DIR='${{ inputs.out_dir }}'
           mkdir -p "${OUT_DIR}"
 
@@ -340,6 +377,15 @@ jobs:
           if [ "${WANT_SVG}" = "1" ]; then
             if [ -n "${OUT_SVG}" ]; then OUT_SVG_ARG="${OUT_SVG}"; else OUT_SVG_ARG="${OUT_DIR}/architecture-diagram.svg"; fi
           fi
+          
+          echo "=== Generating Diagrams ==="
+          echo "Changed IaC Files: ${CHANGED_IAC_FILES}"
+          echo "Output MD: ${OUT_MD}"
+          echo "Output MMD: ${OUT_MMD}"
+          if [ -n "${OUT_PNG_ARG}" ]; then echo "Output PNG: ${OUT_PNG_ARG}"; fi
+          if [ -n "${OUT_JPG_ARG}" ]; then echo "Output JPG: ${OUT_JPG_ARG}"; fi
+          if [ -n "${OUT_SVG_ARG}" ]; then echo "Output SVG: ${OUT_SVG_ARG}"; fi
+          echo "========================="
 
           python .auto-arch-diagram-tool/tools/generate_arch_diagram.py \
             --changed-files "${CHANGED_IAC_FILES}" \
@@ -359,7 +405,68 @@ jobs:
           echo "jpg_path=${OUT_JPG_ARG}" >> "$GITHUB_OUTPUT"
           echo "svg_path=${OUT_SVG_ARG}" >> "$GITHUB_OUTPUT"
 
+      - name: Validate generated files
+        shell: bash
+        run: |
+          set -e
+          echo "=== Validating generated diagram files ==="
+          
+          OUT_DIR='${{ inputs.out_dir }}'
+          MD_PATH='${{ steps.gen.outputs.md_path }}'
+          MMD_PATH='${{ steps.gen.outputs.mmd_path }}'
+          
+          # Check that the output directory exists
+          if [ ! -d "${OUT_DIR}" ]; then
+            echo "ERROR: Output directory does not exist: ${OUT_DIR}"
+            exit 1
+          fi
+          
+          # Check for required files (markdown and mermaid)
+          if [ ! -f "${MD_PATH}" ]; then
+            echo "ERROR: Markdown file was not generated: ${MD_PATH}"
+            exit 1
+          fi
+          
+          if [ ! -f "${MMD_PATH}" ]; then
+            echo "ERROR: Mermaid file was not generated: ${MMD_PATH}"
+            exit 1
+          fi
+          
+          # Check that files are not empty
+          if [ ! -s "${MD_PATH}" ]; then
+            echo "ERROR: Markdown file is empty: ${MD_PATH}"
+            exit 1
+          fi
+          
+          if [ ! -s "${MMD_PATH}" ]; then
+            echo "ERROR: Mermaid file is empty: ${MMD_PATH}"
+            exit 1
+          fi
+          
+          echo "✓ Markdown file: ${MD_PATH} ($(stat -c%s "${MD_PATH}") bytes)"
+          echo "✓ Mermaid file: ${MMD_PATH} ($(stat -c%s "${MMD_PATH}") bytes)"
+          
+          # Check optional image files if they were requested
+          PNG_PATH='${{ steps.gen.outputs.png_path }}'
+          JPG_PATH='${{ steps.gen.outputs.jpg_path }}'
+          SVG_PATH='${{ steps.gen.outputs.svg_path }}'
+          
+          if [ -n "${PNG_PATH}" ] && [ -f "${PNG_PATH}" ]; then
+            echo "✓ PNG file: ${PNG_PATH} ($(stat -c%s "${PNG_PATH}") bytes)"
+          fi
+          
+          if [ -n "${JPG_PATH}" ] && [ -f "${JPG_PATH}" ]; then
+            echo "✓ JPG file: ${JPG_PATH} ($(stat -c%s "${JPG_PATH}") bytes)"
+          fi
+          
+          if [ -n "${SVG_PATH}" ] && [ -f "${SVG_PATH}" ]; then
+            echo "✓ SVG file: ${SVG_PATH} ($(stat -c%s "${SVG_PATH}") bytes)"
+          fi
+          
+          echo "=== All required files validated successfully ==="
+
       - name: Upload artifacts
+        if: success()
         uses: actions/upload-artifact@v4
         with:
           name: auto-arch-diagram
@@ -610,6 +717,8 @@ jobs:
           AUTO_ARCH_RENDER_BG: ${{ inputs.render_bg }}
           AUTO_ARCH_PUBLISH_ENABLED: 'true'
         run: |
+          set -e  # Exit on any error
+          
           OUT_DIR='${{ inputs.out_dir }}'
           mkdir -p "${OUT_DIR}"
 
@@ -651,6 +760,25 @@ jobs:
             --out-png "${OUT_PNG_ARG}" \
             --out-jpg "${OUT_JPG_ARG}" \
             --out-svg "${OUT_SVG_ARG}"
+          
+          # Validate that files were created
+          echo "=== Validating generated files ==="
+          if [ ! -f "${OUT_MD}" ]; then
+            echo "ERROR: Markdown file was not generated: ${OUT_MD}"
+            exit 1
+          fi
+          
+          if [ ! -f "${OUT_MMD}" ]; then
+            echo "ERROR: Mermaid file was not generated: ${OUT_MMD}"
+            exit 1
+          fi
+          
+          if [ ! -s "${OUT_MD}" ] || [ ! -s "${OUT_MMD}" ]; then
+            echo "ERROR: Generated files are empty"
+            exit 1
+          fi
+          
+          echo "✓ Files validated successfully"
 
       - name: Create or update diagram PR
         uses: peter-evans/create-pull-request@v8
