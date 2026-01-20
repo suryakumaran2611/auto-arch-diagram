@@ -14,6 +14,7 @@ This comprehensive guide will help you set up and use the Auto Architecture Diag
 8. [Troubleshooting](#troubleshooting)
 9. [Advanced Usage](#advanced-usage)
 10. [Best Practices](#best-practices)
+11. [Confluence Publishing and Image Replacement](#confluence-publishing-and-image-replacement)
 
 ## Overview
 
@@ -455,6 +456,85 @@ your-repo/
 - Use GitHub Pages to host generated diagrams
 - Link to diagrams from README files
 - Update diagrams as part of your release process
+
+## Confluence Publishing and Image Replacement
+
+The Auto Architecture Diagram action supports robust publishing and replacement of diagrams in Confluence pages. You can target a specific image using a unique marker or filename, ensuring only the intended diagram is updated.
+
+### Example Workflow
+
+```yaml
+with:
+  direction: AUTO
+  image_formats: png,svg
+  publish_enabled: true
+  publish_confluence: true
+  confluence_url: ${{ secrets.CONFLUENCE_URL }}
+  confluence_user: ${{ secrets.CONFLUENCE_USER }}
+  confluence_token: ${{ secrets.CONFLUENCE_TOKEN }}
+  confluence_page_id: '123456789'  # Target Confluence page ID
+  confluence_replace: true         # Replace existing diagram on the page
+  confluence_image_marker: '<!-- auto-arch-diagram:architecture-diagram.png -->' # Unique marker for image replacement
+```
+
+### How It Works
+- The workflow searches for the marker or filename in the Confluence page and replaces only that image.
+- If the marker is not found, it falls back to replacing the first image or prepends the new image.
+- Use a unique marker for each diagram to avoid accidental replacement of other images.
+
+### Best Practices
+- Use a unique marker for each diagram type or environment (e.g., `<!-- auto-arch-diagram:prod.png -->`).
+- Store Confluence credentials as repository secrets.
+- Test the workflow with a test page before using in production.
+- Review the page source in Confluence to confirm marker placement.
+
+### Troubleshooting
+- If the image is not replaced, check that the marker matches exactly in the page source.
+- Ensure the page ID and credentials are correct.
+- Review workflow logs for error messages from the Confluence API.
+- If multiple diagrams are present, use distinct markers for each.
+
+### Required Secrets
+- `CONFLUENCE_URL`: Base URL of your Confluence instance (e.g., `https://your-domain.atlassian.net/wiki`)
+- `CONFLUENCE_USER`: Confluence username or email
+- `CONFLUENCE_TOKEN`: API token generated from Confluence
+
+### Environment Variables
+- `CONFLUENCE_IMAGE_MARKER`: (Optional) Unique marker to target a specific image for replacement.
+
+### Advanced Example: Multiple Diagrams
+
+```yaml
+with:
+  direction: AUTO
+  image_formats: png,svg
+  publish_enabled: true
+  publish_confluence: true
+  confluence_url: ${{ secrets.CONFLUENCE_URL }}
+  confluence_user: ${{ secrets.CONFLUENCE_USER }}
+  confluence_token: ${{ secrets.CONFLUENCE_TOKEN }}
+  confluence_page_id: '123456789'
+  confluence_replace: true
+  confluence_image_marker: '<!-- auto-arch-diagram:staging-architecture.png -->'
+```
+
+**Tip:** Use different markers for staging, production, or environment-specific diagrams.
+
+### Security & Best Practices
+- Never commit API tokens to your repository.
+- Use repository secrets for all sensitive data.
+- Review generated diagrams for sensitive information before publishing.
+- Use a test page for initial integration to avoid overwriting important documentation.
+
+### FAQ
+- **Q: Can I replace multiple images in one page?**
+  - Yes, by running the workflow multiple times with different markers and filenames.
+- **Q: What if the marker is missing?**
+  - The workflow will replace the first image or prepend the new image to the page.
+- **Q: How do I debug Confluence publishing issues?**
+  - Check workflow logs for API errors, verify credentials, and confirm marker placement in the page source.
+
+For more examples and advanced usage, see the README and workflow documentation.
 
 ## Example Implementations
 

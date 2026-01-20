@@ -97,6 +97,39 @@ on:
 
 jobs:
   diagram:
+### Publishing Diagrams to Confluence Pages
+
+You can automatically publish or replace architecture diagrams to a Confluence page using the workflow's Confluence integration feature. This is useful for keeping your documentation up-to-date with the latest infrastructure changes.
+
+**Example Workflow Step:**
+
+```yaml
+with:
+  direction: AUTO
+  image_formats: png,svg
+  publish_enabled: true
+  publish_confluence: true
+  confluence_url: ${{ secrets.CONFLUENCE_URL }}
+  confluence_user: ${{ secrets.CONFLUENCE_USER }}
+  confluence_token: ${{ secrets.CONFLUENCE_TOKEN }}
+  confluence_page_id: '123456789'  # Target Confluence page ID
+  confluence_replace: true         # Replace existing diagram on the page
+```
+
+**How it works:**
+- Set `publish_enabled: true` and `publish_confluence: true` to activate Confluence publishing.
+- Provide your Confluence instance URL, user, and API token as secrets.
+- Specify the target page ID with `confluence_page_id`.
+- Set `confluence_replace: true` to overwrite the existing diagram, or omit for append mode.
+
+**Required Secrets:**
+- `CONFLUENCE_URL`: Base URL of your Confluence instance (e.g., `https://your-domain.atlassian.net/wiki`)
+- `CONFLUENCE_USER`: Confluence username or email
+- `CONFLUENCE_TOKEN`: API token generated from Confluence
+
+**Notes:**
+- The workflow will upload the generated diagram (PNG/SVG/Markdown) to the specified Confluence page after each run.
+- For more details, see the [User Guide](docs/USER_GUIDE.md#confluence-integration).
     permissions:
       contents: read
       pull-requests: write
@@ -438,13 +471,13 @@ icons/
   azure/
     custom_database.png
   gcp/
-    special_processor.png
+    cloud_run.png
 ```
 
 **Icon Mapping Logic**
 - Resource: `aws_my_custom_service` → Icon: `icons/aws/my_custom_service.png`
 - Resource: `azure_custom_database` → Icon: `icons/azure/custom_database.png`
-- Resource: `gcp_special_processor` → Icon: `icons/gcp/special_processor.png`
+- Resource: `gcp_cloud_run` → Icon: `icons/gcp/cloud_run.png`
 
 **Supported Formats**
 - PNG (recommended with transparency)
@@ -812,6 +845,51 @@ with:
 - Check file naming (remove provider prefix)
 - Ensure PNG format with transparency
 - Check file permissions and Git tracking
+
+### Robust Confluence Image Replacement
+
+You can replace a specific image in a Confluence page using a unique marker or filename. This ensures only the intended diagram is updated, even if the page contains multiple images.
+
+**Example Workflow Step:**
+
+```yaml
+with:
+  direction: AUTO
+  image_formats: png,svg
+  publish_enabled: true
+  publish_confluence: true
+  confluence_url: ${{ secrets.CONFLUENCE_URL }}
+  confluence_user: ${{ secrets.CONFLUENCE_USER }}
+  confluence_token: ${{ secrets.CONFLUENCE_TOKEN }}
+  confluence_page_id: '123456789'  # Target Confluence page ID
+  confluence_replace: true         # Replace existing diagram on the page
+  confluence_image_marker: '<!-- auto-arch-diagram:architecture-diagram.png -->' # Unique marker for image replacement
+```
+
+**How it works:**
+- The workflow will search for the marker or filename in the Confluence page and replace only that image.
+- If the marker is not found, it will fall back to replacing the first image or prepend the new image.
+- Use a unique marker for each diagram to avoid accidental replacement of other images.
+
+**Best Practices:**
+- Always use a unique marker for each diagram type or environment.
+- Store Confluence credentials as repository secrets.
+- Test the workflow with a test page before using in production.
+
+**Troubleshooting:**
+- If the image is not replaced, check that the marker matches exactly in the page source.
+- Ensure the page ID and credentials are correct.
+- Review workflow logs for error messages from the Confluence API.
+
+**Required Secrets:**
+- `CONFLUENCE_URL`: Base URL of your Confluence instance (e.g., `https://your-domain.atlassian.net/wiki`)
+- `CONFLUENCE_USER`: Confluence username or email
+- `CONFLUENCE_TOKEN`: API token generated from Confluence
+
+**Environment Variables:**
+- `CONFLUENCE_IMAGE_MARKER`: (Optional) Unique marker to target a specific image for replacement.
+
+**For full details and advanced usage, see the [User Guide](docs/USER_GUIDE.md#confluence-publishing-and-image-replacement).**
 
 ### Debug Mode
 ```yaml
