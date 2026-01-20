@@ -182,9 +182,9 @@ def main():
         if update_docs_image(update['source'], update['dest'], update['desc']):
             docs_success_count += 1
 
-    print(f"\n📋 Updated {docs_success_count}/{len(docs_updates)} docs images successfully")
+    print(f"\nUpdated {docs_success_count}/{len(docs_updates)} docs images successfully")
 
-    print("\n📊 Verification - Checking icon counts...")
+    print("\nVerification - Checking icon counts...")
     print("=" * 45)
 
     # Check icon counts for key diagrams
@@ -200,20 +200,26 @@ def main():
     verified_count = sum(verification_results)
     total_to_verify = len([d for d in diagrams if d['expected_icons'] is not None])
 
-    print(f"\n📊 Verification: {verified_count}/{total_to_verify} diagrams passed icon count checks")
+    print(f"\nVerification: {verified_count}/{total_to_verify} diagrams passed icon count checks")
 
-    print("\n🎉 GitHub Pages images update complete!")
-    print("=" * 45)
-    print("
-📝 Summary:"    print(f"  • Regenerated {success_count}/{len(diagrams)} example diagrams")
-    print(f"  • Updated {docs_success_count}/{len(docs_updates)} GitHub Pages documentation images")
-    print(f"  • Verified {verified_count}/{total_to_verify} diagrams have expected icon counts")
-    print("
-📍 Files updated:"    for update in docs_updates:
+    print("\nFiles updated:")
+    for update in docs_updates:
         print(f"  • {update['dest']}")
 
-    print("
-🔄 Next steps:"    print("  1. Review the generated diagrams for correctness")
+    print("\nNext steps:")
+    print("  1. Review the generated diagrams for correctness")
+    print("\nGitHub Pages images update complete!")
+    print("=" * 45)
+    print("\nSummary:")
+    print(f"  - Regenerated {success_count}/{len(diagrams)} example diagrams")
+    print(f"  - Updated {docs_success_count}/{len(docs_updates)} GitHub Pages documentation images")
+    print(f"  - Verified {verified_count}/{total_to_verify} diagrams have expected icon counts")
+    print("\nFiles updated:")
+    for update in docs_updates:
+        print(f"  - {update['dest']}")
+
+    print("\nNext steps:")
+    print("  1. Review the generated diagrams for correctness")
     print("  2. Commit the updated images to git:")
     print("     git add docs/images/*.png examples/**/*.png examples/**/*.svg")
     print("     git commit -m 'Update GitHub Pages images with latest diagrams'")
@@ -222,10 +228,10 @@ def main():
 
     # Return success if everything worked
     if success_count == len(diagrams) and docs_success_count == len(docs_updates):
-        print("\n✅ All operations completed successfully!")
+        print("\nAll operations completed successfully!")
         return 0
     else:
-        print(f"\n⚠️  Completed with some issues: {success_count}/{len(diagrams)} diagrams, {docs_success_count}/{len(docs_updates)} docs updates")
+        print(f"\nCompleted with some issues: {success_count}/{len(diagrams)} diagrams, {docs_success_count}/{len(docs_updates)} docs updates")
         return 1
 
 if __name__ == '__main__':
