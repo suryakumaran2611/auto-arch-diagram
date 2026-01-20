@@ -6,7 +6,7 @@
 
 [![Python Tests](https://github.com/suryakumaran2611/auto-arch-diagram/actions/workflows/python-tests.yml/badge.svg)](https://github.com/suryakumaran2611/auto-arch-diagram/actions/workflows/python-tests.yml)
 [![Secret Scan](https://github.com/suryakumaran2611/auto-arch-diagram/actions/workflows/secret-scan.yml/badge.svg)](https://github.com/suryakumaran2611/auto-arch-diagram/actions/workflows/secret-scan.yml)
-[![License: Polyform Noncommercial](https://img.shields.io/badge/License-Polyform%20NC-red.svg)](LICENSE)
+[![License: CC BY-NC 4.0](https://img.shields.io/badge/License-CC%20BY--NC%204.0-red.svg)](https://creativecommons.org/licenses/by-nc/4.0/)
 
 *Automatically generate professional diagrams from Terraform, CloudFormation, Bicep, and Pulumi*
 
@@ -63,17 +63,12 @@
 
 ## ✨ Key Features
 
-| Feature | Description |
-|---------|-------------|
-| 🎯 **VPC/Network Grouping** | Resources automatically organized within VPCs with public/private subnet distinction |
-| 🎨 **Professional Styling** | Semi-transparent clusters, intelligent edge types (dashed security, bold data, dotted dependencies) |
-| 🧠 **AUTO Layout** | 6-factor intelligent analysis chooses optimal horizontal/vertical orientation |
-| 📊 **Dynamic Spacing** | Self-adjusting layout based on complexity (nodes, edges, nesting depth) |
-| 🏗️ **Multi-Cloud** | 2,100+ official icons for AWS, Azure, GCP, IBM Cloud, Oracle Cloud |
-| 📤 **Multiple Formats** | Mermaid (inline), PNG, SVG, JPEG with embedded base64 icons |
-| 🔌 **Custom Icons** | Add your own icons for domain-specific components |
-| 🚀 **GitHub Actions** | One-line workflow integration with PR comments |
-| 🔒 **Security-First** | Secret scanning, redaction, minimal permissions |
+- 🎯 **VPC/Network Grouping** - Automatic VPC organization with subnet distinction
+- 🧠 **AUTO Layout** - Intelligent orientation selection (6-factor analysis)
+- 🏗️ **Multi-Cloud** - 2,100+ official icons for AWS, Azure, GCP, and more
+- 📤 **Multiple Formats** - Mermaid, PNG, SVG, JPEG with embedded icons
+- 🚀 **GitHub Actions** - One-line workflow integration with PR comments
+- 🔒 **Security-First** - Secret scanning, redaction, minimal permissions
 
 ## 🎯 Quick Start
 
@@ -103,7 +98,14 @@ jobs:
       comment_on_pr: true
 ```
 
-### Common Configuration Patterns
+**What this does:**
+- 🔄 **Triggers on PRs** that modify IaC files
+- 🎯 **Intelligent AUTO layout** chooses optimal orientation
+- 📊 **Generates PNG + SVG** with embedded cloud icons
+- 💬 **Posts diagram as PR comment** for easy review
+- 🔒 **Minimal permissions** (read-only + PR comments)
+
+### Configuration Examples
 
 **Multi-Cloud with Custom Paths**
 ```yaml
@@ -114,8 +116,6 @@ with:
     infrastructure/terraform/**/*.tf
     cloudformation/**/*.yaml
   out_md: docs/architecture/diagram.md
-  out_png: docs/architecture/diagram.png
-  out_svg: docs/architecture/diagram.svg
 ```
 
 **Mermaid-Only (Fastest)**
@@ -126,56 +126,89 @@ with:
   out_dir: artifacts
 ```
 
-**Force Full Architecture (Ignore Changes)**
+**AI Mode**
+```yaml
+with:
+  mode: ai
+  model: gpt-4o-mini
+  direction: AUTO
+env:
+  OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+```
+
+**Diagram Update PR**
 ```yaml
 with:
   direction: AUTO
-  force_full: true
-  image_formats: png,svg,jpg
+  publish_enabled: true
+  create_diagram_pr: true
 ```
 
-**With Diagram Commit PR**
-```yaml
-on:
-  pull_request_target:
-    types: [opened, synchronize, reopened]
+### 🎨 Custom Icons
 
-jobs:
-  diagram_pr:
-    permissions:
-      contents: write
-      pull-requests: write
-    uses: suryakumaran2611/auto-arch-diagram/.github/workflows/reusable-auto-arch-diagram.yml@v1
-    with:
-      direction: AUTO
-      image_formats: png,svg
-      publish_enabled: true          # Commits to publish.paths in .auto-arch-diagram.yml
-      create_diagram_pr: true
+**Add Custom Provider Icons**
 ```
+icons/
+  aws/
+    my_custom_service.png
+    another_service.png
+  azure/
+    custom_database.png
+  gcp/
+    special_processor.png
+```
+
+**Icon Mapping Logic**
+- Resource: `aws_my_custom_service` → Icon: `icons/aws/my_custom_service.png`
+- Resource: `azure_custom_database` → Icon: `icons/azure/custom_database.png`
+- Resource: `gcp_special_processor` → Icon: `icons/gcp/special_processor.png`
+
+**Supported Formats**
+- PNG (recommended with transparency)
+- SVG (vector graphics)
+- JPG (for simple icons)
+
+**Icon Naming Rules**
+- Remove provider prefix: `aws_` → ``
+- Use lowercase: `AWS_Service` → `service`
+- Replace underscores with hyphens: `my_service` → `my-service` (optional)
 
 ## 📋 Configuration Reference
 
-### Workflow Inputs
+### Key Parameters
 
 | Parameter | Default | Description |
 |-----------|---------|-------------|
-| `direction` | `LR` | `AUTO` (intelligent), `LR` (→), `TB` (↓), `RL` (←), `BT` (↑) |
-| `mode` | `static` | `static` (no AI) or `ai` (requires OPENAI_API_KEY) |
-| `model` | `gpt-4o-mini` | AI model when mode=ai |
-| `render_layout` | `lanes` | `lanes` (category-first) or `providers` (cloud-first) |
-| `render_bg` | `transparent` | PNG/SVG background: `transparent` or `white` |
-| `image_formats` | `png,jpg,svg` | Formats to generate (comma-separated) or `none` |
-| `iac_globs` | (multiple) | Glob patterns for IaC file detection |
-| `out_dir` | `artifacts` | Output directory for generated files |
-| `out_md` | `''` | Override markdown output path |
-| `out_mmd` | `''` | Override Mermaid output path |
-| `out_png` | `''` | Override PNG output path |
-| `out_jpg` | `''` | Override JPEG output path |
-| `out_svg` | `''` | Override SVG output path |
+| `direction` | `LR` | `AUTO`, `LR`, `TB`, `RL`, `BT` |
+| `mode` | `static` | `static` or `ai` (requires OPENAI_API_KEY) |
+| `image_formats` | `png,jpg,svg` | Formats to generate or `none` |
+| `force_full` | `false` | Render full architecture (ignore changes) |
 | `comment_on_pr` | `true` | Post/update sticky PR comment |
-| `publish_enabled` | `false` | Write to paths in `.auto-arch-diagram.yml` |
-| `create_diagram_pr` | `false` | Create diagram update PR (needs contents:write) |
-| `force_full` | `false` | Render full architecture (ignore change detection) |
+| `create_diagram_pr` | `false` | Create diagram update PR |
+
+### Default IaC File Patterns
+```yaml
+iac_globs: |
+  **/*.tf              # Terraform
+  **/*.bicep           # Bicep
+  **/template.yaml     # CloudFormation
+  **/Pulumi.yaml       # Pulumi YAML
+  **/*.cdk.ts          # AWS CDK
+```
+
+### Required Permissions
+
+```yaml
+# Basic PR comments
+permissions:
+  contents: read
+  pull-requests: write
+
+# Diagram commits (advanced)
+permissions:
+  contents: write
+  pull-requests: write
+```
 
 ### Advanced Configuration (`.auto-arch-diagram.yml`)
 
@@ -256,145 +289,59 @@ render:
   edge_arrowsize: 0.65
 ```
 
-## 🎨 Architecture Best Practices
+## 🎨 Architecture Features
 
 ### VPC/Network Grouping
-
-Resources are automatically organized within their VPC/VNet/VCN containers:
-
-- **VPC Clusters**: Automatically detect and group VPC/VNet/VCN resources
-- **Subnet Grouping**: Public subnets (dashed border) vs Private subnets (solid border)
-- **Resource Placement**: EC2, Lambda, RDS automatically placed in correct subnet
-- **Color Coding**: Semi-transparent colors (AWS orange, Azure blue, GCP green)
+Resources automatically organized within VPC/VNet/VCN containers:
+- **VPC Clusters** - Auto-detect and group VPC resources
+- **Subnet Grouping** - Public (dashed border) vs Private (solid border)
+- **Resource Placement** - EC2, Lambda, RDS placed in correct subnets
+- **Color Coding** - Semi-transparent provider colors
 
 ### Intelligent Edge Styling
-
-Connections use different styles based on relationship type:
-
-- **Solid Lines**: Network connections (default)
-- **Dashed Lines**: Security groups, firewalls, IAM policies (red)
-- **Bold Lines**: Data flow connections to databases/storage (blue)
-- **Dotted Lines**: Cross-cloud/cross-region dependencies (gray)
+- **Solid Lines** - Network connections (default)
+- **Dashed Lines** - Security groups, firewalls, IAM policies (red)
+- **Bold Lines** - Data flow to databases/storage (blue)
+- **Dotted Lines** - Cross-cloud/cross-region dependencies (gray)
 
 ### AUTO Direction Selection
+6-factor scoring chooses optimal orientation:
+- **Horizontal (LR)** - Wide architectures, 4+ lanes, 50+ resources
+- **Vertical (TB)** - Deep nesting, high edge density, few large clusters
 
-The `AUTO` mode uses 6-factor scoring to choose optimal orientation:
+### Multi-Cloud Support
+- **2,100+ Official Icons** - AWS, Azure, GCP, IBM Cloud, Oracle Cloud
+- **Custom Icons** - Add your own provider-specific icons
+- **Color-Coded Providers** - AWS orange, Azure blue, GCP green
 
-**Horizontal (LR) favored when:**
-- Wide architectures (4+ lanes, 3+ providers)
-- Large diagrams (50+ resources)
-- Many small clusters
-- Low edge density (<2.0 edges/node)
+## 🏗️ Supported IaC
 
-**Vertical (TB) favored when:**
-- Deep nesting (3+ levels)
-- High edge density (>3.0 edges/node)
-- Few large clusters
-- Provider-first layout
+- **Terraform** - Full support (VPC grouping, 50+ AWS icons)
+- **CloudFormation** - Full support (Ref, GetAtt, Sub, DependsOn)
+- **Bicep** - Good support (resource, dependsOn, parent)
+- **Pulumi YAML** - Good support (resources, dependsOn)
+- **Pulumi TS/Py, CDK** - Limited support (requires AI mode)
 
-**Debug output:**
-```yaml
-env:
-  AUTO_ARCH_DEBUG: "1"  # Shows scoring details
-```
+## 📊 Examples
 
-## 🏗️ Supported IaC Types
+| Architecture | Resources | Features |
+|--------------|-----------|----------|
+| **MLOps Multi-Cloud** | 47 | AWS + Azure + GCP |
+| **Custom Icons Demo** | 40+ | 11 custom icons |
+| **MLOps Multi-Region** | 46 | Primary + DR |
+| **Serverless Websites** | 6-8 | Multi-cloud comparison |
 
-| Type | Extensions | Support Level |
-|------|------------|---------------|
-| **Terraform** | `*.tf`, `*.tfvars`, `*.hcl` | ✅ Full (VPC grouping, 50+ AWS icons) |
-| **CloudFormation** | `template.yaml`, `*.cfn.*` | ✅ Full (Ref, GetAtt, Sub, DependsOn) |
-| **Bicep** | `*.bicep` | ✅ Good (resource, dependsOn, parent) |
-| **Pulumi YAML** | `Pulumi.yaml` | ✅ Good (resources, dependsOn) |
-| **Pulumi TS/Py** | `Pulumi.*.ts`, `Pulumi.*.py` | ⚠️ Limited (requires AI mode) |
-| **CDK** | `*.cdk.ts`, `*.cdk.py` | ⚠️ Limited (requires AI mode) |
-
-## 📊 Example Gallery
-
-<details>
-<summary><strong>🌐 MLOps Multi-Cloud (AWS + Azure + GCP)</strong> - Click to expand</summary>
-
-![MLOps Multi-Cloud](examples/terraform/mlops-multi-cloud/architecture-diagram.png)
-
-**47 Resources** spanning three cloud providers:
-- **GCP Data Layer**: BigQuery feature store, Dataflow processing, Pub/Sub events
-- **AWS Training Layer**: SageMaker, S3 model registry, Step Functions orchestration
-- **Azure Inference Layer**: AKS serving cluster, Container Registry, Cosmos DB logging
-
-➡️ [View Terraform](examples/terraform/mlops-multi-cloud/main.tf)
-
-</details>
-
-<details>
-<summary><strong>🎨 Custom Icons Demo (Serverless Data Pipeline)</strong> - Click to expand</summary>
-
-![Custom Icons Demo](examples/terraform/custom-icons-demo/architecture-diagram.png)
-
-**40+ Resources** with 11 custom icons:
-- **Event-Driven**: API Gateway → Lambda → Kinesis → ElasticSearch
-- **Data Pipeline**: S3 → Glue Crawler → Athena → QuickSight
-- **Custom Icons**: DataPipeline, StreamProcessor, SearchEngine, and more
-
-➡️ [View Terraform](examples/terraform/custom-icons-demo/main.tf)
-
-</details>
-
-<details>
-<summary><strong>🌍 MLOps Multi-Region AWS (DR Architecture)</strong> - Click to expand</summary>
-
-![MLOps Multi-Region AWS](examples/terraform/mlops-multi-region-aws/architecture-diagram.png)
-
-**46 Resources** across two AWS regions:
-- **Primary (us-east-1)**: EKS cluster, RDS Aurora, S3 data lake
-- **DR (us-west-2)**: Read replicas, cross-region replication
-- **Connectivity**: VPC peering, Transit Gateway
-
-➡️ [View Terraform](examples/terraform/mlops-multi-region-aws/main.tf)
-
-</details>
-
-<details>
-<summary><strong>☁️ Multi-Cloud Serverless Websites</strong> - Click to expand</summary>
-
-| Provider | Architecture | Resources |
-|----------|--------------|----------|
-| **AWS** | ![AWS](examples/serverless-website/aws/terraform/architecture-diagram.jpg) | S3, CloudFront, ACM, Route53 |
-| **Azure** | ![Azure](examples/serverless-website/azure/terraform/architecture-diagram.jpg) | Storage, CDN, DNS |
-| **GCP** | ![GCP](examples/serverless-website/gcp/terraform/architecture-diagram.jpg) | Cloud Storage, Cloud CDN |
-
-</details>
-
-📁 **[Browse All Examples →](examples/README.md)**
+📁 **[View All Examples →](examples/README.md)**
 
 ## 🚀 Local Development
 
-### Setup
-
 ```bash
-# Create virtual environment
+# Setup
 python3 -m venv venv
 source venv/bin/activate  # Windows: venv\Scripts\activate
-
-# Install dependencies
 pip install -r requirements.txt
 
-# For AI mode
-pip install -r requirements-ai.txt
-```
-
-### Generate Diagram
-
-```bash
-# Basic usage
-python tools/generate_arch_diagram.py \
-  --changed-files "terraform/main.tf terraform/vpc.tf" \
-  --direction AUTO \
-  --out-md artifacts/diagram.md \
-  --out-png artifacts/diagram.png \
-  --out-svg artifacts/diagram.svg
-
-# With debug output
-export AUTO_ARCH_DEBUG=1
+# Generate diagram
 python tools/generate_arch_diagram.py \
   --changed-files "terraform/**/*.tf" \
   --direction AUTO \
@@ -407,106 +354,68 @@ python tools/generate_arch_diagram.py \
   --changed-files "cdk/app.ts" \
   --direction AUTO \
   --out-png diagram.png
-```
 
-### Regenerate Examples
-
-```bash
-# Regenerate all example diagrams
-python tools/regenerate_examples.py
-
-# With custom config
-export AUTO_ARCH_PUBLISH_ENABLED=false
-python tools/regenerate_examples.py
-```
-
-### Run Tests
-
-```bash
-# Install dev dependencies
-pip install -r requirements-dev.txt
-
-# Run all tests
+# Run tests
 pytest
-
-# Run specific test file
-pytest tests/test_static_terraform.py
-
-# Run with coverage
-pytest --cov=tools --cov-report=html
 ```
 
-## 🔒 Security Features
+## 🔒 Security
 
-### Secret Scanning
-- **gitleaks**: Scans for hardcoded secrets
-- **Redaction**: Automatic redaction of `password=`, `token:` patterns
-- **Truncation**: Large files truncated to prevent leakage
-
-### Minimal Permissions
-```yaml
-permissions:
-  contents: read       # Read IaC files
-  pull-requests: write # Post PR comments
-```
-
-### Safe PR Handling
-- `pull_request`: Read-only access (comments only)
-- `pull_request_target`: Write access (diagram PRs) - checks out generator from base branch
-
-### CI Security Checks
-- `pip-audit`: Python dependency vulnerabilities
-- `bandit`: Code security issues
-- Dependabot: Automated dependency updates
+- **Secret Scanning** - gitleaks, automatic redaction, file truncation
+- **Minimal Permissions** - Read-only access for basic use
+- **Safe PR Handling** - Secure workflow isolation
+- **CI Security** - pip-audit, bandit, Dependabot
 
 ## 📚 Documentation
 
-- [Dynamic Spacing Guide](docs/DYNAMIC_SPACING.md) - Detailed spacing configuration
-- [Quick Start Spacing](docs/QUICK_START_SPACING.md) - Quick spacing recipes
-- [Spacing Examples](docs/SPACING_EXAMPLES.md) - Visual examples
-- [Implementation Summary](docs/IMPLEMENTATION_SUMMARY.md) - Technical details
-- [Testing Guide](TESTING.md) - Test suite documentation
-- [Changelog](CHANGELOG.md) - Version history
+- [Dynamic Spacing Guide](docs/DYNAMIC_SPACING.md)
+- [Testing Guide](TESTING.md)
+- [Changelog](CHANGELOG.md)
 
 ## 🤝 Contributing
 
-We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
-
-### Release Process
-
-1. Update [CHANGELOG.md](CHANGELOG.md)
-2. Ensure CI is green
-3. Create and push tag: `git tag v1.2.3 && git push origin v1.2.3`
-4. GitHub Actions creates release and moves `v1` tag
+We welcome contributions! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
 ## 📄 License
 
-[License](LICENSE)
+**Creative Commons Attribution-NonCommercial 4.0 International License** - Non-commercial use only. Commercial use requires explicit written approval from SuryaKumaran SivaKumararan.
 
-## 🔗 Related Projects
-
-- [diagrams](https://diagrams.mingrammer.com/) - Diagram as code library
-- [Graphviz](https://graphviz.org/) - Graph visualization
-- [Mermaid](https://mermaid.js.org/) - Markdown diagrams
-- [python-hcl2](https://github.com/amplify-education/python-hcl2) - Terraform parser
+[View Full License](LICENSE) • [🔗 Related Projects](https://diagrams.mingrammer.com/)
 
 ## 💡 Tips & Tricks
 
-### Optimize Diagram Size
-
-For large architectures, use `force_full: false` to only render changed resources:
+### Performance Optimization
+**Large Architectures (100+ resources)**
 ```yaml
 with:
-  force_full: false
-  direction: AUTO
+  force_full: false      # Only render changed resources
+  image_formats: png    # Skip SVG/JPG for speed
 ```
 
-### Debug Layout Issues
+**Advanced Performance Tuning**
+```yaml
+# In .auto-arch-diagram.yml
+render:
+  graph:
+    overlap_removal: false    # Faster layout
+    edge_routing: spline      # Faster than ortho
+limits:
+  max_files: 50              # Limit file processing
+```
 
-Enable debug output to see layout decisions:
+### Layout Optimization
+**Best Practices**
+```yaml
+with:
+  direction: AUTO           # Intelligent selection
+  render_layout: lanes      # Category-first (default)
+  render_bg: transparent    # Better for docs
+```
+
+**Debug Layout Issues**
 ```yaml
 env:
-  AUTO_ARCH_DEBUG: "1"
+  AUTO_ARCH_DEBUG: "1"     # Shows scoring details
 ```
 
 Output shows:
@@ -515,83 +424,132 @@ Output shows:
 - Spacing calculations (pad, nodesep, ranksep)
 - VPC/subnet grouping logic
 
-### Custom Icon Paths
-
-Add custom provider icons in `icons/{provider}/` directory:
+### Custom Icons Deep Dive
+**Directory Structure**
 ```
 icons/
   aws/
     my_custom_service.png
+    api-gateway.png
+    lambda@edge.png
   azure/
-    my_custom_service.png
+    custom_function.png
+    storage_account.png
+  gcp/
+    cloud_run.png
+    bigtable.png
 ```
 
-Icon mapping: `resource_type` → `icons/{provider}/{resource_type_without_prefix}.png`
+**Icon Resolution & Quality**
+- **Recommended Size**: 64x64 to 128x128 pixels
+- **Format**: PNG with transparency (best)
+- **Background**: Transparent or white
+- **Style**: Consistent with provider's design language
 
-Example: `aws_custom_service` → `icons/aws/custom_service.png`
+**Advanced Icon Mapping**
+```yaml
+# Custom icon mapping in .auto-arch-diagram.yml
+icons:
+  custom_mappings:
+    aws_custom_api: "icons/aws/api-gateway.png"
+    azure_serverless: "icons/azure/custom_function.png"
+    gcp_ml_service: "icons/gcp/cloud-ml.png"
+```
 
-### Performance Tuning
+**Fallback Logic**
+1. Check custom icon directory first
+2. Fall back to built-in provider icons
+3. Use generic resource type icon
+4. Final fallback to default service icon
 
-For very large diagrams (100+ resources):
-- Use `image_formats: png` (skip SVG/JPG)
-- Set `graph.overlap_removal: false`
-- Use `graph.edge_routing: spline` (faster than ortho)
-- Increase `limits.max_files` if needed
+### Workflow Best Practices
+**Choose Right Trigger**
+```yaml
+# PR reviews (recommended)
+on:
+  pull_request:
+    paths: ['**/*.tf', '**/*.bicep']
 
-## 🎓 Examples Gallery
+# Automated diagram updates
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened]
+```
 
-### What You Can Generate
+**Organize Output Files**
+```yaml
+# For documentation
+with:
+  out_md: docs/architecture/diagram.md
+  out_png: assets/images/architecture.png
 
-| Architecture Type | Example | Resources | Features |
-|-------------------|---------|-----------|----------|
-| 🌐 Multi-Cloud | [mlops-multi-cloud](examples/terraform/mlops-multi-cloud/) | 47 | AWS + Azure + GCP |
-| 🌍 Multi-Region | [mlops-multi-region-aws](examples/terraform/mlops-multi-region-aws/) | 46 | Primary + DR |
-| 🎨 Custom Icons | [custom-icons-demo](examples/terraform/custom-icons-demo/) | 40+ | 11 custom icons |
-| ☁️ AWS Serverless | [aws/terraform](examples/serverless-website/aws/terraform/) | 8 | S3 + CloudFront |
-| 🔷 Azure | [azure/terraform](examples/serverless-website/azure/terraform/) | 7 | Storage + CDN |
-| 🔶 GCP | [gcp/terraform](examples/serverless-website/gcp/terraform/) | 6 | Cloud Storage + CDN |
+# For CI artifacts
+with:
+  out_dir: artifacts
+  image_formats: png,svg
+```
+
+
 
 ## 🐛 Troubleshooting
 
-**Issue**: Diagram not generated
+### Reusable Workflow Issues
+**Workflow fails with "tool not found"**
+- Ensure you're using `@v1` or specific tag: `@v1.2.3`
+- Check workflow ref: `suryakumaran2611/auto-arch-diagram/.github/workflows/reusable-auto-arch-diagram.yml@v1`
+
+**No IaC files detected**
+- Verify `iac_globs` patterns match your file structure
+- Check files are tracked by Git (`git ls-files`)
+- Use `force_full: true` to ignore change detection
+
+**PR comment not posted**
+- Set `pull-requests: write` permission
+- Check `comment_on_pr: true` is set
+- Verify workflow triggers on `pull_request` event
+
+### Diagram Generation Issues
+**Diagram not generated**
 - Check workflow logs for Python errors
 - Verify Graphviz is installed (`which dot`)
 - Ensure `.tf` files are valid HCL2
 
-**Issue**: Wrong layout orientation
+**Wrong layout orientation**
 - Use `direction: AUTO` for intelligent selection
 - Or manually specify `LR`, `TB`, `RL`, `BT`
 - Check `AUTO_ARCH_DEBUG=1` output
 
-**Issue**: Resources not grouped in VPC
+**Resources not grouped in VPC**
 - Verify VPC has `vpc_id` reference in subnet
 - Check subnet has `subnet_id` reference in resource
 - Ensure resource types match patterns (aws_vpc, aws_subnet)
 
-**Issue**: Colors too light/dark
-- Adjust in `.auto-arch-diagram.yml`:
-  ```yaml
-  render:
-    # Semi-transparent colors with alpha channel
-    color_aws: "#FFE8D699"
-    color_vpc: "#E3F2FD77"
-  ```
+**Custom icons not loading**
+- Verify icon path: `icons/{provider}/{resource_type}.png`
+- Check file naming (remove provider prefix)
+- Ensure PNG format with transparency
+- Check file permissions and Git tracking
 
-**Issue**: Too much spacing
-- Use manual spacing instead of auto:
-  ```yaml
-  render:
-    graph:
-      pad: 0.3
-      nodesep: 0.4
-      ranksep: 0.8
-  ```
+### Debug Mode
+```yaml
+env:
+  AUTO_ARCH_DEBUG: "1"  # Shows scoring details and file detection
+```
+
+### Performance Issues
+**Large diagrams timeout**
+- Use `image_formats: png` (skip SVG/JPG)
+- Set `force_full: false` for incremental updates
+- Increase `limits.max_files` if needed
+- Use `graph.overlap_removal: false`
 
 ---
 
 <div align="center">
 
 **Made with ❤️ for Infrastructure Engineers**
+
+**Copyright © 2024-2026 SuryaKumaran SivaKumararan**
 
 ⭐ **Star this repo** if you find it useful!
 
