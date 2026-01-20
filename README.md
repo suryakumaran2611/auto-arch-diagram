@@ -162,6 +162,7 @@ with:
 - 📊 **Generates PNG + SVG** with embedded cloud icons
 - 💬 **Posts diagram as PR comment** for easy review
 - 🔒 **Minimal permissions** (read-only + PR comments)
+- ⚠️ **Complexity limits**: Skips diagrams with >45 resources for performance
 
 ### Configuration Examples
 

@@ -540,6 +540,8 @@ def _embed_images_in_svg(svg_path: Path) -> None:
 
     if not svg_path.exists():
         return
+
+    content = svg_path.read_text(encoding="utf-8")
     try:
         content = svg_path.read_text(encoding="utf-8")
     except Exception:
@@ -2344,6 +2346,16 @@ def _render_icon_diagram_from_terraform(
 
     # Analyze diagram complexity for dynamic spacing
     complexity = _analyze_diagram_complexity(all_resources, edges, grouped_data)
+
+    # Skip extremely complex diagrams that may cause performance issues
+    max_allowed_nodes = 60  # Allow complex diagrams up to 60 nodes (uses providers layout automatically)
+    if complexity.node_count > max_allowed_nodes:
+        print(
+            f"⚠️  Skipping diagram generation: Too many resources ({complexity.node_count} > {max_allowed_nodes})"
+        )
+        print(f"   This diagram is too complex for the current implementation.")
+        print(f"   Consider splitting into smaller, more focused diagrams.")
+        return  # Skip diagram generation
 
     # Auto-detect optimal direction if set to "auto"
     original_direction = direction

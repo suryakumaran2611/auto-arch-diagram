@@ -388,6 +388,15 @@ publish:
 - If icons still don't show, try opening the SVG in a different browser or viewer
 - PNG/JPG formats are recommended for guaranteed icon display
 
+#### 6. "Too many resources" Warning
+**Cause**: Diagrams with more than 60 resources are automatically skipped to prevent performance issues.
+
+**Solution**:
+- Split large infrastructure files into smaller, focused diagrams
+- Use multiple Terraform files or modules for different components
+- For multi-cloud architectures, the tool automatically uses "providers" layout for optimal organization
+- For extremely complex architectures, create separate diagrams for different layers (network, compute, data, etc.)
+
 ### Debug Mode
 
 Add this step to your workflow for debugging:
