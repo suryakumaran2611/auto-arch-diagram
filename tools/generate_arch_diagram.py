@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Any, Iterable
 
 import yaml
-[import requests]
+import requests
 
 try:
     from openai import OpenAI  # type: ignore[import-not-found]
