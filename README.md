@@ -7,9 +7,9 @@
 [![Python Tests](https://github.com/suryakumaran2611/auto-arch-diagram/actions/workflows/python-tests.yml/badge.svg)](https://github.com/suryakumaran2611/auto-arch-diagram/actions/workflows/python-tests.yml)
 [![Secret Scan](https://github.com/suryakumaran2611/auto-arch-diagram/actions/workflows/secret-scan.yml/badge.svg)](https://github.com/suryakumaran2611/auto-arch-diagram/actions/workflows/secret-scan.yml)
 [![License: CC BY-NC 4.0](https://img.shields.io/badge/License-CC%20BY--NC%204.0-red.svg)](https://creativecommons.org/licenses/by-nc/4.0/)
-[📖 User Guide](docs/USER_GUIDE.md) • [🌐 GitHub Pages](https://suryakumaran2611.github.io/auto-arch-diagram/)
+[📖 User Guide](docs/USER_GUIDE.md) • [🛠️ Update Scripts](UPDATE_GITHUB_PAGES_README.md) • [🌐 GitHub Pages](https://suryakumaran2611.github.io/auto-arch-diagram/)
 
-*Automatically generate professional diagrams from Terraform, CloudFormation, Bicep, and Pulumi*
+*Automatically generate professional diagrams from Terraform, CloudFormation, Bicep, and Pulumi with 100+ supported services*
 
 ---
 
@@ -21,11 +21,11 @@
 <tr>
 <td width="50%">
 
-**MLOps Multi-Cloud** (47 resources - PNG only)
+**Multi-Cloud Storage** (7 resources - Network Segregation)
 
 ![MLOps Multi-Cloud](examples/terraform/mlops-multi-cloud/architecture-diagram.png)
 
-*AWS SageMaker + Azure AKS + GCP BigQuery (PNG only due to complexity)*
+*AWS S3 + Azure Blob + GCP Cloud Storage with network-aware labels*
 
 </td>
 <td width="50%">
@@ -66,23 +66,29 @@
 
 - 🎯 **VPC/Network Grouping** - Automatic VPC organization with subnet distinction
 - 🧠 **AUTO Layout** - Intelligent orientation selection (6-factor analysis)
-- 🏗️ **Multi-Cloud** - 2,100+ official icons for AWS, Azure, GCP, and more
+- 🏗️ **Multi-Cloud** - 100+ services supported across AWS (38), Azure (13), GCP (12)
 - 📤 **Multiple Formats** - Mermaid, PNG, SVG, JPEG with embedded icons
 - 🎨 **Open Sans Bold Typography** - Enhanced readability with professional bold fonts
-- ☁️ **Enhanced CloudFormation** - Full icon support and intelligent arrow styling
+- 🏷️ **Network-Aware Labels** - Diagrams show network segregation (aws-network, global, etc.)
+- ☁️ **Enhanced CloudFormation** - Production-ready templates with monitoring and security
+- 🔧 **Automated Updates** - Scripts for keeping documentation synchronized
 - 🚀 **GitHub Actions** - One-line workflow integration with PR comments
 - 🔒 **Security-First** - Secret scanning, redaction, minimal permissions
-- 🤖 **AI Mode** - Experimental AI-powered diagram generation
-- 📚 **Comprehensive Docs** - Detailed [User Guide](docs/USER_GUIDE.md) available
+- 📚 **Comprehensive Docs** - Detailed [User Guide](docs/USER_GUIDE.md) and [Update Scripts](UPDATE_GITHUB_PAGES_README.md)
 
 ### 🎨 Recent Improvements
 
-**Typography Enhancement**: Upgraded to **Open Sans Bold** font for enhanced readability and professional appearance across all diagram formats.
+**63+ New Services**: Added comprehensive service mappings across AWS, Azure, and GCP including VPC endpoints, CloudFront functions, Lambda layers, and more.
 
-**CloudFormation Excellence**: Enhanced CloudFormation support with:
-- Full service-specific icon mapping (S3, Lambda, CloudFront, WAF, etc.)
-- Intelligent arrow styling matching Terraform diagrams
-- Improved layout consistency across IaC formats
+**Network-Aware Diagrams**: Multi-cloud diagrams now display network segregation with contextual labels like "vpc aws network", "storage global", etc.
+
+**Enhanced CloudFormation**: Production-ready CloudFormation templates with monitoring, security policies, rate limiting, and comprehensive resource configurations.
+
+**Automated Maintenance**: Created update scripts (`update_github_pages_images.sh/.bat/.py`) for automatically regenerating and updating all documentation diagrams.
+
+**Service Name Intelligence**: Added smart aliases for service variations (WAFv2→WAF, OpenSearch→Elasticsearch, MSK→Kinesis) to prevent missing icons.
+
+**Typography Enhancement**: Upgraded to **Open Sans Bold** font for enhanced readability and professional appearance across all diagram formats.
 
 **SVG Icon Embedding**: Fixed SVG diagrams to properly embed icons as base64 data URIs, ensuring portability and correct display in all viewers.
 
