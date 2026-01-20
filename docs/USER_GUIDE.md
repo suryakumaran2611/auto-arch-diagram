@@ -28,11 +28,47 @@ The Auto Architecture Diagram action automatically:
 
 - **Multi-format Support**: Terraform, CloudFormation, Bicep, Pulumi, AWS CDK
 - **Flexible Output**: Mermaid markdown, rendered images (PNG/SVG/JPEG)
+- **Typography**: Open Sans font family for professional, readable diagrams
+- **CloudFormation Excellence**: Full icon support with intelligent arrow styling
+- **SVG Portability**: Embedded icons ensure SVGs work in any viewer
 - **AI-Powered**: Optional AI mode for enhanced diagram generation
 - **PR Integration**: Automatic commenting and diagram PR creation
 - **Highly Configurable**: Extensive customization options
 
 ## Quick Start
+
+### 0. Prerequisites & Local Setup
+
+Before using the action, you may want to test locally:
+
+#### Windows with PowerShell (Recommended)
+
+```powershell
+# Create virtual environment with uv
+cd auto-arch-diagram
+uv venv --python "3.12" --seed 3.12.11
+
+# Activate environment
+.venv\Scripts\activate
+
+# Install dependencies
+uv pip install python-hcl2 pytest graphviz diagrams
+uv pip install -r requirements-ai.txt  # For AI mode
+```
+
+#### Traditional Setup
+
+```powershell
+# Using pip
+python -m venv .venv
+.venv\Scripts\activate
+pip install python-hcl2 pytest graphviz diagrams
+
+# Linux/macOS
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+```
 
 ### 1. Basic Setup
 
@@ -165,6 +201,8 @@ limits:
 - `**/template.yaml`
 - `**/template.yml`
 
+**✨ Enhanced Support**: Full service-specific icon mapping, intelligent arrow styling matching Terraform diagrams, and proper resource categorization.
+
 ### Azure Bicep
 - `**/*.bicep`
 
@@ -284,6 +322,14 @@ Organizes components by cloud provider or service category.
 - **Transparent**: Best for dark themes and overlay use
 - **White**: Best for print and light themes
 
+### Font Configuration
+
+The action uses **Open Sans Bold** font by default for enhanced readability and professional appearance. This modern typeface provides excellent screen readability and consistent rendering across different platforms.
+
+**Font**: Open Sans Bold (for optimal contrast and legibility)
+
+**Note**: The GitHub Actions workflow automatically installs the Open Sans font family on Ubuntu runners to ensure consistent rendering.
+
 ### Image Formats
 
 | Format | Best For | Notes |
@@ -332,6 +378,15 @@ publish:
 - Add `OPENAI_API_KEY` as a repository secret
 - Verify the API key has sufficient credits
 - Check that the model name is correct
+
+#### 5. SVG Icons Not Displaying
+**Cause**: SVG files may not have embedded icons or the viewer doesn't support embedded images.
+
+**Solution**:
+- Ensure SVG format is selected in `image_formats`
+- The tool automatically embeds PNG icons as base64 data URIs in SVG files
+- If icons still don't show, try opening the SVG in a different browser or viewer
+- PNG/JPG formats are recommended for guaranteed icon display
 
 ### Debug Mode
 
@@ -526,7 +581,95 @@ with:
 - Review generated diagrams for sensitive information before publishing.
 - Use a test page for initial integration to avoid overwriting important documentation.
 
-### FAQ
+### Testing New AI/ML/Blockchain Services
+
+The action now supports comprehensive AI, ML, and Blockchain services across all major cloud providers:
+
+#### Test with Example Files
+
+```powershell
+# Test AWS AI/ML/Blockchain services
+python tools/generate_arch_diagram.py \
+  --iac-root examples/test-ai-ml-blockchain/aws \
+  --direction AUTO \
+  --out-md aws-ai-ml-test.md \
+  --out-png aws-ai-ml-test.png
+
+# Test Azure AI/ML/Blockchain services  
+python tools/generate_arch_diagram.py \
+  --iac-root examples/test-ai-ml-blockchain/azure \
+  --direction LR \
+  --out-md azure-ai-ml-test.md
+
+# Test with AI mode for enhanced analysis
+$env:OPENAI_API_KEY = "your-key-here"
+python tools/generate_arch_diagram.py \
+  --mode ai \
+  --iac-root examples/test-ai-ml-blockchain \
+  --direction AUTO \
+  --out-md enhanced-ai-diagram.md
+```
+
+#### Newly Supported Services
+
+**AWS AI/ML:**
+- SageMaker (Notebook, Endpoint, Model, Pipeline, Ground Truth)
+- Bedrock (Agent, Knowledge Base, Runtime)
+- AI Services (Textract, Comprehend, Translate, Polly, Rekognition)
+- Custom AI (Personalize, Forecast, Lex, Transcribe)
+
+**AWS Blockchain:**
+- Managed Blockchain (Nodes, Networks)
+- Quantum Ledger Database (QLDB)
+- Amplify (API, GraphQL)
+
+**Azure AI/ML:**
+- Azure Machine Learning (Workspace, Compute, Model, Endpoint)
+- Azure OpenAI Service
+- Cognitive Services (Computer Vision, Face API, Speech, Language)
+- Azure Databricks Integration
+
+**Azure Blockchain:**
+- Blockchain Service (Members, Nodes)
+- Blockchain Workbench
+
+**GCP AI/ML:**
+- Vertex AI (Notebooks, Endpoints, Models, Training)
+- AutoML (Tables, Vision, NLP, Translation)
+- Cloud AI APIs (Speech, Vision, Recommendations)
+- Cloud Datalab, Colab, Jupyter Integration
+
+**Oracle AI/ML:**
+- OCI AI Services (Language, Vision, Data Science, Speech)
+- AI Anomaly Detection
+
+**IBM AI/ML:**
+- Watson Studio, Watson Machine Learning, Watson AutoAI
+- Watson Assistant, Discovery
+- IBM Cloud Pak for Data, Cognos Analytics
+
+**IBM Blockchain:**
+- IBM Blockchain Platform
+
+#### Expected Results
+
+- **Diagram Categories**: Services properly categorized as 'ml', 'blockchain', 'analytics'
+- **Icon Mapping**: Each service uses appropriate cloud provider icons
+- **Color Coding**: AI services get specialized colors/themes
+- **Layout Optimization**: Intelligent grouping of AI/ML services
+
+#### Debugging Service Recognition
+
+```powershell
+# Check if services are recognized
+python tools/generate_arch_diagram.py --iac-root examples/test-ai-ml-blockchain --direction LR --out-md debug-output.md
+
+# Enable debug mode to see mapping details
+$env:AUTO_ARCH_DEBUG = "1"
+python tools/generate_arch_diagram.py --iac-root examples/test-ai-ml-blockchain --out-md debug-detailed.md
+```
+
+## FAQ
 - **Q: Can I replace multiple images in one page?**
   - Yes, by running the workflow multiple times with different markers and filenames.
 - **Q: What if the marker is missing?**

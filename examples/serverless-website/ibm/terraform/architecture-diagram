@@ -1,0 +1,22 @@
+digraph "Architecture (Terraform)" {
+	graph [bgcolor=white concentrate=false esep="+1" fontcolor="#2D3436" fontname="Open Sans Bold" fontsize=12 label="Architecture (Terraform)" labeljust=c labelloc=t mclimit=2.0 nodesep=0.18 nslimit=2.0 outputorder=edgesfirst overlap=prism overlap_scaling=-4 pad=0.21 rankdir=LR ranksep=0.26 remincross=true sep="+3" smoothing=none splines=ortho]
+	node [fixedsize=true fontcolor="#2D3436" fontname="Open Sans Bold" fontsize=9 height=0.8 imagepos=tc imagescale=true labelloc=b shape=box style=rounded width=0.8]
+	edge [arrowhead=normal arrowsize=0.65 arrowtail=none color="#8D96A77B" constraint=true decorate=false dir=forward headclip=true labelangle=0 labeldistance=1.5 minlen=2.0 penwidth=0.9 style=solid tailclip=true weight=1]
+	subgraph cluster_Compute {
+		graph [bgcolor="#FFFFFF" color="#CCCCCC" fontname="Helvetica-Bold" fontsize=14 label=Compute labeljust=l pencolor="#AEB6BE" penwidth=1.0 rankdir=LR shape=box style="rounded,filled"]
+		subgraph "cluster_IBM Cloud" {
+			graph [bgcolor="#FFFFFF" color="#BBCEF2AE" fontname="Helvetica-Bold" fontsize=12 label="IBM Cloud" labeljust=l labelloc=t pencolor="#AEB6BE" penwidth=2.5 rankdir=LR shape=box style="rounded,filled"]
+			"7763fe76e9ea41ba918d7e2b82ecb0e1" [label="Resource…
+cos" height=1.2 image="C:\Users\surya\OneDrive\Documents\GitHub\auto-arch-diagram\.venv\Lib\site-packages\resources/aws/compute\ec2.png" imagepos=tc labelloc=b shape=none]
+		}
+	}
+	subgraph cluster_Storage {
+		graph [bgcolor="#FFFFFF" color="#CCCCCC" fontname="Helvetica-Bold" fontsize=14 label=Storage labeljust=l pencolor="#AEB6BE" penwidth=1.0 rankdir=LR shape=box style="rounded,filled"]
+		subgraph "cluster_IBM Cloud" {
+			graph [bgcolor="#FFFFFF" color="#BBCEF2AE" fontname="Helvetica-Bold" fontsize=12 label="IBM Cloud" labeljust=l labelloc=t pencolor="#AEB6BE" penwidth=2.5 rankdir=LR shape=box style="rounded,filled"]
+			"936c2b669bf042c3bae4fa6a83572925" [label="Cos Bucket
+site" height=1.2 image="C:\Users\surya\OneDrive\Documents\GitHub\auto-arch-diagram\.venv\Lib\site-packages\resources/aws/compute\ec2.png" imagepos=tc labelloc=b shape=none]
+		}
+	}
+	"7763fe76e9ea41ba918d7e2b82ecb0e1" -> "936c2b669bf042c3bae4fa6a83572925" [arrowsize=0.65 color="#2196F3" dir=forward fontcolor="#2D3436" fontname="Sans-Serif" fontsize=13 penwidth=1.35 style=bold]
+}

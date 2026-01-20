@@ -6,17 +6,17 @@ Summary: Generated a dependency-oriented CloudFormation diagram from changed res
 
 ```mermaid
 flowchart LR
-subgraph CloudFront[CloudFront]
-  cfn_CloudFrontOAC["CloudFrontOAC\nAWS::CloudFront::OriginAccessControl"]
-  cfn_Distribution["Distribution\nAWS::CloudFront::Distribution"]
+subgraph Network[Network]
+  cfn_CloudFrontOAC["CloudFrontOAC\nOriginAccessControl"]
+  cfn_Distribution["Distribution\nDistribution"]
 end
-subgraph S3[S3]
-  cfn_LogsBucket["LogsBucket\nAWS::S3::Bucket"]
-  cfn_SiteBucket["SiteBucket\nAWS::S3::Bucket"]
-  cfn_SiteBucketPublicAccessBlock["SiteBucketPublicAccessBlock\nAWS::S3::BucketPublicAccessBlock"]
+subgraph Security[Security]
+  cfn_WafAcl["WafAcl\nWebACL"]
 end
-subgraph WAFv2[WAFv2]
-  cfn_WafAcl["WafAcl\nAWS::WAFv2::WebACL"]
+subgraph Storage[Storage]
+  cfn_LogsBucket["LogsBucket\nBucket"]
+  cfn_SiteBucket["SiteBucket\nBucket"]
+  cfn_SiteBucketPublicAccessBlock["SiteBucketPublicAccessBlock\nBucketPublicAccessBlock"]
 end
 cfn_CloudFrontOAC --> cfn_Distribution
 cfn_LogsBucket --> cfn_Distribution
@@ -28,4 +28,4 @@ cfn_WafAcl --> cfn_Distribution
 
 Assumptions: Connections represent inferred references via Ref/GetAtt/Sub and DependsOn.
 
-Rendered diagram: available as workflow artifact
+Rendered diagram: not available (icons require Graphviz + diagrams)

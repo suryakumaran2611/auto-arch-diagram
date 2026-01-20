@@ -1,3 +1,0 @@
-# This directory contains custom AWS service icons not available in the diagrams library
-# Add 256x256 PNG icons here using the naming convention: {service}_{resource}.png
-# Example: amplify_app.png, app_runner_service.png

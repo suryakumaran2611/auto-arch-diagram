@@ -12,9 +12,13 @@ def _repo_root() -> Path:
 
 def _python_cmd(repo: Path) -> list[str]:
     # Prefer repo venv if present; fall back to current interpreter.
-    venv_py = repo / ".venv" / "bin" / "python"
-    if venv_py.exists():
-        return [str(venv_py)]
+    # Check for Windows venv first, then Unix
+    venv_py_win = repo / ".venv" / "Scripts" / "python.exe"
+    venv_py_unix = repo / ".venv" / "bin" / "python"
+    if venv_py_win.exists():
+        return [str(venv_py_win)]
+    elif venv_py_unix.exists():
+        return [str(venv_py_unix)]
     return [sys.executable]
 
 
@@ -53,7 +57,9 @@ def _generate_for_example(repo: Path, entry_file: Path) -> None:
 
     res = subprocess.run(cmd, cwd=str(repo), env=env, capture_output=True, text=True)  # nosec B603
     if res.returncode != 0:
-        raise RuntimeError(f"Failed generating for {example_dir}:\n{res.stderr}\n{res.stdout}")
+        raise RuntimeError(
+            f"Failed generating for {example_dir}:\n{res.stderr}\n{res.stdout}"
+        )
 
 
 def main() -> int:

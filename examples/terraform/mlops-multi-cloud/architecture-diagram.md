@@ -123,4 +123,4 @@ tf_google_vpc_access_connector_gcp_vpc_connector --> tf_google_cloudfunctions_fu
 
 Assumptions: Connections represent inferred references (including depends_on and attribute references).
 
-Rendered diagram: available as workflow artifact
+Rendered diagram: not available (icons require Graphviz + diagrams)

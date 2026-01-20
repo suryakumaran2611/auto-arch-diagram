@@ -68,10 +68,23 @@
 - 🧠 **AUTO Layout** - Intelligent orientation selection (6-factor analysis)
 - 🏗️ **Multi-Cloud** - 2,100+ official icons for AWS, Azure, GCP, and more
 - 📤 **Multiple Formats** - Mermaid, PNG, SVG, JPEG with embedded icons
+- 🎨 **Open Sans Bold Typography** - Enhanced readability with professional bold fonts
+- ☁️ **Enhanced CloudFormation** - Full icon support and intelligent arrow styling
 - 🚀 **GitHub Actions** - One-line workflow integration with PR comments
 - 🔒 **Security-First** - Secret scanning, redaction, minimal permissions
 - 🤖 **AI Mode** - Experimental AI-powered diagram generation
 - 📚 **Comprehensive Docs** - Detailed [User Guide](docs/USER_GUIDE.md) available
+
+### 🎨 Recent Improvements
+
+**Typography Enhancement**: Upgraded to **Open Sans Bold** font for enhanced readability and professional appearance across all diagram formats.
+
+**CloudFormation Excellence**: Enhanced CloudFormation support with:
+- Full service-specific icon mapping (S3, Lambda, CloudFront, WAF, etc.)
+- Intelligent arrow styling matching Terraform diagrams
+- Improved layout consistency across IaC formats
+
+**SVG Icon Embedding**: Fixed SVG diagrams to properly embed icons as base64 data URIs, ensuring portability and correct display in all viewers.
 
 ## 🎯 Quick Start
 
@@ -650,6 +663,92 @@ Resources automatically organized within VPC/VNet/VCN containers:
 📁 **[View All Examples →](examples/README.md)**
 
 ## 🚀 Local Development
+
+### Prerequisites
+- **Python 3.11+** with PowerShell access
+- **uv** (recommended) - Modern Python package installer
+- Or traditional **pip** with virtual environment
+
+### Setup with uv (Recommended)
+
+**1. Create Virtual Environment**
+```powershell
+# Navigate to project directory
+cd auto-arch-diagram
+
+# Create virtual environment with specific Python
+uv venv --python "3.12" --seed 3.12.11
+
+# Alternative with full Python path
+uv venv --python "C:/Python/cpython-3.12.11-windows-x86_64-none/python.exe"
+
+# Traditional method (fallback)
+python -m venv .venv
+```
+
+**2. Activate Environment**
+```powershell
+# Activate in current PowerShell session
+.venv\Scripts\activate
+
+# Verify activation (should show (.venv) in prompt)
+python --version
+```
+
+**3. Install Dependencies**
+```powershell
+# Install all required packages
+uv pip install python-hcl2 pytest graphviz diagrams
+
+# Install additional dependencies for AI mode
+uv pip install -r requirements-ai.txt
+
+# Install development dependencies
+uv pip install -r requirements-dev.txt
+```
+
+### Setup with pip (Traditional)
+
+```powershell
+# Create and activate virtual environment
+python -m venv .venv
+.venv\Scripts\activate
+
+# Install dependencies
+pip install python-hcl2 pytest graphviz diagrams
+
+# Install AI dependencies
+pip install -r requirements-ai.txt
+
+# Install development dependencies  
+pip install -r requirements-dev.txt
+```
+
+### Generate Diagrams Locally
+
+```powershell
+# Generate from example directory
+python tools/generate_arch_diagram.py --iac-root examples --out-md diagram.md --out-png diagram.png
+
+# Test with AI mode (requires OPENAI_API_KEY)
+$env:OPENAI_API_KEY = "your-api-key"
+python tools/generate_arch_diagram.py --mode ai --iac-root examples/test-ai-ml-blockchain --out-md ai-diagram.md
+
+# Generate all formats
+python tools/generate_arch_diagram.py --iac-root examples --out-md full-diagram.md --out-png full-diagram.png --out-svg full-diagram.svg --out-jpg full-diagram.jpg
+```
+
+### Testing the New Services
+
+```powershell
+# Test AI/ML/Blockchain service mapping
+python tools/generate_arch_diagram.py --iac-root examples/test-ai-ml-blockchain --direction LR --out-md test-services.md
+
+# Verify all services are recognized
+python tools/generate_arch_diagram.py --mode ai --iac-root examples/test-ai-ml-blockchain --direction AUTO --out-md ai-test.md
+```
+
+### Traditional Linux/macOS Setup
 
 ```bash
 # Setup
