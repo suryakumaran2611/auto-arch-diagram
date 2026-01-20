@@ -824,6 +824,44 @@ Resources:
         </div>
     </section>
 
+        <section class="confluence-publish" id="confluence-publish">
+            <div class="container">
+                <div class="section-header">
+                    <h2>Publish & Replace Diagrams in Confluence</h2>
+                    <p>Automatically publish or robustly replace architecture diagrams in your Confluence pages using the Auto Arch Diagram GitHub Action.</p>
+                </div>
+                <div class="usage-card">
+                    <h3>🔗 Example Workflow: Publish to Confluence</h3>
+                    <div class="code-block">
+    <pre><span class="key">jobs:</span>
+      <span class="key">diagram:</span>
+        <span class="key">runs-on:</span> <span class="string">ubuntu-latest</span>
+        <span class="key">steps:</span>
+          - <span class="key">uses:</span> <span class="string">actions/checkout@v4</span>
+          - <span class="key">uses:</span> <span class="string">suryakumaran2611/auto-arch-diagram@v1</span>
+            <span class="key">with:</span>
+              <span class="key">publish_to_confluence:</span> <span class="string">true</span>
+              <span class="key">confluence_url:</span> <span class="string">https://your-domain.atlassian.net/wiki</span>
+              <span class="key">confluence_page_id:</span> <span class="string">123456</span>
+              <span class="key">confluence_username:</span> <span class="string">${{ secrets.CONFLUENCE_USER }}</span>
+              <span class="key">confluence_api_token:</span> <span class="string">${{ secrets.CONFLUENCE_API_TOKEN }}</span>
+              <span class="key">confluence_marker:</span> <span class="string">ARCH_DIAGRAM_MARKER</span>
+    </pre>
+                    </div>
+                    <p><strong>Best Practice:</strong> Use a unique marker (e.g., <code>ARCH_DIAGRAM_MARKER</code>) in your Confluence page to target the diagram for replacement. The action will only update the image between these markers, ensuring robust and precise updates.</p>
+                    <p><strong>How to Add a Marker:</strong> In your Confluence page, add a comment or text like <code>&lt;!-- ARCH_DIAGRAM_MARKER --&gt;</code> before and after the diagram image. The action will replace the image between these markers.</p>
+                    <p><strong>Troubleshooting:</strong></p>
+                    <ul>
+                        <li>Ensure your Confluence credentials are stored as GitHub secrets.</li>
+                        <li>Test on a non-production page before updating important documentation.</li>
+                        <li>If the marker is not found, the action will not replace any image. Double-check marker spelling and placement.</li>
+                        <li>For multiple diagrams, use different markers for each.</li>
+                    </ul>
+                    <a href="USER_GUIDE.md#confluence-publishing" class="btn btn-secondary">View Full User Guide →</a>
+                </div>
+            </div>
+        </section>
+
     <section class="formats" id="formats">
         <div class="container">
             <div class="section-header">
