@@ -1,0 +1,6 @@
+flowchart LR
+subgraph IBM[IBM]
+  tf_ibm_cos_bucket_site["ibm_cos_bucket.site"]
+  tf_ibm_resource_instance_cos["ibm_resource_instance.cos"]
+end
+tf_ibm_resource_instance_cos --> tf_ibm_cos_bucket_site

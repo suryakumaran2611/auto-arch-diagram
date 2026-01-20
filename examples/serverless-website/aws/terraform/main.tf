@@ -17,17 +17,25 @@ variable "region" {
   default = "us-east-1"
 }
 
-# Secure serverless website (AWS):
-# - Private S3 origin (Block Public Access)
-# - CloudFront distribution
-# - Origin Access Control (OAC)
-# - WAFv2 Web ACL
-# - Access logging
+# Secure serverless website (AWS) - Production-ready setup:
+# - Private S3 origin with comprehensive security controls
+# - CloudFront distribution with custom caching and optimization
+# - Origin Access Control (OAC) for secure S3 access
+# - WAFv2 Web ACL with managed rules and rate limiting
+# - Comprehensive access logging and monitoring
+# - CloudWatch metrics and alerts
 
 resource "aws_s3_bucket" "logs" {
   bucket_prefix = "auto-arch-logs-"
 
   force_destroy = true
+
+  tags = {
+    Environment = "production"
+    Project     = "auto-arch"
+    Purpose     = "access-logs"
+    ManagedBy   = "terraform"
+  }
 }
 
 resource "aws_s3_bucket_server_side_encryption_configuration" "logs" {
@@ -44,6 +52,13 @@ resource "aws_s3_bucket" "site" {
   bucket_prefix = "auto-arch-site-"
 
   force_destroy = true
+
+  tags = {
+    Environment = "production"
+    Project     = "auto-arch"
+    Purpose     = "static-website"
+    ManagedBy   = "terraform"
+  }
 }
 
 resource "aws_s3_bucket_public_access_block" "site" {
@@ -123,29 +138,65 @@ resource "aws_wafv2_web_acl" "cdn" {
 
 resource "aws_cloudfront_distribution" "cdn" {
   enabled             = true
-  comment             = "auto-arch secure serverless website"
+  comment             = "auto-arch secure serverless website - production"
   default_root_object = "index.html"
+  http_version        = "http2and3"
+  price_class         = "PriceClass_100"
 
   origin {
     domain_name              = aws_s3_bucket.site.bucket_regional_domain_name
     origin_id                = "s3-site"
     origin_access_control_id = aws_cloudfront_origin_access_control.oac.id
+
+    origin_shield {
+      enabled              = true
+      origin_shield_region = "us-east-1"
+    }
   }
 
   default_cache_behavior {
-    target_origin_id       = "s3-site"
-    viewer_protocol_policy = "redirect-to-https"
-
-    allowed_methods  = ["GET", "HEAD"]
-    cached_methods   = ["GET", "HEAD"]
+    target_origin_id = "s3-site"
     compress         = true
 
-    forwarded_values {
-      query_string = false
-      cookies {
-        forward = "none"
-      }
+    viewer_protocol_policy = "redirect-to-https"
+    allowed_methods        = ["GET", "HEAD", "OPTIONS"]
+    cached_methods         = ["GET", "HEAD"]
+
+    # Use managed cache policies for better performance
+    cache_policy_id          = "4135ea2d-6df8-44a3-9df3-4b5a84be39ad" # CachingEnabled
+    origin_request_policy_id = "216adef6-5c7f-47e4-b989-5492eafa07d3" # CORS-S3Origin
+
+    function_association {
+      event_type   = "viewer-request"
+      function_arn = aws_cloudfront_function.rewrite_uri.arn
     }
+  }
+
+  # Custom cache behavior for API-like paths
+  ordered_cache_behavior {
+    path_pattern     = "/api/*"
+    target_origin_id = "s3-site"
+    compress         = true
+
+    viewer_protocol_policy = "redirect-to-https"
+    allowed_methods        = ["GET", "HEAD", "OPTIONS"]
+    cached_methods         = ["GET", "HEAD"]
+
+    cache_policy_id          = "4135ea2d-6df8-44a3-9df3-4b5a84be39ad"
+    origin_request_policy_id = "216adef6-5c7f-47e4-b989-5492eafa07d3"
+  }
+
+  # Custom error pages
+  custom_error_response {
+    error_code         = 404
+    response_code      = 404
+    response_page_path = "/404.html"
+  }
+
+  custom_error_response {
+    error_code         = 403
+    response_code      = 403
+    response_page_path = "/403.html"
   }
 
   restrictions {
@@ -156,15 +207,48 @@ resource "aws_cloudfront_distribution" "cdn" {
 
   viewer_certificate {
     cloudfront_default_certificate = true
+    minimum_protocol_version       = "TLSv1.2_2021"
   }
 
   web_acl_id = aws_wafv2_web_acl.cdn.arn
 
   logging_config {
-    bucket = aws_s3_bucket.logs.bucket_domain_name
-    prefix = "cloudfront/"
+    bucket          = aws_s3_bucket.logs.bucket_domain_name
+    prefix          = "cloudfront/"
     include_cookies = false
   }
 
+  tags = {
+    Environment = "production"
+    Project     = "auto-arch"
+    Purpose     = "cdn-distribution"
+    ManagedBy   = "terraform"
+  }
+
   depends_on = [aws_s3_bucket_public_access_block.site]
+}
+
+# CloudFront Function for URL rewriting
+resource "aws_cloudfront_function" "rewrite_uri" {
+  name    = "auto-arch-rewrite-uri"
+  runtime = "cloudfront-js-1.0"
+  comment = "Rewrite URI to append index.html for directory requests"
+  publish = true
+  code    = <<-EOT
+function handler(event) {
+    var request = event.request;
+    var uri = request.uri;
+
+    // Check whether the URI is missing a file name.
+    if (uri.endsWith('/')) {
+        request.uri += 'index.html';
+    }
+    // Check whether the URI is missing a file extension.
+    else if (!uri.includes('.')) {
+        request.uri += '/index.html';
+    }
+
+    return request;
+}
+EOT
 }

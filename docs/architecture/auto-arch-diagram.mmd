@@ -1,11 +1,17 @@
 flowchart LR
 subgraph AWS[AWS]
-  tf_aws_instance_web["aws_instance.web"]
-  tf_aws_security_group_web["aws_security_group.web"]
-  tf_aws_subnet_public["aws_subnet.public"]
-  tf_aws_vpc_main["aws_vpc.main"]
+  tf_aws_s3_bucket_s3_global["aws_s3_bucket.s3_global"]
+  tf_aws_subnet_subnet_aws_network["aws_subnet.subnet_aws_network"]
+  tf_aws_vpc_vpc_aws_network["aws_vpc.vpc_aws_network"]
 end
-tf_aws_security_group_web --> tf_aws_instance_web
-tf_aws_subnet_public --> tf_aws_instance_web
-tf_aws_vpc_main --> tf_aws_security_group_web
-tf_aws_vpc_main --> tf_aws_subnet_public
+subgraph AZURERM[AZURERM]
+  tf_azurerm_resource_group_rg_azure_network["azurerm_resource_group.rg_azure_network"]
+  tf_azurerm_storage_account_storage_global["azurerm_storage_account.storage_global"]
+  tf_azurerm_storage_container_container_global["azurerm_storage_container.container_global"]
+end
+subgraph GOOGLE[GOOGLE]
+  tf_google_storage_bucket_bucket_global["google_storage_bucket.bucket_global"]
+end
+tf_aws_vpc_vpc_aws_network --> tf_aws_subnet_subnet_aws_network
+tf_azurerm_resource_group_rg_azure_network --> tf_azurerm_storage_account_storage_global
+tf_azurerm_storage_account_storage_global --> tf_azurerm_storage_container_container_global

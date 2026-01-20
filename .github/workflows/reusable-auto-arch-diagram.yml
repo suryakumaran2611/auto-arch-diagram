@@ -198,16 +198,37 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Install Graphviz (for icon rendering)
-        run: |
-          FORMATS_RAW='${{ inputs.image_formats }}'
-          FORMATS="$(echo "${FORMATS_RAW}" | tr '[:upper:]' '[:lower:]' | tr -d ' ' )"
-          if [ -z "${FORMATS}" ] || [ "${FORMATS}" = "none" ]; then
-            exit 0
-          fi
+       - name: Install Graphviz (for icon rendering)
+         run: |
+           FORMATS_RAW='${{ inputs.image_formats }}'
+           FORMATS="$(echo "${FORMATS_RAW}" | tr '[:upper:]' '[:lower:]' | tr -d ' ' )"
+           if [ -z "${FORMATS}" ] || [ "${FORMATS}" = "none" ]; then
+             exit 0
+           fi
 
-          sudo apt-get update
-          sudo apt-get install -y graphviz
+           sudo apt-get update
+           sudo apt-get install -y graphviz
+
+       - name: Install Open Sans font
+         run: |
+           FORMATS_RAW='${{ inputs.image_formats }}'
+           FORMATS="$(echo "${FORMATS_RAW}" | tr '[:upper:]' '[:lower:]' | tr -d ' ' )"
+           if [ -z "${FORMATS}" ] || [ "${FORMATS}" = "none" ]; then
+             exit 0
+           fi
+
+           echo "Installing Open Sans font family..."
+
+           # Install fonts-open-sans package which includes the full font family
+           sudo apt-get update
+           sudo apt-get install -y fonts-open-sans
+
+           # Update font cache
+           sudo fc-cache -f -v
+
+           # Verify Open Sans is installed
+           echo "Available fonts:"
+           fc-list | grep -i "open.sans" | head -5 || echo "Warning: Open Sans fonts may not be properly installed"
 
       - name: Install dependencies
         shell: bash
@@ -573,12 +594,33 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Install Graphviz (for icon rendering)
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y graphviz
+       - name: Install Graphviz (for icon rendering)
+         run: |
+           sudo apt-get update
+           sudo apt-get install -y graphviz
 
-      - name: Install dependencies
+       - name: Install Open Sans font
+         run: |
+           FORMATS_RAW='${{ inputs.image_formats }}'
+           FORMATS="$(echo "${FORMATS_RAW}" | tr '[:upper:]' '[:lower:]' | tr -d ' ' )"
+           if [ -z "${FORMATS}" ] || [ "${FORMATS}" = "none" ]; then
+             exit 0
+           fi
+
+           echo "Installing Open Sans font family..."
+
+           # Install fonts-open-sans package which includes the full font family
+           sudo apt-get update
+           sudo apt-get install -y fonts-open-sans
+
+           # Update font cache
+           sudo fc-cache -f -v
+
+           # Verify Open Sans is installed
+           echo "Available fonts:"
+           fc-list | grep -i "open.sans" | head -5 || echo "Warning: Open Sans fonts may not be properly installed"
+
+       - name: Install dependencies
         shell: bash
         run: |
           set -e

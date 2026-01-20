@@ -1,0 +1,68 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Run pytest",
+			"type": "shell",
+			"command": "pytest",
+			"problemMatcher": [
+				"$pytest"
+			],
+			"group": "test"
+		},
+		{
+			"label": "Re-run pytest after import fix",
+			"type": "shell",
+			"command": "pytest",
+			"problemMatcher": [
+				"$pytest"
+			],
+			"group": "test"
+		},
+		{
+			"label": "Re-run pytest after installing requests",
+			"type": "shell",
+			"command": "pytest",
+			"problemMatcher": [
+				"$pytest"
+			],
+			"group": "test"
+		},
+		{
+			"label": "Final pytest after env+requests fix",
+			"type": "shell",
+			"command": "pytest",
+			"problemMatcher": [
+				"$pytest"
+			],
+			"group": "test"
+		},
+		{
+			"label": "Pytest after requests in venv",
+			"type": "shell",
+			"command": ".venv\\Scripts\\python.exe -m pytest",
+			"problemMatcher": [
+				"$pytest"
+			],
+			"group": "test"
+		},
+		{
+			"label": "Pytest after requests fixed in venv",
+			"type": "shell",
+			"command": ".venv\\Scripts\\python.exe -m pytest",
+			"problemMatcher": [
+				"$pytest"
+			],
+			"group": "test"
+		},
+		{
+			"label": "Re-run pytest to verify custom icon fix",
+			"type": "shell",
+			"command": ".venv\\Scripts\\python.exe -m pytest tests/test_custom_icon_render.py",
+			"problemMatcher": [
+				"$pytest"
+			],
+			"group": "test"
+		}
+	]
+}
