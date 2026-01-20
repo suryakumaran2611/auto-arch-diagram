@@ -642,29 +642,57 @@
     <section class="demo">
         <div class="container">
             <div class="demo-grid">
-                <div class="demo-code">
-                    <div class="demo-code-header">
-                        <span></span><span></span><span></span>
-                    </div>
-                    <pre><code><span class="comment"># main.tf</span>
-<span class="keyword">resource</span> <span class="string">"aws_lambda_function"</span> <span class="string">"api"</span> {
-  <span class="property">function_name</span> = <span class="string">"my-api"</span>
-  <span class="property">runtime</span>       = <span class="string">"python3.11"</span>
-}
+                                <div class="demo-code">
+                                        <div class="demo-code-header">
+                                                <span></span><span></span><span></span>
+                                        </div>
+                                        <pre><code><span class="comment"># template.yaml (CloudFormation)</span>
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Secure serverless website (AWS) - S3 private origin + CloudFront + WAF
 
-<span class="keyword">resource</span> <span class="string">"aws_dynamodb_table"</span> <span class="string">"data"</span> {
-  <span class="property">name</span>     = <span class="string">"my-table"</span>
-  <span class="property">hash_key</span> = <span class="string">"id"</span>
-}
+Resources:
+    LogsBucket:
+        Type: AWS::S3::Bucket
+        Properties:
+            BucketEncryption:
+                ServerSideEncryptionConfiguration:
+                    - ServerSideEncryptionByDefault:
+                            SSEAlgorithm: AES256
 
-<span class="keyword">resource</span> <span class="string">"aws_api_gateway_rest_api"</span> <span class="string">"gw"</span> {
-  <span class="property">name</span> = <span class="string">"my-gateway"</span>
-}</code></pre>
-                </div>
-                <div class="demo-image">
-                    <img src="images/aws-serverless.png" alt="Generated Architecture Diagram">
-                    <p>↑ Auto-generated from your Terraform code</p>
-                </div>
+    SiteBucket:
+        Type: AWS::S3::Bucket
+        Properties:
+            BucketEncryption:
+                ServerSideEncryptionConfiguration:
+                    - ServerSideEncryptionByDefault:
+                            SSEAlgorithm: AES256
+            VersioningConfiguration:
+                Status: Enabled
+            LoggingConfiguration:
+                DestinationBucketName: !Ref LogsBucket
+                LogFilePrefix: s3/
+
+    SiteBucketPublicAccessBlock:
+        Type: AWS::S3::BucketPublicAccessBlock
+        Properties:
+            Bucket: !Ref SiteBucket
+            BlockPublicAcls: true
+            IgnorePublicAcls: true
+            BlockPublicPolicy: true
+            RestrictPublicBuckets: true
+
+    WafAcl:
+        Type: AWS::WAFv2::WebACL
+        Properties:
+            Name: auto-arch-waf
+            Scope: CLOUDFRONT
+            DefaultAction: ...
+</code></pre>
+                                </div>
+                                <div class="demo-image">
+                                        <img src="images/aws-serverless.png" alt="Generated Architecture Diagram">
+                                        <p>↑ Auto-generated from your CloudFormation code</p>
+                                </div>
             </div>
         </div>
     </section>
@@ -758,35 +786,41 @@
                 <h2>Quick Start</h2>
                 <p>Add to your GitHub Actions workflow in seconds.</p>
             </div>
-            <div class="usage-card">
-                <h3>📋 .github/workflows/diagram.yml</h3>
-                <div class="code-block">
+                        <div class="usage-card">
+                                <h3>📋 .github/workflows/diagram.yml</h3>
+                                <div class="code-block">
 <pre><span class="key">name:</span> <span class="string">Update Architecture Diagram</span>
 <span class="key">on:</span>
-  <span class="key">pull_request:</span>
-    <span class="key">paths:</span>
-      - <span class="string">'**/*.tf'</span>
-      - <span class="string">'**/*.yaml'</span>
+    <span class="key">pull_request:</span>
+        <span class="key">paths:</span>
+            - <span class="string">'**/*.tf'</span>
+            - <span class="string">'**/*.yaml'</span>
 
 <span class="key">jobs:</span>
-  <span class="key">diagram:</span>
-    <span class="key">runs-on:</span> <span class="string">ubuntu-latest</span>
-    <span class="key">steps:</span>
-      - <span class="key">uses:</span> <span class="string">actions/checkout@v4</span>
-      
-      - <span class="key">uses:</span> <span class="string">suryakumaran2611/auto-arch-diagram@v1</span>
-        <span class="key">with:</span>
-          <span class="key">changed_files:</span> <span class="string">${{ github.event.pull_request.changed_files }}</span>
-      
-      - <span class="key">uses:</span> <span class="string">actions/upload-artifact@v4</span>
-        <span class="key">with:</span>
-          <span class="key">name:</span> <span class="string">architecture-diagram</span>
-          <span class="key">path:</span> <span class="string">artifacts/</span></pre>
-                </div>
-                <a href="https://github.com/suryakumaran2611/auto-arch-diagram#usage" class="btn btn-secondary">
-                    View Full Documentation →
-                </a>
-            </div>
+    <span class="key">diagram:</span>
+        <span class="key">runs-on:</span> <span class="string">ubuntu-latest</span>
+        <span class="key">steps:</span>
+            - <span class="key">uses:</span> <span class="string">actions/checkout@v4</span>
+            - <span class="key">name:</span> <span class="string">Generate Architecture Diagram</span>
+                <span class="key">uses:</span> <span class="string">suryakumaran2611/auto-arch-diagram@v1</span>
+                <span class="key">with:</span>
+                    <span class="key">iac_globs:</span> <span class="string">**/*.tf\n**/*.yaml</span>
+                    <span class="key">out_dir:</span> <span class="string">artifacts</span>
+                    <span class="key">image_formats:</span> <span class="string">png,svg</span>
+                    <span class="key">mode:</span> <span class="string">static</span>
+                    <span class="key">direction:</span> <span class="string">LR</span>
+            - <span class="key">name:</span> <span class="string">Upload Diagram Artifacts</span>
+                <span class="key">uses:</span> <span class="string">actions/upload-artifact@v4</span>
+                <span class="key">with:</span>
+                    <span class="key">name:</span> <span class="string">architecture-diagram</span>
+                    <span class="key">path:</span> <span class="string">artifacts/</span>
+</pre>
+                                </div>
+                                <p><strong>Best Practice:</strong> Use <code>iac_globs</code> to specify all relevant IaC files (Terraform, CloudFormation, etc.) and <code>out_dir</code> for organized output. Always upload generated artifacts for traceability.</p>
+                                <a href="USER_GUIDE.md" class="btn btn-secondary">
+                                        View Full Documentation →
+                                </a>
+                        </div>
         </div>
     </section>
 
