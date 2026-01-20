@@ -6,6 +6,10 @@ Summary: Generated a dependency-oriented CloudFormation diagram from changed res
 
 ```mermaid
 flowchart LR
+subgraph Management[Management]
+  cfn_CloudFrontLogGroup["CloudFrontLogGroup\nLogGroup"]
+  cfn_WafLogGroup["WafLogGroup\nLogGroup"]
+end
 subgraph Network[Network]
   cfn_CloudFrontOAC["CloudFrontOAC\nOriginAccessControl"]
   cfn_Distribution["Distribution\nDistribution"]
@@ -28,4 +32,4 @@ cfn_WafAcl --> cfn_Distribution
 
 Assumptions: Connections represent inferred references via Ref/GetAtt/Sub and DependsOn.
 
-Rendered diagram: not available (icons require Graphviz + diagrams)
+Rendered diagram: available as workflow artifact

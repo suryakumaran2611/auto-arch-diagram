@@ -8,6 +8,7 @@ Summary: Generated a dependency-oriented Terraform diagram from changed resource
 flowchart LR
 subgraph AWS[AWS]
   tf_aws_cloudfront_distribution_cdn["aws_cloudfront_distribution.cdn"]
+  tf_aws_cloudfront_function_rewrite_uri["aws_cloudfront_function.rewrite_uri"]
   tf_aws_cloudfront_origin_access_control_oac["aws_cloudfront_origin_access_control.oac"]
   tf_aws_s3_bucket_logs["aws_s3_bucket.logs"]
   tf_aws_s3_bucket_site["aws_s3_bucket.site"]
@@ -18,6 +19,7 @@ subgraph AWS[AWS]
   tf_aws_s3_bucket_versioning_site["aws_s3_bucket_versioning.site"]
   tf_aws_wafv2_web_acl_cdn["aws_wafv2_web_acl.cdn"]
 end
+tf_aws_cloudfront_function_rewrite_uri --> tf_aws_cloudfront_distribution_cdn
 tf_aws_cloudfront_origin_access_control_oac --> tf_aws_cloudfront_distribution_cdn
 tf_aws_s3_bucket_logs --> tf_aws_cloudfront_distribution_cdn
 tf_aws_s3_bucket_logs --> tf_aws_s3_bucket_logging_site

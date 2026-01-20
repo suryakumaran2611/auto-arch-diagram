@@ -1,18 +1,46 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: Secure serverless website (AWS) - S3 private origin + CloudFront + WAF
+Description: 'Secure serverless website (AWS) - S3 private origin + CloudFront + WAF + monitoring'
+
+Parameters:
+  EnvironmentName:
+    Type: String
+    Default: 'prod'
+    Description: 'Environment name for resource naming'
+
+  DomainName:
+    Type: String
+    Default: ''
+    Description: 'Custom domain name (leave empty for default CloudFront domain)'
+
+  CertificateArn:
+    Type: String
+    Default: ''
+    Description: 'ACM Certificate ARN for custom domain (required if DomainName is specified)'
+
+Conditions:
+  UseCustomDomain: !Not [ !Equals [ !Ref DomainName, '' ] ]
 
 Resources:
   LogsBucket:
     Type: AWS::S3::Bucket
     Properties:
+      BucketName: !Sub '${EnvironmentName}-logs-${AWS::AccountId}'
       BucketEncryption:
         ServerSideEncryptionConfiguration:
           - ServerSideEncryptionByDefault:
               SSEAlgorithm: AES256
+      VersioningConfiguration:
+        Status: Enabled
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
 
   SiteBucket:
     Type: AWS::S3::Bucket
     Properties:
+      BucketName: !Sub '${EnvironmentName}-site-${AWS::AccountId}'
       BucketEncryption:
         ServerSideEncryptionConfiguration:
           - ServerSideEncryptionByDefault:
@@ -21,7 +49,12 @@ Resources:
         Status: Enabled
       LoggingConfiguration:
         DestinationBucketName: !Ref LogsBucket
-        LogFilePrefix: s3/
+        LogFilePrefix: 's3-access/'
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
 
   SiteBucketPublicAccessBlock:
     Type: AWS::S3::BucketPublicAccessBlock
@@ -32,19 +65,27 @@ Resources:
       BlockPublicPolicy: true
       RestrictPublicBuckets: true
 
+  # CloudWatch Logs for WAF monitoring
+  WafLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub '/aws/waf/${EnvironmentName}'
+      RetentionInDays: 30
+
   WafAcl:
     Type: AWS::WAFv2::WebACL
     Properties:
-      Name: auto-arch-waf
+      Name: !Sub '${EnvironmentName}-waf-acl'
       Scope: CLOUDFRONT
+      Description: 'WAF protection for serverless website'
       DefaultAction:
         Allow: {}
       VisibilityConfig:
         CloudWatchMetricsEnabled: true
-        MetricName: auto-arch-waf
+        MetricName: !Sub '${EnvironmentName}-waf'
         SampledRequestsEnabled: true
       Rules:
-        - Name: AWSManagedRulesCommonRuleSet
+        - Name: 'AWSManagedRulesCommonRuleSet'
           Priority: 1
           OverrideAction:
             None: {}
@@ -54,49 +95,119 @@ Resources:
               Name: AWSManagedRulesCommonRuleSet
           VisibilityConfig:
             CloudWatchMetricsEnabled: true
-            MetricName: common
+            MetricName: !Sub '${EnvironmentName}-common-rules'
+            SampledRequestsEnabled: true
+        - Name: 'RateLimitRule'
+          Priority: 2
+          Action:
+            Block: {}
+          Statement:
+            RateBasedStatement:
+              Limit: 1000
+              AggregateKeyType: IP
+          VisibilityConfig:
+            CloudWatchMetricsEnabled: true
+            MetricName: !Sub '${EnvironmentName}-rate-limit'
             SampledRequestsEnabled: true
 
   CloudFrontOAC:
     Type: AWS::CloudFront::OriginAccessControl
     Properties:
       OriginAccessControlConfig:
-        Name: auto-arch-oac
+        Name: !Sub '${EnvironmentName}-oac'
+        Description: 'Origin Access Control for S3 bucket'
         OriginAccessControlOriginType: s3
         SigningBehavior: always
         SigningProtocol: sigv4
+
+  # CloudWatch Logs for CloudFront monitoring
+  CloudFrontLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub '/aws/cloudfront/${EnvironmentName}'
+      RetentionInDays: 30
 
   Distribution:
     Type: AWS::CloudFront::Distribution
     Properties:
       DistributionConfig:
+        Comment: !Sub 'Serverless website distribution - ${EnvironmentName}'
         Enabled: true
-        DefaultRootObject: index.html
+        DefaultRootObject: 'index.html'
         WebACLId: !GetAtt WafAcl.Arn
+        HttpVersion: 'http2and3'
         Origins:
           - Id: s3-site
             DomainName: !GetAtt SiteBucket.RegionalDomainName
             OriginAccessControlId: !GetAtt CloudFrontOAC.Id
-            S3OriginConfig: {}
+            S3OriginConfig:
+              OriginAccessIdentity: ''
         DefaultCacheBehavior:
           TargetOriginId: s3-site
-          ViewerProtocolPolicy: redirect-to-https
-          AllowedMethods: [GET, HEAD]
-          CachedMethods: [GET, HEAD]
+          ViewerProtocolPolicy: 'redirect-to-https'
           Compress: true
-          ForwardedValues:
-            QueryString: false
-            Cookies:
-              Forward: none
+          AllowedMethods: ['GET', 'HEAD', 'OPTIONS']
+          CachedMethods: ['GET', 'HEAD']
+          CachePolicyId: '4135ea2d-6df8-44a3-9df3-4b5a84be39ad'  # CachingEnabled
+          OriginRequestPolicyId: '216adef6-5c7f-47e4-b989-5492eafa07d3'  # CORS-S3Origin
+        CacheBehaviors:
+          - PathPattern: '/api/*'
+            TargetOriginId: s3-site
+            ViewerProtocolPolicy: 'redirect-to-https'
+            Compress: true
+            AllowedMethods: ['GET', 'HEAD', 'OPTIONS']
+            CachedMethods: ['GET', 'HEAD']
+            CachePolicyId: '4135ea2d-6df8-44a3-9df3-4b5a84be39ad'
+            OriginRequestPolicyId: '216adef6-5c7f-47e4-b989-5492eafa07d3'
         Restrictions:
           GeoRestriction:
             RestrictionType: none
         ViewerCertificate:
-          CloudFrontDefaultCertificate: true
+          CloudFrontDefaultCertificate: !Equals [ !Ref DomainName, '' ]
+          AcmCertificateArn: !If
+            - UseCustomDomain
+            - !Ref CertificateArn
+            - !Ref AWS::NoValue
+          SslSupportMethod: !If
+            - UseCustomDomain
+            - sni-only
+            - !Ref AWS::NoValue
+          MinimumProtocolVersion: !If
+            - UseCustomDomain
+            - TLSv1.2_2021
+            - !Ref AWS::NoValue
         Logging:
-          Bucket: !GetAtt LogsBucket.DomainName
-          Prefix: cloudfront/
+          Bucket: !GetAtt LogsBucket.RegionalDomainName
+          Prefix: 'cloudfront/'
+          IncludeCookies: false
 
 Outputs:
+  CloudFrontDistributionId:
+    Description: 'CloudFront Distribution ID'
+    Value: !Ref Distribution
+    Export:
+      Name: !Sub '${EnvironmentName}-distribution-id'
+
   CloudFrontDomain:
+    Description: 'CloudFront Distribution Domain Name'
     Value: !GetAtt Distribution.DomainName
+    Export:
+      Name: !Sub '${EnvironmentName}-cloudfront-domain'
+
+  SiteBucketName:
+    Description: 'S3 Bucket for static website content'
+    Value: !Ref SiteBucket
+    Export:
+      Name: !Sub '${EnvironmentName}-site-bucket'
+
+  LogsBucketName:
+    Description: 'S3 Bucket for access logs'
+    Value: !Ref LogsBucket
+    Export:
+      Name: !Sub '${EnvironmentName}-logs-bucket'
+
+  WafAclArn:
+    Description: 'WAF Web ACL ARN'
+    Value: !GetAtt WafAcl.Arn
+    Export:
+      Name: !Sub '${EnvironmentName}-waf-arn'

@@ -2041,8 +2041,6 @@ def _icon_class_for(terraform_resource_type: str):
     3. Built-in diagrams library icons (legacy)
     4. Generic fallback icons
     """
-    # Debug for any resource
-    print(f"[DEBUG] _icon_class_for called for: {terraform_resource_type}")
     # Get repo root
     repo_root = Path(__file__).resolve().parents[1]
     icons_dir = repo_root / "icons"
@@ -2060,6 +2058,8 @@ def _icon_class_for(terraform_resource_type: str):
             resource_provider = _guess_provider(terraform_resource_type).lower()
             if resource_provider == "azurerm":
                 resource_provider = "azure"
+            elif resource_provider == "google":
+                resource_provider = "gcp"
             elif resource_provider == "other":
                 pass  # Skip comprehensive mappings for unknown providers
 
@@ -2072,8 +2072,59 @@ def _icon_class_for(terraform_resource_type: str):
                     break
 
             # Extract base service name from resource type
-            # Examples: athena_workgroup -> athena, glue_catalog_database -> glue
-            service_name = t_clean.split("_")[0]  # Get first part before underscore
+            # Examples: s3_bucket -> s3, storage_account -> storage_account, compute_instance -> compute_instance
+            parts = t_clean.split("_")
+
+            # For some services, we need the full service name (e.g., storage_account, compute_instance)
+            # For others, just the first part (e.g., athena, glue)
+            service_name = parts[0]  # Default to first part
+
+            # Special cases where we need multi-part service names
+            provider_mappings = service_mappings.get(provider_normalized, {})
+
+            # Check four-part names first (highest priority)
+            if len(parts) >= 4:
+                four_part = f"{parts[0]}_{parts[1]}_{parts[2]}_{parts[3]}"
+                if four_part in provider_mappings:
+                    service_name = four_part
+
+            # Check three-part names
+            if (
+                len(parts) >= 3 and service_name == parts[0]
+            ):  # Only if we haven't found a match yet
+                three_part = f"{parts[0]}_{parts[1]}_{parts[2]}"
+                if three_part in provider_mappings:
+                    service_name = three_part
+
+            # Then check two-part names
+            if (
+                len(parts) >= 2 and service_name == parts[0]
+            ):  # Only if we haven't found a match yet
+                two_part = f"{parts[0]}_{parts[1]}"
+                if two_part in provider_mappings:
+                    service_name = two_part
+
+            # Special service name mappings and aliases
+            if service_name == "wafv2":
+                service_name = "waf"  # WAF v2 uses the same icon as WAF
+            elif service_name == "apigatewayv2":
+                service_name = "apigateway"  # API Gateway v2 uses same icon
+            elif service_name == "opensearch":
+                service_name = (
+                    "elasticsearch"  # OpenSearch is successor to Elasticsearch
+                )
+            elif service_name == "msk":
+                service_name = "kinesis"  # MSK is managed Kafka, uses Kinesis icon
+            elif service_name == "fargate":
+                service_name = "ecs"  # Fargate is part of ECS
+            elif service_name == "app_runner":
+                service_name = "elasticbeanstalk"  # App Runner is similar to EB
+            elif service_name == "controltower":
+                service_name = "organizations"  # Control Tower extends Organizations
+            elif service_name == "memorydb":
+                service_name = "elasticache"  # MemoryDB is Redis-compatible
+            elif service_name == "detective":
+                service_name = "guardduty"  # Detective works with GuardDuty
 
             if (
                 provider_normalized in service_mappings
@@ -2086,6 +2137,12 @@ def _icon_class_for(terraform_resource_type: str):
                 # Try diagrams library first
                 try:
                     # Import provider module (e.g., diagrams.aws)
+                    provider_module = __import__(
+                        f"diagrams.{provider_normalized}", fromlist=[category_name]
+                    )
+                    category_module = getattr(provider_module, category_name)
+                    icon_class = getattr(category_module, class_name)
+                    return icon_class
                     provider_mod = __import__(
                         f"diagrams.{provider_normalized}",
                         fromlist=[provider_normalized],
@@ -3529,38 +3586,150 @@ def _static_pulumi_yaml_mermaid(
     return mermaid, summary, assumptions
 
 
+def _create_cfn_node(
+    rid: str, cfn_resources: dict, node_by_res: dict, render: Any
+) -> None:
+    """Create a CloudFormation node with proper icon mapping."""
+    resource_body = cfn_resources[rid]
+    resource_type = resource_body.get("Type", "")
+    terraform_resource_name = _cfn_to_terraform_resource_name(resource_type)
+
+    Icon = _icon_class_for(terraform_resource_name)
+    if not Icon:
+        # Use service-specific icons
+        if "S3" in resource_type:
+            Icon = _icon_class_for("aws_s3_bucket")
+        elif "WAF" in resource_type:
+            Icon = _icon_class_for("aws_wafv2_web_acl")
+        elif "CloudFront" in resource_type:
+            Icon = _icon_class_for("aws_cloudfront_distribution")
+        else:
+            # Extract category from resource for generic icon
+            category = "Other"
+            if "::" in resource_type:
+                service = resource_type.split("::")[1].lower()
+                category_map = {
+                    "s3": "Storage",
+                    "wafv2": "Security",
+                    "cloudfront": "Network",
+                    "iam": "Security",
+                    "lambda": "Compute",
+                    "apigateway": "Other",
+                    "logs": "Other",
+                }
+                category = category_map.get(service, "Other")
+            Icon = _generic_icon_for_kind(category.lower())
+
+    # Use professional node creation like Terraform
+    if Icon:
+        node_by_res[rid] = _create_node_with_xlabel(
+            Icon, _wrap_text(rid, max_width=14, max_lines=2)
+        )
+    else:
+        # Fallback to text node with professional styling
+        from diagrams.generic.blank import Blank
+
+        node_by_res[rid] = Blank(
+            _wrap_text(rid, max_width=14, max_lines=2), height="1.2", labelloc="b"
+        )
+
+
 def _cfn_to_terraform_resource_name(cfn_resource_type: str) -> str:
     """Convert CloudFormation resource type to Terraform-style resource name for icon lookup."""
     if not cfn_resource_type or "::" not in cfn_resource_type:
         return ""
 
-    # Extract service and resource from AWS::Service::Resource
+    # Extract service and resource from AWS::Service::Resource, Azure::Service::Resource, etc.
     parts = cfn_resource_type.split("::")
     if len(parts) < 3:
         return ""
 
+    provider = parts[0].lower()  # AWS, Azure, Google
     service = parts[1].lower()
     resource = parts[2].lower()
 
     # Map CloudFormation resource types to Terraform resource names
     cfn_to_tf_map = {
-        ("s3", "bucket"): "aws_s3_bucket",
-        ("s3", "bucketpublicaccessblock"): "aws_s3_bucket_public_access_block",
-        ("wafv2", "webacl"): "aws_wafv2_web_acl",
-        ("cloudfront", "distribution"): "aws_cloudfront_distribution",
-        ("cloudfront", "originaccesscontrol"): "aws_cloudfront_origin_access_control",
-        ("iam", "role"): "aws_iam_role",
-        ("lambda", "function"): "aws_lambda_function",
-        ("apigateway", "restapi"): "aws_api_gateway_rest_api",
-        ("dynamodb", "table"): "aws_dynamodb_table",
-        ("rds", "dbinstance"): "aws_db_instance",
-        ("ec2", "instance"): "aws_instance",
-        ("vpc", "vpc"): "aws_vpc",
-        ("vpc", "subnet"): "aws_subnet",
-        ("elb", "loadbalancer"): "aws_lb",
+        # AWS mappings
+        ("aws", "s3", "bucket"): "aws_s3_bucket",
+        ("aws", "s3", "bucketpublicaccessblock"): "aws_s3_bucket_public_access_block",
+        ("aws", "wafv2", "webacl"): "aws_wafv2_web_acl",
+        ("aws", "cloudfront", "distribution"): "aws_cloudfront_distribution",
+        (
+            "aws",
+            "cloudfront",
+            "originaccesscontrol",
+        ): "aws_cloudfront_origin_access_control",
+        ("aws", "iam", "role"): "aws_iam_role",
+        ("aws", "lambda", "function"): "aws_lambda_function",
+        ("aws", "apigateway", "restapi"): "aws_api_gateway_rest_api",
+        ("aws", "dynamodb", "table"): "aws_dynamodb_table",
+        ("aws", "rds", "dbinstance"): "aws_db_instance",
+        ("aws", "ec2", "instance"): "aws_instance",
+        ("aws", "vpc", "vpc"): "aws_vpc",
+        ("aws", "vpc", "subnet"): "aws_subnet",
+        ("aws", "elb", "loadbalancer"): "aws_lb",
+        ("aws", "logs", "loggroup"): "aws_cloudwatch_log_group",
+        # Azure mappings (Azure CloudFormation uses different service names)
+        ("azure", "storage", "storageaccount"): "azurerm_storage_account",
+        ("azure", "network", "virtualnetwork"): "azurerm_virtual_network",
+        ("azure", "network", "subnet"): "azurerm_subnet",
+        ("azure", "network", "networksecuritygroup"): "azurerm_network_security_group",
+        ("azure", "network", "publicip"): "azurerm_public_ip",
+        ("azure", "network", "applicationgateway"): "azurerm_application_gateway",
+        (
+            "azure",
+            "containerservice",
+            "kubernetescluster",
+        ): "azurerm_kubernetes_cluster",
+        ("azure", "containerregistry", "registry"): "azurerm_container_registry",
+        ("azure", "cosmosdb", "account"): "azurerm_cosmosdb_account",
+        ("azure", "redis", "cache"): "azurerm_redis_cache",
+        (
+            "azure",
+            "monitor",
+            "loganalyticsworkspace",
+        ): "azurerm_log_analytics_workspace",
+        ("azure", "appservice", "functionapp"): "azurerm_function_app",
+        ("azure", "appservice", "plan"): "azurerm_app_service_plan",
+        ("azure", "resources", "resourcegroup"): "azurerm_resource_group",
+        # GCP mappings (Google CloudFormation uses different service names)
+        ("google", "storage", "bucket"): "google_storage_bucket",
+        ("google", "compute", "network"): "google_compute_network",
+        ("google", "compute", "subnetwork"): "google_compute_subnetwork",
+        ("google", "compute", "firewall"): "google_compute_firewall",
+        ("google", "bigquery", "dataset"): "google_bigquery_dataset",
+        ("google", "bigquery", "table"): "google_bigquery_table",
+        ("google", "dataflow", "job"): "google_dataflow_job",
+        ("google", "pubsub", "topic"): "google_pubsub_topic",
+        ("google", "pubsub", "subscription"): "google_pubsub_subscription",
+        ("google", "cloudfunctions", "function"): "google_cloudfunctions_function",
+        ("google", "vpcaccess", "connector"): "google_vpc_access_connector",
+        ("google", "notebooks", "instance"): "google_notebooks_instance",
+        ("google", "redis", "instance"): "google_redis_instance",
+        ("google", "monitoring", "alertpolicy"): "google_monitoring_alert_policy",
+        (
+            "google",
+            "monitoring",
+            "notificationchannel",
+        ): "google_monitoring_notification_channel",
+        ("google", "serviceaccount", "account"): "google_service_account",
     }
 
-    return cfn_to_tf_map.get((service, resource), f"aws_{resource}")
+    # Try exact match first
+    result = cfn_to_tf_map.get((provider, service, resource))
+    if result:
+        return result
+
+    # Fallback: construct Terraform-style name
+    if provider == "aws":
+        return f"aws_{resource}"
+    elif provider == "azure":
+        return f"azurerm_{resource}"
+    elif provider == "google":
+        return f"google_{resource}"
+
+    return f"{provider}_{resource}"
 
 
 def _render_cfn_diagram(
@@ -3574,7 +3743,7 @@ def _render_cfn_diagram(
     cfn_complexity: Any,
     render: Any,
 ) -> None:
-    """Helper function to render CloudFormation diagram in specified format using the same layout as Terraform."""
+    """Render CloudFormation diagram with same professional quality as Terraform."""
     outformat = out_path.suffix.lstrip(".").lower() or "png"
     filename_no_ext = str(out_path.with_suffix(""))
 
@@ -3589,136 +3758,48 @@ def _render_cfn_diagram(
     )
     bgcolor = "white" if outformat in {"jpg", "jpeg"} else desired_bg
 
+    # Select layout based on complexity (same as Terraform)
+    layout = "lanes"  # Default layout
+    if cfn_complexity.node_count > 30 or cfn_complexity.provider_count > 2:
+        layout = "providers"  # Use providers layout for complex multi-provider diagrams
+
+    # Use same dynamic spacing calculations as Terraform
+    spacing = _calculate_dynamic_spacing(cfn_complexity, render, cfn_direction)
+
+    # Determine final spacing values (use auto-calculated or manual values)
+    final_pad = spacing["pad"] if render.pad == "auto" else float(render.pad)
+    final_nodesep = (
+        spacing["nodesep"] if render.nodesep == "auto" else float(render.nodesep)
+    )
+    final_ranksep = (
+        spacing["ranksep"] if render.ranksep == "auto" else float(render.ranksep)
+    )
+
+    # Enhanced graph attributes with intelligent edge routing (same as Terraform)
     graph_attr = {
         "bgcolor": bgcolor,
-        "pad": str(cfn_pad),
-        "nodesep": str(cfn_nodesep),
-        "ranksep": str(cfn_ranksep),
+        "pad": str(final_pad),
+        "nodesep": str(final_nodesep),
+        "ranksep": str(final_ranksep),
         "splines": render.edge_routing,
         "concentrate": "true" if render.concentrate else "false",
         "fontname": render.fontname,
         "fontsize": str(render.graph_fontsize),
         "outputorder": "edgesfirst",
+        # Advanced overlap and separation controls
         "overlap": render.overlap_removal,
         "overlap_scaling": "-4" if render.overlap_removal != "false" else "0",
-        "sep": f"+{int(cfn_nodesep * 20)}",
-        "esep": f"+{int(cfn_nodesep * 10)}",
+        "sep": f"+{int(final_nodesep * 20)}",  # Dynamic cluster separation
+        "esep": f"+{int(final_nodesep * 10)}",  # Dynamic edge separation
         "labelloc": "t",
         "labeljust": "c",
+        # Professional edge routing from centers
         "smoothing": "spring" if cfn_complexity.edge_count > 10 else "none",
         "mclimit": "2.0",
         "nslimit": "2.0",
         "remincross": "true",
         "searchsize": "50",
     }
-    node_attr = {
-        "fontname": render.fontname,
-        "fontsize": str(render.node_fontsize),
-        "labelloc": "b",
-        "labeljust": "c",
-        "imagescale": "true",
-        "fixedsize": "true",
-        "width": str(render.node_width),
-        "height": str(render.node_height),
-        "shape": "box",
-        "style": "rounded",
-        "margin": "0.05",
-        "fillcolor": bgcolor if outformat in {"jpg", "jpeg"} else "transparent",
-        "color": "#D1D5DB",
-        "penwidth": "1",
-    }
-
-    # Use the same layout logic as Terraform
-    layout = "lanes"  # Use lanes layout like Terraform
-    lanes = list(render.lanes)
-
-    # Group resources by category and provider
-    grouped_lanes: dict[str, dict[str, list[str]]] = {lane: {} for lane in lanes}
-    grouped_providers: dict[str, dict[str, list[str]]] = {}
-
-    for res in cfn_resources.keys():
-        # For CloudFormation, we need to infer provider and category from resource type
-        # CloudFormation resource types are like "AWS::EC2::Instance", "AWS::S3::Bucket", etc.
-        provider = "AWS"  # CloudFormation is AWS-specific
-        category = "Other"  # Default category
-
-        # Get the resource type from the CloudFormation resource body
-        resource_body = cfn_resources[res]
-        resource_type = resource_body.get("Type", "")
-
-        # Extract service from CloudFormation resource type
-        if "::" in resource_type:
-            parts = resource_type.split("::")
-            if len(parts) >= 2:
-                service = parts[1].lower()
-                # Map CloudFormation services to categories
-                category_map = {
-                    "ec2": "Compute",
-                    "s3": "Storage",
-                    "rds": "Data",
-                    "lambda": "Compute",
-                    "apigateway": "Other",
-                    "cloudformation": "Other",
-                    "iam": "Security",
-                    "vpc": "Network",
-                    "elb": "Network",
-                    "route53": "Network",
-                    "cloudwatch": "Other",
-                    "sns": "Other",
-                    "sqs": "Other",
-                    "dynamodb": "Data",
-                    "kinesis": "Data",
-                    "glue": "Data",
-                    "athena": "Data",
-                    "wafv2": "Security",
-                    "cloudfront": "Network",
-                }
-                category = category_map.get(service, "Other")
-
-        grouped_lanes.setdefault(category, {}).setdefault(provider, []).append(res)
-        grouped_providers.setdefault(provider, {}).setdefault(category, []).append(res)
-
-    # Helper function to render provider icon + label cluster
-    def render_provider_cluster(
-        provider: str, cluster_color: str, penwidth: str = "0.5"
-    ):
-        # Create provider label with colored border
-        provider_icon_path = _get_provider_icon_path(provider)
-        if provider_icon_path:
-            # Use Custom node for provider badge with icon
-            try:
-                Custom = _import_node_class("diagrams", "Custom")
-                if Custom:
-                    provider_cluster = Custom(
-                        f"{provider}\nCloud",
-                        icon_path=provider_icon_path,
-                    )
-                    return Cluster(
-                        "",
-                        graph_attr={
-                            "bgcolor": cluster_color,
-                            "style": "rounded,filled",
-                            "penwidth": penwidth,
-                            "color": cluster_color,
-                            "fontsize": "10",
-                            "fontname": "Helvetica-Bold",
-                        },
-                    )
-            except Exception:
-                pass
-
-        # Fallback to text-only cluster
-        return Cluster(
-            f"{provider} Cloud",
-            graph_attr={
-                "bgcolor": cluster_color,
-                "style": "rounded,filled",
-                "penwidth": penwidth,
-                "color": cluster_color,
-                "fontsize": "12",
-                "fontname": "Helvetica-Bold",
-            },
-        )
 
     node_by_res: dict[str, Any] = {}
 
@@ -3729,38 +3810,106 @@ def _render_cfn_diagram(
         outformat=outformat,
         filename=filename_no_ext,
         graph_attr=graph_attr,
-        node_attr=node_attr,
     ):
-        # Create nodes directly without cluster
-        for rid in sorted(cfn_resources.keys()):
+        # Group resources by category for professional clustering like Terraform
+        grouped_resources: dict[str, list[str]] = {}
+
+        for rid in cfn_resources.keys():
             resource_body = cfn_resources[rid]
             resource_type = resource_body.get("Type", "")
-            terraform_resource_name = _cfn_to_terraform_resource_name(resource_type)
 
-            Icon = _icon_class_for(terraform_resource_name)
-            if Icon:
-                node_by_res[rid] = Icon(_wrap_text(rid, max_width=14, max_lines=2))
-            else:
-                # Use service-specific icons based on CloudFormation resource type
-                if "S3" in resource_type:
-                    Icon = _icon_class_for("aws_s3_bucket")
-                elif "WAF" in resource_type:
-                    Icon = _icon_class_for("aws_wafv2_web_acl")
-                elif "CloudFront" in resource_type:
-                    Icon = _icon_class_for("aws_cloudfront_distribution")
-                else:
-                    Icon = _generic_icon_for_kind("compute")
+            # Map CloudFormation resource types to categories
+            category = "Other"  # Default category
+            if "::" in resource_type:
+                service = resource_type.split("::")[1].lower()
+                category_map = {
+                    "s3": "Storage",
+                    "wafv2": "Security",
+                    "cloudfront": "Network",
+                    "iam": "Security",
+                    "lambda": "Compute",
+                    "apigateway": "Other",
+                    "logs": "Other",
+                    "ssm": "Other",
+                }
+                category = category_map.get(service, "Other")
 
-                if Icon:
-                    node_by_res[rid] = Icon(_wrap_text(rid, max_width=14, max_lines=2))
-                else:
-                    node_by_res[rid] = _wrap_text(rid, max_width=14, max_lines=2)
+            if category not in grouped_resources:
+                grouped_resources[category] = []
+            grouped_resources[category].append(rid)
 
-        for src, dst in sorted(cfn_edges):
-            print(f"DEBUG: Creating edge {src} -> {dst}")
-            if src in node_by_res and dst in node_by_res:
-                print(f"DEBUG: Connecting {src} to {dst}")
-                node_by_res[src] >> node_by_res[dst]
+        # Create clusters based on layout selection
+        if layout == "providers":
+            # Provider-based layout for complex multi-provider diagrams
+            for provider in ["aws", "azure", "google"]:
+                provider_resources = {}
+                for category, resources in grouped_resources.items():
+                    for rid in resources:
+                        resource_body = cfn_resources[rid]
+                        resource_type = resource_body.get("Type", "")
+                        if resource_type.startswith(provider.upper() + "::"):
+                            if category not in provider_resources:
+                                provider_resources[category] = []
+                            provider_resources[category].append(rid)
+
+                if provider_resources:
+                    provider_name = {
+                        "aws": "AWS",
+                        "azure": "Azure",
+                        "google": "Google",
+                    }[provider]
+                    with Cluster(
+                        f"{provider_name} Cloud",
+                        graph_attr={
+                            "bgcolor": "#f8f9fa",
+                            "style": "rounded,filled",
+                            "penwidth": "2.0",
+                            "color": "#6c757d",
+                            "fontsize": "14",
+                            "fontname": render.fontname,
+                        },
+                    ):
+                        # Category sub-clusters within provider
+                        for category in [
+                            "Network",
+                            "Security",
+                            "Storage",
+                            "Compute",
+                            "Other",
+                        ]:
+                            if category in provider_resources:
+                                with Cluster(
+                                    category,
+                                    graph_attr={
+                                        "bgcolor": "#e9ecef",
+                                        "style": "rounded,filled",
+                                        "penwidth": "1.5",
+                                        "color": "#adb5bd",
+                                        "fontsize": "12",
+                                        "fontname": render.fontname,
+                                    },
+                                ):
+                                    for rid in sorted(provider_resources[category]):
+                                        _create_cfn_node(
+                                            rid, cfn_resources, node_by_res, render
+                                        )
+        else:
+            # Category-based layout (default for simpler diagrams)
+            for category in ["Network", "Security", "Storage", "Compute", "Other"]:
+                if category in grouped_resources and grouped_resources[category]:
+                    # Professional cluster styling like Terraform
+                    cluster_attrs = {
+                        "bgcolor": "#cccccc",
+                        "style": "rounded,filled",
+                        "penwidth": "2.0",
+                        "color": "#aeb6be",
+                        "fontsize": "14",
+                        "fontname": render.fontname,
+                    }
+
+                    with Cluster(category, graph_attr=cluster_attrs):
+                        for rid in sorted(grouped_resources[category]):
+                            _create_cfn_node(rid, cfn_resources, node_by_res, render)
 
         # Create edges with intelligent styling like Terraform
         for src, dst in sorted(cfn_edges):
@@ -3769,151 +3918,13 @@ def _render_cfn_diagram(
                 edge_type = _detect_edge_type(src, dst, cfn_resources)
                 edge_style_attrs = _get_edge_style_attrs(edge_type, render)
 
+                # Try to apply custom styling using Edge object
                 try:
                     from diagrams import Edge
 
                     node_by_res[src] >> Edge(**edge_style_attrs) >> node_by_res[dst]
                 except (ImportError, TypeError, AttributeError):
                     node_by_res[src] >> node_by_res[dst]
-                    # Category lanes
-                    for category in lanes:
-                        cat_resources = categories.get(category) or []
-                        if cat_resources:
-                            with Cluster(
-                                category.title(),
-                                graph_attr={
-                                    "bgcolor": "#f8f9fa",
-                                    "style": "rounded,filled",
-                                    "penwidth": "1.0",
-                                    "color": "#dee2e6",
-                                    "fontsize": "10",
-                                },
-                            ):
-                                for res in sorted(cat_resources):
-                                    # Map CloudFormation resource type to Terraform-style resource name for icon lookup
-                                    resource_body = cfn_resources[res]
-                                    resource_type = resource_body.get("Type", "")
-                                    terraform_resource_name = (
-                                        _cfn_to_terraform_resource_name(resource_type)
-                                    )
-                                    Icon = _icon_class_for(
-                                        terraform_resource_name
-                                    ) or _generic_icon_for_kind(category)
-                                    if Icon:
-                                        node_by_res[res] = Icon(
-                                            _wrap_text(
-                                                res.split("::")[-1],
-                                                max_width=14,
-                                                max_lines=2,
-                                            )
-                                        )
-                                    else:
-                                        # Fallback to text node
-                                        node_by_res[res] = _wrap_text(
-                                            res.split("::")[-1],
-                                            max_width=14,
-                                            max_lines=2,
-                                        )
-        else:
-            # Category lanes (default): Network -> Security -> Compute -> Data...
-            print(f"DEBUG: Processing lanes: {lanes}")
-            for lane in lanes:
-                providers = grouped_lanes.get(lane) or {}
-                print(
-                    f"DEBUG: Lane {lane}: {list(providers.keys()) if providers else 'no providers'}"
-                )
-                if providers:
-                    with Cluster(
-                        lane.title(),
-                        graph_attr={
-                            "bgcolor": "#cccccc",
-                            "style": "rounded,filled",
-                            "penwidth": "2.0",
-                            "color": "#aeb6be",
-                            "fontsize": "14",
-                            "fontname": "Helvetica-Bold",
-                        },
-                    ):
-                        for provider, resources in sorted(providers.items()):
-                            if (
-                                len(providers) > 1
-                            ):  # Only create provider sub-cluster if multiple providers
-                                cluster_color = _get_cluster_color(provider, render)
-                                with render_provider_cluster(provider, cluster_color):
-                                    for res in sorted(resources):
-                                        # Map CloudFormation resource type to Terraform-style resource name for icon lookup
-                                        resource_body = cfn_resources[res]
-                                        resource_type = resource_body.get("Type", "")
-                                        terraform_resource_name = (
-                                            _cfn_to_terraform_resource_name(
-                                                resource_type
-                                            )
-                                        )
-                                        Icon = _icon_class_for(
-                                            terraform_resource_name
-                                        ) or _generic_icon_for_kind(lane)
-                                        if Icon:
-                                            node_by_res[res] = Icon(
-                                                _wrap_text(
-                                                    res.split("::")[-1],
-                                                    max_width=14,
-                                                    max_lines=2,
-                                                )
-                                            )
-                                        else:
-                                            # Fallback to text node
-                                            node_by_res[res] = _wrap_text(
-                                                res.split("::")[-1],
-                                                max_width=14,
-                                                max_lines=2,
-                                            )
-                            else:
-                                # Single provider, no sub-cluster needed
-                                for res in sorted(resources):
-                                    # Map CloudFormation resource type to Terraform-style resource name for icon lookup
-                                    resource_body = cfn_resources[res]
-                                    resource_type = resource_body.get("Type", "")
-                                    terraform_resource_name = (
-                                        _cfn_to_terraform_resource_name(resource_type)
-                                    )
-                                    Icon = _icon_class_for(
-                                        terraform_resource_name
-                                    ) or _generic_icon_for_kind(lane)
-                                    if Icon:
-                                        node_by_res[res] = Icon(
-                                            _wrap_text(
-                                                res.split("::")[-1],
-                                                max_width=14,
-                                                max_lines=2,
-                                            )
-                                        )
-                                    else:
-                                        # Fallback to text node
-                                        node_by_res[res] = _wrap_text(
-                                            res.split("::")[-1],
-                                            max_width=14,
-                                            max_lines=2,
-                                        )
-
-        # Render edges with intelligent styling like Terraform
-        for src_res, dst_res in sorted(cfn_edges):
-            if src_res in node_by_res and dst_res in node_by_res:
-                # Detect edge type and apply intelligent styling
-                edge_type = _detect_edge_type(src_res, dst_res, cfn_resources)
-                edge_style_attrs = _get_edge_style_attrs(edge_type, render)
-
-                # Try to apply custom styling using Edge object
-                try:
-                    from diagrams import Edge
-
-                    (
-                        node_by_res[src_res]
-                        >> Edge(**edge_style_attrs)
-                        >> node_by_res[dst_res]
-                    )
-                except (ImportError, TypeError, AttributeError):
-                    # Fallback to simple connection if Edge styling not supported
-                    node_by_res[src_res] >> node_by_res[dst_res]
 
     # Embed images in SVG files
     if outformat == "svg":

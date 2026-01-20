@@ -21,11 +21,11 @@
 <tr>
 <td width="50%">
 
-**MLOps Multi-Cloud** (47 resources)
+**MLOps Multi-Cloud** (47 resources - PNG only)
 
 ![MLOps Multi-Cloud](examples/terraform/mlops-multi-cloud/architecture-diagram.png)
 
-*AWS SageMaker + Azure AKS + GCP BigQuery*
+*AWS SageMaker + Azure AKS + GCP BigQuery (PNG only due to complexity)*
 
 </td>
 <td width="50%">

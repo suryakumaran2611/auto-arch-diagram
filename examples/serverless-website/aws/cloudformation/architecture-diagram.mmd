@@ -1,4 +1,8 @@
 flowchart LR
+subgraph Management[Management]
+  cfn_CloudFrontLogGroup["CloudFrontLogGroup\nLogGroup"]
+  cfn_WafLogGroup["WafLogGroup\nLogGroup"]
+end
 subgraph Network[Network]
   cfn_CloudFrontOAC["CloudFrontOAC\nOriginAccessControl"]
   cfn_Distribution["Distribution\nDistribution"]
