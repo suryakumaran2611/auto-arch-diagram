@@ -7,6 +7,7 @@
 [![Python Tests](https://github.com/suryakumaran2611/auto-arch-diagram/actions/workflows/python-tests.yml/badge.svg)](https://github.com/suryakumaran2611/auto-arch-diagram/actions/workflows/python-tests.yml)
 [![Secret Scan](https://github.com/suryakumaran2611/auto-arch-diagram/actions/workflows/secret-scan.yml/badge.svg)](https://github.com/suryakumaran2611/auto-arch-diagram/actions/workflows/secret-scan.yml)
 [![License: CC BY-NC 4.0](https://img.shields.io/badge/License-CC%20BY--NC%204.0-red.svg)](https://creativecommons.org/licenses/by-nc/4.0/)
+[📖 User Guide](docs/USER_GUIDE.md) • [🌐 GitHub Pages](https://suryakumaran2611.github.io/auto-arch-diagram/)
 
 *Automatically generate professional diagrams from Terraform, CloudFormation, Bicep, and Pulumi*
 
@@ -69,6 +70,8 @@
 - 📤 **Multiple Formats** - Mermaid, PNG, SVG, JPEG with embedded icons
 - 🚀 **GitHub Actions** - One-line workflow integration with PR comments
 - 🔒 **Security-First** - Secret scanning, redaction, minimal permissions
+- 🤖 **AI Mode** - Experimental AI-powered diagram generation
+- 📚 **Comprehensive Docs** - Detailed [User Guide](docs/USER_GUIDE.md) available
 
 ## 🎯 Quick Start
 
@@ -85,6 +88,12 @@ on:
       - 'terraform/**/*.tf'
       - '**/*.bicep'
       - '**/template.yaml'
+  workflow_dispatch:  # Manual trigger with force option
+    inputs:
+      force_update:
+        description: 'Force diagram update even if no IaC files changed'
+        type: boolean
+        default: false
 
 jobs:
   diagram:
@@ -96,7 +105,10 @@ jobs:
       direction: AUTO                 # Intelligent layout
       image_formats: png,svg
       comment_on_pr: true
+      force_full: ${{ github.event.inputs.force_update || false }}  # Force generation if manually triggered
 ```
+
+📖 **For complete documentation, see the [User Guide](docs/USER_GUIDE.md)**
 
 **What this does:**
 - 🔄 **Triggers on PRs** that modify IaC files
@@ -115,7 +127,35 @@ with:
   iac_globs: |
     infrastructure/terraform/**/*.tf
     cloudformation/**/*.yaml
+    pulumi/**/*.py
+    cdk/**/*.ts
   out_md: docs/architecture/diagram.md
+```
+
+**Production-Ready (Recommended)**
+```yaml
+name: Architecture Diagrams
+
+on:
+  pull_request:
+    paths: ['**/*.tf', '**/*.bicep']
+  workflow_dispatch:
+    inputs:
+      force_update:
+        type: boolean
+        default: false
+
+jobs:
+  diagram:
+    permissions:
+      contents: read
+      pull-requests: write
+    uses: suryakumaran2611/auto-arch-diagram/.github/workflows/reusable-auto-arch-diagram.yml@v1
+    with:
+      direction: AUTO
+      image_formats: png,svg
+      comment_on_pr: true
+      force_full: ${{ github.event.inputs.force_update || false }}
 ```
 
 **Mermaid-Only (Fastest)**
@@ -126,23 +166,266 @@ with:
   out_dir: artifacts
 ```
 
-**AI Mode**
+**AI Mode (Experimental)** ⚠️
+> **Not for Production Use** - See [Security Considerations](docs/USER_GUIDE.md#security-considerations)
+
 ```yaml
 with:
   mode: ai
   model: gpt-4o-mini
   direction: AUTO
 env:
-  OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+  OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}  # Transmits IaC code to external services
 ```
 
-**Diagram Update PR**
+**Diagram Update PR (Auto-commit)**
 ```yaml
-with:
-  direction: AUTO
-  publish_enabled: true
-  create_diagram_pr: true
+on:
+  pull_request_target:  # For fork safety
+    paths: ['**/*.tf', '**/*.bicep']
+
+jobs:
+  diagram_pr:
+    permissions:
+      contents: write
+      pull-requests: write
+    uses: suryakumaran2611/auto-arch-diagram/.github/workflows/reusable-auto-arch-diagram.yml@v1
+    with:
+      direction: AUTO
+      publish_enabled: true
+      create_diagram_pr: true
+      # comment_on_pr: false  # Only create PR, don't comment
 ```
+
+**Force Updates (Repository Variable)**
+```yaml
+# Repository Settings → Variables → AUTO_ARCH_FORCE_UPDATE = true
+# Then workflow will update on every push to main/develop
+on:
+  push:
+    branches: [main, develop]
+    if: vars.AUTO_ARCH_FORCE_UPDATE == 'true'
+```
+
+### 🧪 CI/CD Testing Workflow
+
+**Complete CI Pipeline with Architecture Diagram Testing**
+```yaml
+name: CI Pipeline with Architecture Testing
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'terraform/**'
+      - 'bicep/**'
+      - '**/template.yaml'
+  workflow_dispatch: # Manual trigger
+
+jobs:
+  # Security and Quality Checks
+  quality-checks:
+    name: Quality Checks
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Terraform Security Scan
+        uses: bridgecrewio/checkov-action@master
+        with:
+          directory: terraform/
+          framework: terraform
+          quiet: true
+      
+      - name: Terraform Format Check
+        run: |
+          cd terraform
+          terraform fmt -check
+          
+      - name: Terraform Validation
+        run: |
+          cd terraform
+          terraform validate
+
+  # Architecture Diagram Generation
+  architecture-diagram:
+    name: Generate Architecture Diagram
+    runs-on: ubuntu-latest
+    needs: quality-checks
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Generate Architecture Diagram
+        uses: suryakumaran2611/auto-arch-diagram/.github/workflows/reusable-auto-arch-diagram.yml@v1
+        with:
+          direction: AUTO
+          image_formats: png,svg
+          comment_on_pr: true
+          # Only processes changed IaC files (default behavior)
+
+  # Integration Tests
+  integration-tests:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    needs: [quality-checks, architecture-diagram]
+    if: github.event_name == 'pull_request'
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: latest
+      
+      - name: Terraform Plan
+        run: |
+          cd terraform
+          terraform init -backend=false
+          terraform plan -out=plan.tfplan
+        env:
+          AWS_DEFAULT_REGION: us-east-1
+          TF_VAR_environment: test
+
+      - name: Validate Diagram Resources
+        run: |
+          echo "Checking if diagram resources match terraform plan..."
+          # Add custom validation logic here
+          
+  # Deploy to Staging (on main branch)
+  deploy-staging:
+    name: Deploy to Staging
+    runs-on: ubuntu-latest
+    needs: [quality-checks, architecture-diagram, integration-tests]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    environment: staging
+    permissions:
+      contents: read
+      deployments: write
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Deploy to Staging
+        run: |
+          echo "Deploying to staging environment..."
+          # Add your deployment commands here
+```
+
+**Manual Testing Workflow**
+```yaml
+name: Manual Architecture Testing
+
+on:
+  workflow_dispatch:
+    inputs:
+      test_type:
+        description: 'Type of test to run'
+        required: true
+        default: 'incremental'
+        type: choice
+        options:
+          - incremental    # Only changed files (default)
+          - full          # Force regenerate all diagrams
+          - ai_mode       # Use AI generation (experimental)
+
+jobs:
+  test-architecture:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Generate Test Diagram
+        uses: suryakumaran2611/auto-arch-diagram/.github/workflows/reusable-auto-arch-diagram.yml@v1
+        with:
+          direction: AUTO
+          image_formats: png,jpg,svg
+          force_full: ${{ github.event.inputs.test_type == 'full' }}
+          mode: ${{ github.event.inputs.test_type == 'ai_mode' && 'ai' || 'static' }}
+          comment_on_pr: ${{ github.event_name == 'pull_request' }}
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+```
+
+**Multi-Environment Pipeline**
+```yaml
+name: Multi-Environment CI/CD
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - 'terraform/**'
+  pull_request:
+    branches: [main]
+
+env:
+  # Different configurations per environment
+  AWS_REGION: ${{ github.ref == 'refs/heads/main' && 'us-east-1' || 'us-west-2' }}
+  ENVIRONMENT: ${{ github.ref == 'refs/heads/main' && 'production' || 'staging' }}
+
+jobs:
+  # Pre-commit checks
+  pre-commit:
+    name: Pre-commit Checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Generate Architecture for Review
+        uses: suryakumaran2611/auto-arch-diagram/.github/workflows/reusable-auto-arch-diagram.yml@v1
+        with:
+          direction: AUTO
+          image_formats: png
+          comment_on_pr: true
+          out_dir: architecture-review
+  
+  # Deploy and update diagrams
+  deploy-and-diagram:
+    name: Deploy and Update Architecture
+    runs-on: ubuntu-latest
+    needs: pre-commit
+    if: github.event_name == 'push'
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Deploy Infrastructure
+        run: |
+          echo "Deploying to ${{ env.ENVIRONMENT }}..."
+          # Your deployment logic here
+      
+      - name: Update Architecture Documentation
+        uses: suryakumaran2611/auto-arch-diagram/.github/workflows/reusable-auto-arch-diagram.yml@v1
+        with:
+          direction: AUTO
+          image_formats: png,svg
+          create_diagram_pr: true
+          publish_enabled: true
+          out_md: docs/architecture/${{ env.ENVIRONMENT }}/diagram.md
+          out_png: assets/images/architecture-${{ env.ENVIRONMENT }}.png
+```
+
+**CI/CD Best Practices**
+- ✅ **Quality gates before diagram generation** - Security scans, format checks, validation
+- ✅ **Parallel execution** - Quality checks run in parallel with diagram generation
+- ✅ **Environment-aware** - Different configs for staging vs production
+- ✅ **Manual triggers** - `workflow_dispatch` for testing and debugging
+- ✅ **Proper permissions** - Minimal permissions for each job
+- ✅ **Artifact management** - Store diagrams as artifacts and in documentation
+- ✅ **Dependency management** - `needs` ensures proper execution order
 
 ### 🎨 Custom Icons
 
@@ -542,6 +825,44 @@ env:
 - Set `force_full: false` for incremental updates
 - Increase `limits.max_files` if needed
 - Use `graph.overlap_removal: false`
+
+---
+
+## 🚀 Upcoming Features
+
+### 🤖 Enhanced AI Capabilities
+- **Multiple AI Providers**: Claude, Gemini, and local AI models support
+- **Advanced Analysis**: Better understanding of complex architectural patterns  
+- **Custom Prompts**: User-defined AI prompts for specialized diagrams
+- **Smart Layouts**: AI-driven layout optimization
+
+### 🔌 Integration Expansions
+- **Confluence Integration**: Automatic diagram publishing to Confluence pages
+- **Notion Integration**: Direct updates to Notion databases and pages
+- **Slack/Discord**: Diagram sharing and notifications in team channels
+- **Jira Integration**: Link diagrams to Jira tickets and documentation
+
+### 📊 Advanced Features
+- **Cost Estimation**: Integration with cloud pricing APIs
+- **Security Insights**: Automated security recommendations
+- **Compliance Checking**: Compliance overlays and certifications
+- **Version Comparison**: Visual diff between diagram versions
+
+## ⚠️ Experimental Features
+
+### 🧠 AI Mode (Experimental)
+> **Not for Production Use** - See [User Guide](docs/USER_GUIDE.md#ai-mode-experimental) for details
+
+- **Status**: Experimental - May contain inaccuracies
+- **Security**: Transmits IaC code to external AI services  
+- **Costs**: API charges may apply
+- **Recommendation**: Use for testing and evaluation only
+
+**Known Limitations:**
+- May miss complex architectural relationships
+- Generated diagrams require manual review
+- Not suitable for production environments
+- API costs can accumulate quickly
 
 ---
 

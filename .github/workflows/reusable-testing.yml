@@ -1,0 +1,149 @@
+name: Reusable Testing Workflow
+
+on:
+  workflow_call:
+    inputs:
+      python-version:
+        description: 'Python version to use'
+        required: false
+        type: string
+        default: '3.12'
+      run-security-scans:
+        description: 'Whether to run security scans'
+        required: false
+        type: boolean
+        default: true
+      test-path:
+        description: 'Path to test files'
+        required: false
+        type: string
+        default: 'tests/'
+      requirements-files:
+        description: 'Comma-separated list of requirements files'
+        required: false
+        type: string
+        default: 'requirements.txt,requirements-dev.txt'
+
+jobs:
+  test:
+    name: Testing
+    runs-on: ubuntu-latest
+    
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.11', '3.12']
+    
+    permissions:
+      contents: read
+      security-events: write
+      actions: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: 'pip'
+          cache-dependency-path: ${{ inputs.requirements-files }}
+
+      - name: Install Graphviz
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y graphviz
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          IFS=',' read -ra REQ_FILES <<< "${{ inputs.requirements-files }}"
+          for req_file in "${REQ_FILES[@]}"; do
+            if [ -f "$req_file" ]; then
+              pip install -r "$req_file"
+            fi
+          done
+          pip install pip-audit bandit
+
+      - name: Dependency vulnerability scan (pip-audit)
+        if: inputs.run-security-scans
+        run: |
+          IFS=',' read -ra REQ_FILES <<< "${{ inputs.requirements-files }}"
+          for req_file in "${REQ_FILES[@]}"; do
+            if [ -f "$req_file" ]; then
+              echo "Scanning $req_file..."
+              pip-audit -r "$req_file" || echo "Vulnerabilities found in $req_file"
+            fi
+          done
+
+      - name: Static security scan (bandit)
+        if: inputs.run-security-scans
+        run: |
+          # Treat Bandit as a "security smell" detector, but fail CI only on
+          # actionable findings (MEDIUM/HIGH). Low-severity hits are expected
+          # in test code (asserts) and in intentionally-resilient tooling.
+          bandit -q -r tools --severity-level medium --confidence-level medium
+
+      - name: Run unit tests
+        run: |
+          pytest ${{ inputs.test-path }} -v
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-${{ matrix.python-version }}
+          path: |
+            test-output/
+            htmlcov/
+          retention-days: 7
+
+  code-quality:
+    name: Code Quality Checks
+    runs-on: ubuntu-latest
+    if: inputs.run-security-scans
+    
+    permissions:
+      contents: read
+      security-events: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ inputs.python-version }}
+          cache: 'pip'
+          cache-dependency-path: ${{ inputs.requirements-files }}
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install flake8 black isort mypy
+          IFS=',' read -ra REQ_FILES <<< "${{ inputs.requirements-files }}"
+          for req_file in "${REQ_FILES[@]}"; do
+            if [ -f "$req_file" ]; then
+              pip install -r "$req_file"
+            fi
+          done
+
+      - name: Code formatting check (black)
+        run: |
+          black --check --diff .
+
+      - name: Import sorting check (isort)
+        run: |
+          isort --check-only --diff .
+
+      - name: Linting (flake8)
+        run: |
+          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+          flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+
+      - name: Type checking (mypy)
+        run: |
+          mypy tools/ --ignore-missing-imports || true

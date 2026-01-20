@@ -43,7 +43,16 @@ on:
       - '**/Pulumi.*.py'
       - '**/*.cdk.ts'
       - '**/*.cdk.py'
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      force_update:
+        description: 'Force architecture diagram update even if no IaC files changed'
+        required: false
+        default: 'false'
+        type: boolean
+  push:
+    branches: [main, develop]
+    if: vars.AUTO_ARCH_FORCE_UPDATE == 'true'
 
 jobs:
   comment:
@@ -61,11 +70,12 @@ jobs:
       publish_enabled: false
       comment_on_pr: true
       create_diagram_pr: false
+      force_full: ${{ github.event.inputs.force_update || vars.AUTO_ARCH_FORCE_UPDATE || 'false' }}
     secrets:
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
 
   diagram_pr:
-    if: ${{ github.event_name == 'pull_request_target' && vars.AUTO_ARCH_CREATE_DIAGRAM_PR == 'true' }}
+    if: ${{ github.event_name == 'pull_request_target' }}
     permissions:
       contents: write
       pull-requests: write
@@ -78,7 +88,8 @@ jobs:
       render_bg: ${{ vars.AUTO_ARCH_RENDER_BG || 'transparent' }}
       publish_enabled: true
       comment_on_pr: false
-      create_diagram_pr: true
+      create_diagram_pr: ${{ vars.AUTO_ARCH_CREATE_DIAGRAM_PR || 'true' }}
       diagram_pr_branch_prefix: ${{ vars.AUTO_ARCH_DIAGRAM_PR_BRANCH_PREFIX || 'auto-arch-diagram/update' }}
+      force_full: ${{ github.event.inputs.force_update || vars.AUTO_ARCH_FORCE_UPDATE || 'false' }}
     secrets:
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}

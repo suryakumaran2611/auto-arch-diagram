@@ -334,7 +334,7 @@ jobs:
       - name: Generate diagrams
         id: gen
         env:
-          CHANGED_IAC_FILES: ${{ inputs.changed_files != '' && steps.changed_direct.outputs.all_changed_files || (inputs.force_full && steps.all_iac.outputs.all_changed_files || steps.changed.outputs.all_changed_files) }}
+          CHANGED_IAC_FILES: ${{ inputs.changed_files != '' && steps.changed_direct.outputs.all_changed_files || (inputs.force_full == 'true' && steps.all_iac.outputs.all_changed_files || steps.changed.outputs.all_changed_files) }}
           AUTO_ARCH_MODE: ${{ inputs.mode }}
           AUTO_ARCH_MODEL: ${{ inputs.model }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
@@ -701,14 +701,21 @@ jobs:
       - name: Validate publish paths
         shell: bash
         run: |
+          echo "=== Validating publish paths ==="
+          echo "Publish paths from config:"
+          echo "${{ steps.cfg.outputs.add_paths }}"
+          echo "=============================="
+          
           if [ -z "${{ steps.cfg.outputs.add_paths }}" ]; then
-            echo "publish.paths is empty; configure .auto-arch-diagram.yml publish.paths.* before enabling create_diagram_pr." 1>&2
+            echo "ERROR: publish.paths is empty; configure .auto-arch-diagram.yml publish.paths.* before enabling create_diagram_pr." 1>&2
+            echo "Current .auto-arch-diagram.yml configuration:"
+            cat .auto-arch-diagram.yml || echo "Config file not found"
             exit 1
           fi
 
       - name: Generate and publish into repo paths
         env:
-          CHANGED_IAC_FILES: ${{ inputs.force_full && '.' || (github.event_name == 'pull_request_target' && steps.pr_files.outputs.iac_files || steps.changed.outputs.all_changed_files) }}
+          CHANGED_IAC_FILES: ${{ inputs.force_full == 'true' && '.' || (github.event_name == 'pull_request_target' && steps.pr_files.outputs.iac_files || steps.changed.outputs.all_changed_files) }}
           AUTO_ARCH_MODE: ${{ inputs.mode }}
           AUTO_ARCH_MODEL: ${{ inputs.model }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
@@ -790,5 +797,5 @@ jobs:
 
             Source run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           branch: ${{ inputs.diagram_pr_branch_prefix }}-${{ github.event.pull_request.number || github.run_id }}
-          base: ${{ github.event.pull_request.base.ref || github.ref_name }}
+          base: ${{ github.event.pull_request.base.ref || 'main' }}
           add-paths: ${{ steps.cfg.outputs.add_paths }}
