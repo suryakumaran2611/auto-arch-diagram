@@ -490,6 +490,169 @@ AWS_SERVICE_MAPPINGS = {
     "mq": {"category": "integration", "class": "MQ", "description": "Amazon MQ"},
     # Quantum Computing
     "braket": {"category": "quantum", "class": "Braket", "description": "Braket"},
+    # Additional missing services from error output
+    "dynamodb": {
+        "category": "database",
+        "class": "DynamoDB",
+        "description": "DynamoDB",
+    },
+    "opensearch": {
+        "category": "search",
+        "class": "OpenSearch",
+        "description": "OpenSearch Service",
+    },
+    "elasticsearch": {
+        "category": "search",
+        "class": "OpenSearch",
+        "description": "Elasticsearch Service",
+    },
+    "securitygroup": {
+        "category": "network",
+        "class": "SecurityGroup",
+        "description": "Security Group",
+    },
+    "security_group": {
+        "category": "network",
+        "class": "SecurityGroup", 
+        "description": "Security Group",
+    },
+    "apigateway": {
+        "category": "network",
+        "class": "APIGateway",
+        "description": "API Gateway",
+    },
+    "apigatewaymethod": {
+        "category": "network",
+        "class": "APIGateway",
+        "description": "API Gateway Method",
+    },
+    "apigatewayresource": {
+        "category": "network", 
+        "class": "APIGateway",
+        "description": "API Gateway Resource",
+    },
+    "apigatewayrestapi": {
+        "category": "network",
+        "class": "APIGateway",
+        "description": "API Gateway REST API",
+    },
+    "cloudwatch": {
+        "category": "management",
+        "class": "CloudWatch",
+        "description": "CloudWatch",
+    },
+    "cloudwatcheventrule": {
+        "category": "management",
+        "class": "CloudWatch",
+        "description": "CloudWatch Event Rule",
+    },
+    "cloudwatcheventtarget": {
+        "category": "management",
+        "class": "CloudWatch", 
+        "description": "CloudWatch Event Target",
+    },
+    "cloudwatchloggroup": {
+        "category": "management",
+        "class": "CloudWatch",
+        "description": "CloudWatch Log Group",
+    },
+    "cloudwatchmetricalarm": {
+        "category": "management",
+        "class": "CloudWatch",
+        "description": "CloudWatch Metric Alarm",
+    },
+    # Additional specific missing services
+    "elasticsearch_domain": {
+        "category": "search",
+        "class": "OpenSearch",
+        "description": "Elasticsearch Domain",
+    },
+    "api_gateway": {
+        "category": "network",
+        "class": "APIGateway",
+        "description": "API Gateway",
+    },
+    "api_gateway_method": {
+        "category": "network",
+        "class": "APIGateway",
+        "description": "API Gateway Method",
+    },
+    "api_gateway_resource": {
+        "category": "network",
+        "class": "APIGateway",
+        "description": "API Gateway Resource",
+    },
+    "api_gateway_rest_api": {
+        "category": "network",
+        "class": "APIGateway",
+        "description": "API Gateway REST API",
+    },
+    "cloudwatch_event_rule": {
+        "category": "management",
+        "class": "CloudWatch",
+        "description": "CloudWatch Event Rule",
+    },
+    "cloudwatch_event_target": {
+        "category": "management",
+        "class": "CloudWatch", 
+        "description": "CloudWatch Event Target",
+    },
+    "cloudwatch_log_group": {
+        "category": "management",
+        "class": "CloudWatch",
+        "description": "CloudWatch Log Group",
+    },
+    "cloudwatch_metric_alarm": {
+        "category": "management",
+        "class": "CloudWatch",
+        "description": "CloudWatch Metric Alarm",
+    },
+    "dynamodb_table": {
+        "category": "database",
+        "class": "DynamoDB",
+        "description": "DynamoDB Table",
+    },
+    # Exact mappings for the specific resource types in the demo
+    "elasticsearch_domain": {
+        "category": "search",
+        "class": "OpenSearch",
+        "description": "Elasticsearch Domain",
+    },
+    "api_gateway_rest_api": {
+        "category": "network",
+        "class": "APIGateway",
+        "description": "API Gateway REST API",
+    },
+    "api_gateway_resource": {
+        "category": "network",
+        "class": "APIGateway",
+        "description": "API Gateway Resource",
+    },
+    "api_gateway_method": {
+        "category": "network",
+        "class": "APIGateway",
+        "description": "API Gateway Method",
+    },
+    "cloudwatch_event_rule": {
+        "category": "management",
+        "class": "CloudWatch",
+        "description": "CloudWatch Event Rule",
+    },
+    "cloudwatch_event_target": {
+        "category": "management",
+        "class": "CloudWatch",
+        "description": "CloudWatch Event Target",
+    },
+    "cloudwatch_log_group": {
+        "category": "management",
+        "class": "CloudWatch",
+        "description": "CloudWatch Log Group",
+    },
+    "cloudwatch_metric_alarm": {
+        "category": "management",
+        "class": "CloudWatch",
+        "description": "CloudWatch Metric Alarm",
+    },
 }
 
 # Azure service mappings

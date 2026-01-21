@@ -4,12 +4,12 @@ subgraph AWS[AWS]
   tf_aws_subnet_subnet_aws_network["aws_subnet.subnet_aws_network"]
   tf_aws_vpc_vpc_aws_network["aws_vpc.vpc_aws_network"]
 end
-subgraph AZURERM[AZURERM]
+subgraph Azure[Azure]
   tf_azurerm_resource_group_rg_azure_network["azurerm_resource_group.rg_azure_network"]
   tf_azurerm_storage_account_storage_global["azurerm_storage_account.storage_global"]
   tf_azurerm_storage_container_container_global["azurerm_storage_container.container_global"]
 end
-subgraph GOOGLE[GOOGLE]
+subgraph GCP[GCP]
   tf_google_storage_bucket_bucket_global["google_storage_bucket.bucket_global"]
 end
 tf_aws_vpc_vpc_aws_network --> tf_aws_subnet_subnet_aws_network
