@@ -28,8 +28,8 @@ from cloud_services_util import load_cloud_services
 # Import icon path loader
 from cloud_icons_util import load_cloud_icons, load_public_cloud_icons
 
-# Import the UltimateCloudMapper for improved icon mapping
-from ultimate_cloud_mapper import UltimateCloudMapper
+# Import the BulletproofMapper for improved icon mapping
+from refined_bulletproof_mapper import RefinedBulletproofMapper as BulletproofMapper
 
 try:
     from openai import OpenAI  # type: ignore[import-not-found]
@@ -61,7 +61,7 @@ provider_map = {
     "ibm": "IBM",
 }
 
-# Global instance of the UltimateCloudMapper for improved icon mapping
+# Global instance of the BulletproofMapper for improved icon mapping
 _ultimate_mapper = None
 
 
@@ -2202,18 +2202,18 @@ def _icon_class_for(terraform_resource_type: str):
         print(f"[WARN] Fallback to PNG icon for {terraform_resource_type}")
         return custom_icon
 
-    # 5. Ultimate fallback: Use UltimateCloudMapper for guaranteed mapping
+    # 5. Ultimate fallback: Use BulletproofMapper for guaranteed mapping
     global _ultimate_mapper
     if _ultimate_mapper is None:
-        _ultimate_mapper = UltimateCloudMapper()
+        _ultimate_mapper = BulletproofMapper()
     
     try:
-        ultimate_icon = _ultimate_mapper.get_icon(terraform_resource_type, debug=True)
+        ultimate_icon = _ultimate_mapper.get_icon(terraform_resource_type)
         if ultimate_icon:
-            print(f"[INFO] UltimateCloudMapper found icon for {terraform_resource_type}")
+            print(f"[INFO] BulletproofMapper found icon for {terraform_resource_type}")
             return ultimate_icon
     except Exception as e:
-        print(f"[DEBUG] UltimateCloudMapper failed: {e}")
+        print(f"[DEBUG] BulletproofMapper failed: {e}")
     
     # 6. Absolute final fallback to diagrams.generic.blank.Blank (should never happen now)
     print(f"[ERROR] All mapping failed for {terraform_resource_type}, using diagrams.generic.blank.Blank")

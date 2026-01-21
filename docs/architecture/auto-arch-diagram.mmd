@@ -1,90 +1,116 @@
-flowchart AUTO
+flowchart LR
 subgraph AWS[AWS]
-  tf_aws_api_gateway_method_post_data["aws_api_gateway_method.post_data"]
-  tf_aws_api_gateway_resource_data_resource["aws_api_gateway_resource.data_resource"]
-  tf_aws_api_gateway_rest_api_data_api["aws_api_gateway_rest_api.data_api"]
-  tf_aws_athena_workgroup_analytics["aws_athena_workgroup.analytics"]
-  tf_aws_cloudwatch_event_rule_scheduled_processing["aws_cloudwatch_event_rule.scheduled_processing"]
-  tf_aws_cloudwatch_event_target_lambda_target["aws_cloudwatch_event_target.lambda_target"]
-  tf_aws_cloudwatch_log_group_pipeline_logs["aws_cloudwatch_log_group.pipeline_logs"]
-  tf_aws_cloudwatch_metric_alarm_lambda_errors["aws_cloudwatch_metric_alarm.lambda_errors"]
-  tf_aws_dynamodb_table_metadata["aws_dynamodb_table.metadata"]
-  tf_aws_elasticsearch_domain_search_cluster["aws_elasticsearch_domain.search_cluster"]
-  tf_aws_glue_catalog_database_data_catalog["aws_glue_catalog_database.data_catalog"]
-  tf_aws_glue_crawler_data_crawler["aws_glue_crawler.data_crawler"]
-  tf_aws_iam_role_glue_role["aws_iam_role.glue_role"]
+  tf_aws_cloudwatch_log_group_ml_pipeline_logs["aws_cloudwatch_log_group.ml_pipeline_logs"]
+  tf_aws_db_subnet_group_aurora_subnet_group["aws_db_subnet_group.aurora_subnet_group"]
+  tf_aws_dynamodb_table_experiment_tracking["aws_dynamodb_table.experiment_tracking"]
+  tf_aws_eip_nat_eip["aws_eip.nat_eip"]
+  tf_aws_eks_cluster_mlops_cluster["aws_eks_cluster.mlops_cluster"]
+  tf_aws_eks_node_group_mlops_nodes["aws_eks_node_group.mlops_nodes"]
+  tf_aws_elasticache_cluster_feature_cache["aws_elasticache_cluster.feature_cache"]
+  tf_aws_elasticache_subnet_group_cache_subnet_group["aws_elasticache_subnet_group.cache_subnet_group"]
+  tf_aws_iam_role_eks_cluster_role["aws_iam_role.eks_cluster_role"]
+  tf_aws_iam_role_eks_node_role["aws_iam_role.eks_node_role"]
   tf_aws_iam_role_lambda_role["aws_iam_role.lambda_role"]
-  tf_aws_iam_role_policy_attachment_glue_service["aws_iam_role_policy_attachment.glue_service"]
-  tf_aws_iam_role_policy_attachment_lambda_basic["aws_iam_role_policy_attachment.lambda_basic"]
-  tf_aws_iam_role_policy_attachment_lambda_vpc["aws_iam_role_policy_attachment.lambda_vpc"]
-  tf_aws_internet_gateway_igw["aws_internet_gateway.igw"]
-  tf_aws_kinesis_stream_data_stream["aws_kinesis_stream.data_stream"]
-  tf_aws_lambda_event_source_mapping_dynamodb_to_lambda["aws_lambda_event_source_mapping.dynamodb_to_lambda"]
-  tf_aws_lambda_event_source_mapping_kinesis_to_lambda["aws_lambda_event_source_mapping.kinesis_to_lambda"]
-  tf_aws_lambda_function_batch_processor["aws_lambda_function.batch_processor"]
-  tf_aws_lambda_function_data_ingestion["aws_lambda_function.data_ingestion"]
-  tf_aws_lambda_function_dlq_processor["aws_lambda_function.dlq_processor"]
-  tf_aws_lambda_function_dynamodb_stream_handler["aws_lambda_function.dynamodb_stream_handler"]
-  tf_aws_lambda_function_s3_event_handler["aws_lambda_function.s3_event_handler"]
-  tf_aws_lambda_function_stream_processor["aws_lambda_function.stream_processor"]
-  tf_aws_s3_bucket_processed_data["aws_s3_bucket.processed_data"]
-  tf_aws_s3_bucket_query_results["aws_s3_bucket.query_results"]
-  tf_aws_s3_bucket_raw_data["aws_s3_bucket.raw_data"]
-  tf_aws_s3_bucket_notification_bucket_notification["aws_s3_bucket_notification.bucket_notification"]
-  tf_aws_security_group_lambda_sg["aws_security_group.lambda_sg"]
-  tf_aws_sns_topic_alerts["aws_sns_topic.alerts"]
-  tf_aws_sns_topic_subscription_email_alerts["aws_sns_topic_subscription.email_alerts"]
-  tf_aws_sqs_queue_dlq["aws_sqs_queue.dlq"]
-  tf_aws_subnet_private_subnet["aws_subnet.private_subnet"]
-  tf_aws_subnet_public_subnet["aws_subnet.public_subnet"]
-  tf_aws_vpc_serverless_vpc["aws_vpc.serverless_vpc"]
+  tf_aws_iam_role_sagemaker_role["aws_iam_role.sagemaker_role"]
+  tf_aws_iam_role_step_functions_role["aws_iam_role.step_functions_role"]
+  tf_aws_iam_role_policy_attachment_eks_cluster_policy["aws_iam_role_policy_attachment.eks_cluster_policy"]
+  tf_aws_iam_role_policy_attachment_eks_cni_policy["aws_iam_role_policy_attachment.eks_cni_policy"]
+  tf_aws_iam_role_policy_attachment_eks_node_policy["aws_iam_role_policy_attachment.eks_node_policy"]
+  tf_aws_iam_role_policy_attachment_eks_registry_policy["aws_iam_role_policy_attachment.eks_registry_policy"]
+  tf_aws_iam_role_policy_attachment_eks_service_policy["aws_iam_role_policy_attachment.eks_service_policy"]
+  tf_aws_internet_gateway_primary_igw["aws_internet_gateway.primary_igw"]
+  tf_aws_kms_key_mlops_key["aws_kms_key.mlops_key"]
+  tf_aws_lambda_function_data_preprocessor["aws_lambda_function.data_preprocessor"]
+  tf_aws_lambda_function_model_evaluator["aws_lambda_function.model_evaluator"]
+  tf_aws_lb_mlops_alb["aws_lb.mlops_alb"]
+  tf_aws_nat_gateway_primary_nat["aws_nat_gateway.primary_nat"]
+  tf_aws_network_acl_private_nacl["aws_network_acl.private_nacl"]
+  tf_aws_rds_cluster_feature_store["aws_rds_cluster.feature_store"]
+  tf_aws_rds_cluster_feature_store_replica["aws_rds_cluster.feature_store_replica"]
+  tf_aws_s3_bucket_data_lake["aws_s3_bucket.data_lake"]
+  tf_aws_s3_bucket_model_artifacts["aws_s3_bucket.model_artifacts"]
+  tf_aws_s3_bucket_training_data["aws_s3_bucket.training_data"]
+  tf_aws_s3_bucket_versioning_model_versioning["aws_s3_bucket_versioning.model_versioning"]
+  tf_aws_sagemaker_notebook_instance_ml_notebook["aws_sagemaker_notebook_instance.ml_notebook"]
+  tf_aws_security_group_alb_sg["aws_security_group.alb_sg"]
+  tf_aws_security_group_eks_sg["aws_security_group.eks_sg"]
+  tf_aws_security_group_rds_sg["aws_security_group.rds_sg"]
+  tf_aws_sfn_state_machine_ml_pipeline["aws_sfn_state_machine.ml_pipeline"]
+  tf_aws_sns_topic_ml_alerts["aws_sns_topic.ml_alerts"]
+  tf_aws_subnet_dr_private_subnet_2a["aws_subnet.dr_private_subnet_2a"]
+  tf_aws_subnet_primary_private_subnet_1a["aws_subnet.primary_private_subnet_1a"]
+  tf_aws_subnet_primary_private_subnet_1b["aws_subnet.primary_private_subnet_1b"]
+  tf_aws_subnet_primary_public_subnet_1a["aws_subnet.primary_public_subnet_1a"]
+  tf_aws_subnet_primary_public_subnet_1b["aws_subnet.primary_public_subnet_1b"]
+  tf_aws_vpc_dr_vpc["aws_vpc.dr_vpc"]
+  tf_aws_vpc_primary_vpc["aws_vpc.primary_vpc"]
+  tf_aws_vpc_peering_connection_primary_to_dr["aws_vpc_peering_connection.primary_to_dr"]
+  tf_aws_vpc_peering_connection_accepter_dr_accepter["aws_vpc_peering_connection_accepter.dr_accepter"]
 end
-tf_aws_api_gateway_resource_data_resource --> tf_aws_api_gateway_method_post_data
-tf_aws_api_gateway_rest_api_data_api --> tf_aws_api_gateway_method_post_data
-tf_aws_api_gateway_rest_api_data_api --> tf_aws_api_gateway_resource_data_resource
-tf_aws_cloudwatch_event_rule_scheduled_processing --> tf_aws_cloudwatch_event_target_lambda_target
-tf_aws_dynamodb_table_metadata --> tf_aws_lambda_event_source_mapping_dynamodb_to_lambda
-tf_aws_dynamodb_table_metadata --> tf_aws_lambda_function_data_ingestion
-tf_aws_elasticsearch_domain_search_cluster --> tf_aws_lambda_function_stream_processor
-tf_aws_glue_catalog_database_data_catalog --> tf_aws_glue_crawler_data_crawler
-tf_aws_glue_catalog_database_data_catalog --> tf_aws_lambda_function_s3_event_handler
-tf_aws_iam_role_glue_role --> tf_aws_glue_crawler_data_crawler
-tf_aws_iam_role_glue_role --> tf_aws_iam_role_policy_attachment_glue_service
-tf_aws_iam_role_lambda_role --> tf_aws_iam_role_policy_attachment_lambda_basic
-tf_aws_iam_role_lambda_role --> tf_aws_iam_role_policy_attachment_lambda_vpc
-tf_aws_iam_role_lambda_role --> tf_aws_lambda_function_batch_processor
-tf_aws_iam_role_lambda_role --> tf_aws_lambda_function_data_ingestion
-tf_aws_iam_role_lambda_role --> tf_aws_lambda_function_dlq_processor
-tf_aws_iam_role_lambda_role --> tf_aws_lambda_function_dynamodb_stream_handler
-tf_aws_iam_role_lambda_role --> tf_aws_lambda_function_s3_event_handler
-tf_aws_iam_role_lambda_role --> tf_aws_lambda_function_stream_processor
-tf_aws_kinesis_stream_data_stream --> tf_aws_lambda_event_source_mapping_kinesis_to_lambda
-tf_aws_kinesis_stream_data_stream --> tf_aws_lambda_function_data_ingestion
-tf_aws_lambda_function_batch_processor --> tf_aws_cloudwatch_event_target_lambda_target
-tf_aws_lambda_function_dynamodb_stream_handler --> tf_aws_lambda_event_source_mapping_dynamodb_to_lambda
-tf_aws_lambda_function_s3_event_handler --> tf_aws_s3_bucket_notification_bucket_notification
-tf_aws_lambda_function_stream_processor --> tf_aws_cloudwatch_metric_alarm_lambda_errors
-tf_aws_lambda_function_stream_processor --> tf_aws_lambda_event_source_mapping_kinesis_to_lambda
-tf_aws_s3_bucket_processed_data --> tf_aws_glue_crawler_data_crawler
-tf_aws_s3_bucket_processed_data --> tf_aws_lambda_function_batch_processor
-tf_aws_s3_bucket_processed_data --> tf_aws_lambda_function_stream_processor
-tf_aws_s3_bucket_processed_data --> tf_aws_s3_bucket_notification_bucket_notification
-tf_aws_s3_bucket_query_results --> tf_aws_athena_workgroup_analytics
-tf_aws_s3_bucket_query_results --> tf_aws_lambda_function_s3_event_handler
-tf_aws_s3_bucket_raw_data --> tf_aws_lambda_function_batch_processor
-tf_aws_s3_bucket_raw_data --> tf_aws_lambda_function_data_ingestion
-tf_aws_security_group_lambda_sg --> tf_aws_elasticsearch_domain_search_cluster
-tf_aws_security_group_lambda_sg --> tf_aws_lambda_function_data_ingestion
-tf_aws_security_group_lambda_sg --> tf_aws_lambda_function_stream_processor
-tf_aws_sns_topic_alerts --> tf_aws_cloudwatch_metric_alarm_lambda_errors
-tf_aws_sns_topic_alerts --> tf_aws_lambda_function_dlq_processor
-tf_aws_sns_topic_alerts --> tf_aws_lambda_function_stream_processor
-tf_aws_sns_topic_alerts --> tf_aws_sns_topic_subscription_email_alerts
-tf_aws_sqs_queue_dlq --> tf_aws_lambda_function_dlq_processor
-tf_aws_subnet_private_subnet --> tf_aws_elasticsearch_domain_search_cluster
-tf_aws_subnet_private_subnet --> tf_aws_lambda_function_data_ingestion
-tf_aws_subnet_private_subnet --> tf_aws_lambda_function_stream_processor
-tf_aws_vpc_serverless_vpc --> tf_aws_internet_gateway_igw
-tf_aws_vpc_serverless_vpc --> tf_aws_security_group_lambda_sg
-tf_aws_vpc_serverless_vpc --> tf_aws_subnet_private_subnet
-tf_aws_vpc_serverless_vpc --> tf_aws_subnet_public_subnet
+tf_aws_db_subnet_group_aurora_subnet_group --> tf_aws_rds_cluster_feature_store
+tf_aws_dynamodb_table_experiment_tracking --> tf_aws_lambda_function_model_evaluator
+tf_aws_eip_nat_eip --> tf_aws_nat_gateway_primary_nat
+tf_aws_eks_cluster_mlops_cluster --> tf_aws_eks_node_group_mlops_nodes
+tf_aws_elasticache_cluster_feature_cache --> tf_aws_lambda_function_data_preprocessor
+tf_aws_elasticache_subnet_group_cache_subnet_group --> tf_aws_elasticache_cluster_feature_cache
+tf_aws_iam_role_eks_cluster_role --> tf_aws_eks_cluster_mlops_cluster
+tf_aws_iam_role_eks_cluster_role --> tf_aws_iam_role_policy_attachment_eks_cluster_policy
+tf_aws_iam_role_eks_cluster_role --> tf_aws_iam_role_policy_attachment_eks_service_policy
+tf_aws_iam_role_eks_node_role --> tf_aws_eks_node_group_mlops_nodes
+tf_aws_iam_role_eks_node_role --> tf_aws_iam_role_policy_attachment_eks_cni_policy
+tf_aws_iam_role_eks_node_role --> tf_aws_iam_role_policy_attachment_eks_node_policy
+tf_aws_iam_role_eks_node_role --> tf_aws_iam_role_policy_attachment_eks_registry_policy
+tf_aws_iam_role_lambda_role --> tf_aws_lambda_function_data_preprocessor
+tf_aws_iam_role_lambda_role --> tf_aws_lambda_function_model_evaluator
+tf_aws_iam_role_policy_attachment_eks_cluster_policy --> tf_aws_eks_cluster_mlops_cluster
+tf_aws_iam_role_policy_attachment_eks_cni_policy --> tf_aws_eks_node_group_mlops_nodes
+tf_aws_iam_role_policy_attachment_eks_node_policy --> tf_aws_eks_node_group_mlops_nodes
+tf_aws_iam_role_policy_attachment_eks_registry_policy --> tf_aws_eks_node_group_mlops_nodes
+tf_aws_iam_role_policy_attachment_eks_service_policy --> tf_aws_eks_cluster_mlops_cluster
+tf_aws_iam_role_sagemaker_role --> tf_aws_sagemaker_notebook_instance_ml_notebook
+tf_aws_iam_role_step_functions_role --> tf_aws_sfn_state_machine_ml_pipeline
+tf_aws_internet_gateway_primary_igw --> tf_aws_nat_gateway_primary_nat
+tf_aws_lambda_function_data_preprocessor --> tf_aws_sfn_state_machine_ml_pipeline
+tf_aws_lambda_function_model_evaluator --> tf_aws_sfn_state_machine_ml_pipeline
+tf_aws_rds_cluster_feature_store --> tf_aws_lambda_function_data_preprocessor
+tf_aws_rds_cluster_feature_store --> tf_aws_rds_cluster_feature_store_replica
+tf_aws_s3_bucket_model_artifacts --> tf_aws_lambda_function_model_evaluator
+tf_aws_s3_bucket_model_artifacts --> tf_aws_s3_bucket_versioning_model_versioning
+tf_aws_s3_bucket_training_data --> tf_aws_lambda_function_data_preprocessor
+tf_aws_security_group_alb_sg --> tf_aws_lb_mlops_alb
+tf_aws_security_group_alb_sg --> tf_aws_security_group_eks_sg
+tf_aws_security_group_eks_sg --> tf_aws_eks_cluster_mlops_cluster
+tf_aws_security_group_eks_sg --> tf_aws_elasticache_cluster_feature_cache
+tf_aws_security_group_eks_sg --> tf_aws_lambda_function_data_preprocessor
+tf_aws_security_group_eks_sg --> tf_aws_rds_cluster_feature_store_replica
+tf_aws_security_group_eks_sg --> tf_aws_sagemaker_notebook_instance_ml_notebook
+tf_aws_security_group_eks_sg --> tf_aws_security_group_rds_sg
+tf_aws_security_group_rds_sg --> tf_aws_rds_cluster_feature_store
+tf_aws_subnet_primary_private_subnet_1a --> tf_aws_db_subnet_group_aurora_subnet_group
+tf_aws_subnet_primary_private_subnet_1a --> tf_aws_eks_cluster_mlops_cluster
+tf_aws_subnet_primary_private_subnet_1a --> tf_aws_eks_node_group_mlops_nodes
+tf_aws_subnet_primary_private_subnet_1a --> tf_aws_elasticache_subnet_group_cache_subnet_group
+tf_aws_subnet_primary_private_subnet_1a --> tf_aws_lambda_function_data_preprocessor
+tf_aws_subnet_primary_private_subnet_1a --> tf_aws_network_acl_private_nacl
+tf_aws_subnet_primary_private_subnet_1a --> tf_aws_sagemaker_notebook_instance_ml_notebook
+tf_aws_subnet_primary_private_subnet_1b --> tf_aws_db_subnet_group_aurora_subnet_group
+tf_aws_subnet_primary_private_subnet_1b --> tf_aws_eks_cluster_mlops_cluster
+tf_aws_subnet_primary_private_subnet_1b --> tf_aws_eks_node_group_mlops_nodes
+tf_aws_subnet_primary_private_subnet_1b --> tf_aws_elasticache_subnet_group_cache_subnet_group
+tf_aws_subnet_primary_private_subnet_1b --> tf_aws_network_acl_private_nacl
+tf_aws_subnet_primary_public_subnet_1a --> tf_aws_lb_mlops_alb
+tf_aws_subnet_primary_public_subnet_1a --> tf_aws_nat_gateway_primary_nat
+tf_aws_subnet_primary_public_subnet_1b --> tf_aws_lb_mlops_alb
+tf_aws_vpc_dr_vpc --> tf_aws_subnet_dr_private_subnet_2a
+tf_aws_vpc_dr_vpc --> tf_aws_vpc_peering_connection_primary_to_dr
+tf_aws_vpc_peering_connection_primary_to_dr --> tf_aws_vpc_peering_connection_accepter_dr_accepter
+tf_aws_vpc_primary_vpc --> tf_aws_internet_gateway_primary_igw
+tf_aws_vpc_primary_vpc --> tf_aws_network_acl_private_nacl
+tf_aws_vpc_primary_vpc --> tf_aws_security_group_alb_sg
+tf_aws_vpc_primary_vpc --> tf_aws_security_group_eks_sg
+tf_aws_vpc_primary_vpc --> tf_aws_security_group_rds_sg
+tf_aws_vpc_primary_vpc --> tf_aws_subnet_primary_private_subnet_1a
+tf_aws_vpc_primary_vpc --> tf_aws_subnet_primary_private_subnet_1b
+tf_aws_vpc_primary_vpc --> tf_aws_subnet_primary_public_subnet_1a
+tf_aws_vpc_primary_vpc --> tf_aws_subnet_primary_public_subnet_1b
+tf_aws_vpc_primary_vpc --> tf_aws_vpc_peering_connection_primary_to_dr

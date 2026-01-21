@@ -1177,7 +1177,37 @@
     "hyperdisk_instance": {
       "category": "storage",
       "class": "Hyperdisk",
-      "description": "Hyperdisk"
+      "description": "Hyperdisk",
+      "compute_security_policy": {
+        "category": "network",
+        "class": "CloudArmor",
+        "description": "Cloud Armor Security Policy"
+      },
+      "compute_backend_bucket": {
+        "category": "storage",
+        "class": "CloudStorage",
+        "description": "Backend Bucket for CDN"
+      },
+      "compute_url_map": {
+        "category": "network",
+        "class": "URLMap",
+        "description": "URL Map for Load Balancing"
+      },
+      "compute_target_https_proxy": {
+        "category": "network",
+        "class": "TargetHttpsProxy",
+        "description": "Target HTTPS Proxy"
+      },
+      "compute_global_forwarding_rule": {
+        "category": "network",
+        "class": "GlobalForwardingRule",
+        "description": "Global Forwarding Rule"
+      },
+      "compute_managed_ssl_certificate": {
+        "category": "security",
+        "class": "SSLCertificate",
+        "description": "Managed SSL Certificate"
+      }
     }
   }
 }
