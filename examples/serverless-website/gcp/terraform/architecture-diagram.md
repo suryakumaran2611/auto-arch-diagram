@@ -6,7 +6,7 @@ Summary: Generated a dependency-oriented Terraform diagram from changed resource
 
 ```mermaid
 flowchart LR
-subgraph GOOGLE[GOOGLE]
+subgraph GCP[GCP]
   tf_google_compute_backend_bucket_cdn["google_compute_backend_bucket.cdn"]
   tf_google_compute_global_forwarding_rule_lb["google_compute_global_forwarding_rule.lb"]
   tf_google_compute_managed_ssl_certificate_cert["google_compute_managed_ssl_certificate.cert"]

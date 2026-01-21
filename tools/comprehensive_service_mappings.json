@@ -438,7 +438,7 @@
     "elasticsearch": {
       "category": "search",
       "class": "OpenSearch",
-      "description": "OpenSearch Service"
+      "description": "Elasticsearch Service"
     },
     "opensearch": {
       "category": "search",
@@ -595,203 +595,103 @@
       "class": "Braket",
       "description": "Braket"
     },
-    "fargate": {
-      "category": "compute",
-      "class": "Fargate",
-      "description": "AWS Fargate"
-    },
-    "app_runner": {
-      "category": "compute",
-      "class": "AppRunner",
-      "description": "AWS App Runner"
-    },
-    "outposts": {
-      "category": "compute",
-      "class": "Outposts",
-      "description": "AWS Outposts"
-    },
-    "s3control": {
-      "category": "storage",
-      "class": "S3",
-      "description": "S3 Control"
-    },
-    "s3outposts": {
-      "category": "storage",
-      "class": "S3Outposts",
-      "description": "S3 Outposts"
-    },
-    "fsx_lustre": {
-      "category": "storage",
-      "class": "FSx",
-      "description": "FSx for Lustre"
-    },
-    "fsx_windows": {
-      "category": "storage",
-      "class": "FSx",
-      "description": "FSx for Windows"
-    },
-    "fsx_netapp": {
-      "category": "storage",
-      "class": "FSx",
-      "description": "FSx for NetApp ONTAP"
-    },
-    "fsx_openzfs": {
-      "category": "storage",
-      "class": "FSx",
-      "description": "FSx for OpenZFS"
-    },
-    "rds_cluster": {
-      "category": "database",
-      "class": "RDS",
-      "description": "RDS Cluster"
-    },
-    "rds_proxy": {
-      "category": "database",
-      "class": "RDS",
-      "description": "RDS Proxy"
-    },
-    "memorydb": {
-      "category": "database",
-      "class": "ElastiCache",
-      "description": "Amazon MemoryDB"
-    },
-    "keyspaces_table": {
-      "category": "database",
-      "class": "Keyspaces",
-      "description": "Amazon Keyspaces"
-    },
-    "vpc_endpoint": {
+    "securitygroup": {
       "category": "network",
-      "class": "VPC",
-      "description": "VPC Endpoint"
-    },
-    "vpc_peering": {
-      "category": "network",
-      "class": "VPC",
-      "description": "VPC Peering"
-    },
-    "transit_gateway": {
-      "category": "network",
-      "class": "VPC",
-      "description": "Transit Gateway"
-    },
-    "network_acl": {
-      "category": "network",
-      "class": "VPC",
-      "description": "Network ACL"
-    },
-    "route_table": {
-      "category": "network",
-      "class": "VPC",
-      "description": "Route Table"
-    },
-    "internet_gateway": {
-      "category": "network",
-      "class": "VPC",
-      "description": "Internet Gateway"
-    },
-    "nat_gateway": {
-      "category": "network",
-      "class": "VPC",
-      "description": "NAT Gateway"
-    },
-    "vpc_security_group": {
-      "category": "network",
-      "class": "VPC",
+      "class": "SecurityGroup",
       "description": "Security Group"
     },
-    "network_firewall": {
+    "security_group": {
       "category": "network",
-      "class": "VPC",
-      "description": "Network Firewall"
+      "class": "SecurityGroup",
+      "description": "Security Group"
     },
-    "cloudfront_response_headers_policy": {
+    "apigatewaymethod": {
       "category": "network",
-      "class": "CloudFront",
-      "description": "CloudFront Response Headers Policy"
-    },
-    "inspector2": {
-      "category": "security",
-      "class": "Inspector",
-      "description": "Amazon Inspector v2"
-    },
-    "securityhub": {
-      "category": "security",
-      "class": "SecurityHub",
-      "description": "AWS Security Hub"
-    },
-    "detective": {
-      "category": "security",
-      "class": "Detective",
-      "description": "Amazon Detective"
-    },
-    "auditmanager": {
-      "category": "security",
-      "class": "AuditManager",
-      "description": "AWS Audit Manager"
-    },
-    "msk": {
-      "category": "analytics",
-      "class": "ManagedStreamingKafka",
-      "description": "Amazon MSK"
-    },
-    "opensearch_domain": {
-      "category": "analytics",
-      "class": "OpenSearch",
-      "description": "Amazon OpenSearch"
-    },
-    "kinesis_firehose": {
-      "category": "analytics",
-      "class": "Kinesis",
-      "description": "Kinesis Firehose"
-    },
-    "appsync_graphql_api": {
-      "category": "integration",
-      "class": "AppSync",
-      "description": "AWS App Sync GraphQL API"
-    },
-    "apigatewayv2_api": {
-      "category": "integration",
       "class": "APIGateway",
-      "description": "API Gateway v2"
+      "description": "API Gateway Method"
     },
-    "eventbridge_rule": {
-      "category": "integration",
-      "class": "EventBridge",
-      "description": "EventBridge Rule"
+    "apigatewayresource": {
+      "category": "network",
+      "class": "APIGateway",
+      "description": "API Gateway Resource"
     },
-    "eventbridge_bus": {
-      "category": "integration",
-      "class": "EventBridge",
-      "description": "EventBridge Bus"
+    "apigatewayrestapi": {
+      "category": "network",
+      "class": "APIGateway",
+      "description": "API Gateway REST API"
     },
-    "resourcegroups_group": {
+    "cloudwatcheventrule": {
       "category": "management",
-      "class": "ResourceGroups",
-      "description": "Resource Groups"
+      "class": "CloudWatch",
+      "description": "CloudWatch Event Rule"
     },
-    "backup_vault": {
+    "cloudwatcheventtarget": {
       "category": "management",
-      "class": "Backup",
-      "description": "AWS Backup Vault"
+      "class": "CloudWatch",
+      "description": "CloudWatch Event Target"
     },
-    "backup_plan": {
+    "cloudwatchloggroup": {
       "category": "management",
-      "class": "Backup",
-      "description": "AWS Backup Plan"
+      "class": "CloudWatch",
+      "description": "CloudWatch Log Group"
     },
-    "controltower_landing_zone": {
+    "cloudwatchmetricalarm": {
       "category": "management",
-      "class": "ControlTower",
-      "description": "AWS Control Tower"
+      "class": "CloudWatch",
+      "description": "CloudWatch Metric Alarm"
+    },
+    "elasticsearch_domain": {
+      "category": "search",
+      "class": "OpenSearch",
+      "description": "Elasticsearch Domain"
+    },
+    "api_gateway": {
+      "category": "network",
+      "class": "APIGateway",
+      "description": "API Gateway"
+    },
+    "api_gateway_method": {
+      "category": "network",
+      "class": "APIGateway",
+      "description": "API Gateway Method"
+    },
+    "api_gateway_resource": {
+      "category": "network",
+      "class": "APIGateway",
+      "description": "API Gateway Resource"
+    },
+    "api_gateway_rest_api": {
+      "category": "network",
+      "class": "APIGateway",
+      "description": "API Gateway REST API"
+    },
+    "cloudwatch_event_rule": {
+      "category": "management",
+      "class": "CloudWatch",
+      "description": "CloudWatch Event Rule"
+    },
+    "cloudwatch_event_target": {
+      "category": "management",
+      "class": "CloudWatch",
+      "description": "CloudWatch Event Target"
+    },
+    "cloudwatch_log_group": {
+      "category": "management",
+      "class": "CloudWatch",
+      "description": "CloudWatch Log Group"
+    },
+    "cloudwatch_metric_alarm": {
+      "category": "management",
+      "class": "CloudWatch",
+      "description": "CloudWatch Metric Alarm"
+    },
+    "dynamodb_table": {
+      "category": "database",
+      "class": "DynamoDB",
+      "description": "DynamoDB Table"
     }
   },
   "azure": {
-    "resource_group": {
-      "category": "general",
-      "class": "ResourceGroups",
-      "description": "Resource Group"
-    },
     "virtual_machine": {
       "category": "compute",
       "class": "VirtualMachine",
@@ -824,7 +724,7 @@
     },
     "storage_account": {
       "category": "storage",
-      "class": "StorageAccounts",
+      "class": "StorageAccount",
       "description": "Storage Account"
     },
     "blob": {
@@ -914,7 +814,7 @@
     },
     "cdn": {
       "category": "network",
-      "class": "CDNProfiles",
+      "class": "CDN",
       "description": "Content Delivery Network"
     },
     "frontdoor": {
@@ -1046,76 +946,6 @@
       "category": "mobile",
       "class": "MobileEngagement",
       "description": "Mobile Engagement"
-    },
-    "container_registry": {
-      "category": "compute",
-      "class": "ContainerRegistry",
-      "description": "Container Registry"
-    },
-    "container_app": {
-      "category": "compute",
-      "class": "ContainerInstances",
-      "description": "Container App"
-    },
-    "service_plan": {
-      "category": "compute",
-      "class": "AppService",
-      "description": "App Service Plan"
-    },
-    "storage_share": {
-      "category": "storage",
-      "class": "FileStorage",
-      "description": "Storage File Share"
-    },
-    "storage_queue": {
-      "category": "storage",
-      "class": "QueueStorage",
-      "description": "Storage Queue"
-    },
-    "storage_table": {
-      "category": "storage",
-      "class": "TableStorage",
-      "description": "Storage Table"
-    },
-    "network_interface": {
-      "category": "network",
-      "class": "NetworkInterfaces",
-      "description": "Network Interface"
-    },
-    "public_ip": {
-      "category": "network",
-      "class": "PublicIpAddresses",
-      "description": "Public IP"
-    },
-    "key_vault_secret": {
-      "category": "security",
-      "class": "KeyVault",
-      "description": "Key Vault Secret"
-    },
-    "key_vault_key": {
-      "category": "security",
-      "class": "KeyVault",
-      "description": "Key Vault Key"
-    },
-    "key_vault_certificate": {
-      "category": "security",
-      "class": "KeyVault",
-      "description": "Key Vault Certificate"
-    },
-    "monitor_action_group": {
-      "category": "management",
-      "class": "Monitor",
-      "description": "Monitor Action Group"
-    },
-    "monitor_metric_alert": {
-      "category": "management",
-      "class": "Monitor",
-      "description": "Monitor Metric Alert"
-    },
-    "log_analytics_workspace": {
-      "category": "management",
-      "class": "LogAnalytics",
-      "description": "Log Analytics Workspace"
     }
   },
   "gcp": {
@@ -1146,7 +976,7 @@
     },
     "storage_bucket": {
       "category": "storage",
-      "class": "GCS",
+      "class": "CloudStorage",
       "description": "Cloud Storage"
     },
     "filestore_instance": {
@@ -1347,92 +1177,37 @@
     "hyperdisk_instance": {
       "category": "storage",
       "class": "Hyperdisk",
-      "description": "Hyperdisk"
-    },
-    "compute_security_policy": {
-      "category": "network",
-      "class": "Armor",
-      "description": "Cloud Armor Security Policy"
-    },
-    "compute_backend_bucket": {
-      "category": "network",
-      "class": "LoadBalancing",
-      "description": "Load Balancing Backend Bucket"
-    },
-    "compute_url_map": {
-      "category": "network",
-      "class": "LoadBalancing",
-      "description": "Load Balancing URL Map"
-    },
-    "compute_target_https_proxy": {
-      "category": "network",
-      "class": "LoadBalancing",
-      "description": "Load Balancing HTTPS Proxy"
-    },
-    "compute_global_forwarding_rule": {
-      "category": "network",
-      "class": "LoadBalancing",
-      "description": "Load Balancing Forwarding Rule"
-    },
-    "compute_managed_ssl_certificate": {
-      "category": "security",
-      "class": "CertificateManager",
-      "description": "SSL Certificate Manager"
-    },
-    "compute_instance_group": {
-      "category": "compute",
-      "class": "ComputeEngine",
-      "description": "Instance Group"
-    },
-    "compute_instance_template": {
-      "category": "compute",
-      "class": "ComputeEngine",
-      "description": "Instance Template"
-    },
-    "compute_disk": {
-      "category": "compute",
-      "class": "ComputeEngine",
-      "description": "Persistent Disk"
-    },
-    "storage_bucket_iam": {
-      "category": "storage",
-      "class": "GCS",
-      "description": "Cloud Storage IAM"
-    },
-    "compute_firewall": {
-      "category": "network",
-      "class": "FirewallRules",
-      "description": "Firewall Rule"
-    },
-    "compute_address": {
-      "category": "network",
-      "class": "ExternalIpAddresses",
-      "description": "External IP"
-    },
-    "iam_service_account_key": {
-      "category": "security",
-      "class": "IAM",
-      "description": "Service Account Key"
-    },
-    "iam_workload_identity_pool": {
-      "category": "security",
-      "class": "IAM",
-      "description": "Workload Identity Pool"
-    },
-    "monitoring_alert_policy": {
-      "category": "management",
-      "class": "CloudMonitoring",
-      "description": "Alert Policy"
-    },
-    "logging_metric": {
-      "category": "management",
-      "class": "CloudLogging",
-      "description": "Log Metric"
-    },
-    "billing_budget": {
-      "category": "management",
-      "class": "CloudBilling",
-      "description": "Billing Budget"
+      "description": "Hyperdisk",
+      "compute_security_policy": {
+        "category": "network",
+        "class": "CloudArmor",
+        "description": "Cloud Armor Security Policy"
+      },
+      "compute_backend_bucket": {
+        "category": "storage",
+        "class": "CloudStorage",
+        "description": "Backend Bucket for CDN"
+      },
+      "compute_url_map": {
+        "category": "network",
+        "class": "URLMap",
+        "description": "URL Map for Load Balancing"
+      },
+      "compute_target_https_proxy": {
+        "category": "network",
+        "class": "TargetHttpsProxy",
+        "description": "Target HTTPS Proxy"
+      },
+      "compute_global_forwarding_rule": {
+        "category": "network",
+        "class": "GlobalForwardingRule",
+        "description": "Global Forwarding Rule"
+      },
+      "compute_managed_ssl_certificate": {
+        "category": "security",
+        "class": "SSLCertificate",
+        "description": "Managed SSL Certificate"
+      }
     }
   }
 }

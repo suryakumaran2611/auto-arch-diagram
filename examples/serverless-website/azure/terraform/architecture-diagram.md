@@ -6,7 +6,7 @@ Summary: Generated a dependency-oriented Terraform diagram from changed resource
 
 ```mermaid
 flowchart LR
-subgraph AZURERM[AZURERM]
+subgraph Azure[Azure]
   tf_azurerm_cdn_endpoint_endpoint["azurerm_cdn_endpoint.endpoint"]
   tf_azurerm_cdn_frontdoor_firewall_policy_waf["azurerm_cdn_frontdoor_firewall_policy.waf"]
   tf_azurerm_cdn_profile_cdn["azurerm_cdn_profile.cdn"]

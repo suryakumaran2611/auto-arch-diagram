@@ -31,6 +31,128 @@ def main():
     covered_services = 0
     missing_icons = []
 
+
+    # Load smart PNG mappings for variant matching
+    png_mappings_file = repo_root / "icons" / "comprehensive_mappings.json"
+    png_mappings = None
+    if png_mappings_file.exists():
+        with open(png_mappings_file, "r") as f:
+            png_mappings = json.load(f)
+
+    # Alias and variant helpers (from _icon_class_for)
+
+    # Cloud-agnostic alias and variant logic
+    provider_aliases = {
+        "azurerm": "azure",
+        "google": "gcp",
+        "gcp": "gcp",
+        "aws": "aws",
+        "oci": "oci",
+        "ibm": "ibm",
+    }
+
+    # Common aliases for all clouds (expand as needed)
+    global_alias_map = {
+        # AWS
+        "wafv2": "waf",
+        "apigatewayv2": "apigateway",
+        "opensearch": "elasticsearch",
+        "msk": "kinesis",
+        "fargate": "ecs",
+        "app_runner": "elasticbeanstalk",
+        "controltower": "organizations",
+        "memorydb": "elasticache",
+        "detective": "guardduty",
+        # Azure
+        "functionapp": "function_app",
+        "sqlserver": "sql_server",
+        "postgres": "postgresql",
+        # GCP
+        "gke": "kubernetes_engine",
+        "gcs": "storage",
+        "pubsub": "pub_sub",
+    }
+
+    import re
+    import inflection
+    from slugify import slugify
+    from rapidfuzz import process, fuzz
+
+    def smart_png_icon_exists(provider, service_name):
+        provider_norm = provider_aliases.get(provider.lower(), provider.lower())
+        if not png_mappings or provider_norm not in png_mappings:
+            return False
+        mapping = png_mappings[provider_norm]
+        base = service_name.lower().replace('-', '_')
+        parts = base.split('_')
+        candidates = set()
+        # Multi-part names (4, 3, 2)
+        for n in [4, 3, 2]:
+            if len(parts) >= n:
+                candidates.add('_'.join(parts[:n]))
+        # Add single-part and base
+        candidates.add(service_name.lower())
+        candidates.add(base)
+        # Add alias if present
+        if service_name.lower() in global_alias_map:
+            candidates.add(global_alias_map[service_name.lower()])
+        # inflection: underscore, camelize, singularize, pluralize
+        candidates.add(inflection.underscore(service_name))
+        candidates.add(inflection.camelize(service_name, False))
+        candidates.add(inflection.camelize(service_name, True))
+        candidates.add(inflection.singularize(base))
+        candidates.add(inflection.pluralize(base))
+        # slugify: kebab-case
+        candidates.add(slugify(base))
+        # Add no-underscore, no-dash
+        candidates.add(base.replace('_', ''))
+        candidates.add(base.replace('_', '-'))
+        candidates.add(base.replace('-', ''))
+        # Plural/singular
+        if base.endswith('s'):
+            candidates.add(base[:-1])
+        else:
+            candidates.add(base + 's')
+        # Remove trailing numbers (e.g., v2, 2)
+        candidates.add(re.sub(r'\d+$', '', base))
+        # Add known patterns for common services (cloud-agnostic)
+        if base in ("lb", "elb", "loadbalancer", "load_balancer"):
+            candidates.update([
+                "elb_application_load_balancer", "elb_network_load_balancer", "elb_classic_load_balancer",
+                "load_balancer", "loadbalancer", "application_load_balancer", "network_load_balancer", "classic_load_balancer"
+            ])
+        if base in ("stepfunctions", "step_functions", "step-functions"):
+            candidates.update(["step_functions", "step-functions", "stepfunctions"])
+        if base in ("elasticsearch", "opensearch", "search"):
+            candidates.update(["elasticsearch_service", "amazon_opensearch_service", "search"])
+        if base in ("s3", "storage", "bucket"):
+            candidates.update([
+                "simple_storage_service_s3", "simple_storage_service_s3_bucket", "s3_glacier_archive",
+                "storage", "bucket", "storage_bucket"
+            ])
+        if base == "glue":
+            candidates.update(["glue_crawlers", "glue_data_catalog"])
+        if base == "dynamodb":
+            candidates.update(["dynamodb_table", "dynamodb_items", "dynamodb_item"])
+        if base == "cloudwatch":
+            candidates.update(["cloudwatch_logs", "cloudwatch_alarm", "cloudwatch_rule"])
+        if base in ("pubsub", "pub_sub"):
+            candidates.update(["pubsub", "pub_sub"])
+        # Try all candidates in order
+        for c in candidates:
+            if c in mapping:
+                icon_file = icons_dir / provider_norm / mapping[c] if not mapping[c].startswith("/") else Path(mapping[c])
+                if icon_file.exists():
+                    return True
+        # Fuzzy match fallback: find closest mapping key if above fails
+        fuzzy_result = process.extractOne(base, mapping.keys(), scorer=fuzz.ratio, score_cutoff=80) if mapping else None
+        if fuzzy_result:
+            best = fuzzy_result[0]
+            icon_file = icons_dir / provider_norm / mapping[best] if not mapping[best].startswith("/") else Path(mapping[best])
+            if icon_file.exists():
+                return True
+        return False
+
     for provider in mappings:
         print(f"\nChecking {provider.upper()} ({len(mappings[provider])} services):")
 
@@ -41,25 +163,13 @@ def main():
             total_services += 1
             category = service_info["category"]
 
-            # Check for icon file
-            icon_path = icons_dir / provider / category / f"{service_name}.png"
-            if icon_path.exists():
+            # Use smart PNG icon matching logic
+            if smart_png_icon_exists(provider, service_name):
                 provider_covered += 1
                 covered_services += 1
             else:
-                # Try alternative naming (some icons use hyphens)
-                alt_path = (
-                    icons_dir
-                    / provider
-                    / category
-                    / f"{service_name.replace('_', '-')}.png"
-                )
-                if alt_path.exists():
-                    provider_covered += 1
-                    covered_services += 1
-                else:
-                    provider_missing.append(f"{service_name} ({category})")
-                    missing_icons.append(f"{provider}.{category}.{service_name}")
+                provider_missing.append(f"{service_name} ({category})")
+                missing_icons.append(f"{provider}.{category}.{service_name}")
 
         coverage_percent = (
             (provider_covered / len(mappings[provider]) * 100)

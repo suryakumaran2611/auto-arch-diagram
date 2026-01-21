@@ -8,7 +8,7 @@ import os
 import re
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any, Iterable, Optional
 
 import yaml
 import requests
@@ -27,6 +27,9 @@ from cloud_services_util import load_cloud_services
 
 # Import icon path loader
 from cloud_icons_util import load_cloud_icons, load_public_cloud_icons
+
+# Import the BulletproofMapper for improved icon mapping
+from refined_bulletproof_mapper import RefinedBulletproofMapper as BulletproofMapper
 
 try:
     from openai import OpenAI  # type: ignore[import-not-found]
@@ -48,6 +51,18 @@ except Exception:  # pragma: no cover
 Blank = None
 Rack = None
 SQL = None
+
+# Global provider mapping
+provider_map = {
+    "aws": "AWS",
+    "azurerm": "Azure", 
+    "google": "GCP",
+    "oci": "OCI",
+    "ibm": "IBM",
+}
+
+# Global instance of the BulletproofMapper for improved icon mapping
+_ultimate_mapper = None
 
 
 def _map_to_diagrams_category(
@@ -1587,20 +1602,7 @@ def _import_node_class(module_path: str, class_name: str):
         return None
 
 
-def _guess_provider(resource_type: str) -> str:
-    """Extract provider name from Terraform resource type."""
-    t = resource_type.lower()
-    if t.startswith("aws_"):
-        return "AWS"
-    if t.startswith("azurerm_"):
-        return "AZURERM"
-    if t.startswith("google_"):
-        return "GOOGLE"
-    if t.startswith("oci_"):
-        return "OCI"
-    if t.startswith("ibm_"):
-        return "IBM"
-    return "OTHER"
+
 
 
 def _download_missing_icon(provider: str, service_name: str, icons_dir: Path) -> bool:
@@ -1656,10 +1658,11 @@ def _load_custom_icon(terraform_resource_type: str):
     """Load a custom icon from icons/ directory, custom:// scheme, or user input if available.
     Returns a Custom node class that uses the icon file, or None if not found.
     """
+
     if Diagram is None:
         return None
 
-    # Debug for key services
+    # Only debug for key services
     if terraform_resource_type.lower() in [
         "aws_athena_workgroup",
         "aws_glue_catalog_database",
@@ -1671,24 +1674,76 @@ def _load_custom_icon(terraform_resource_type: str):
     ]:
         print(f"[DEBUG] _load_custom_icon called for: {terraform_resource_type}")
 
-    # Debug output for key services (can be removed later)
-    # if terraform_resource_type.lower() in ['aws_athena_workgroup', 'aws_glue_catalog_database', 'aws_elasticsearch_domain', 'aws_kinesis_stream']:
-    #     print(f"[DEBUG] _icon_class_for called for: {terraform_resource_type}")
-    # First, try loading a custom icon
-    custom_icon = _load_custom_icon(terraform_resource_type)
-    if custom_icon is not None:
-        return custom_icon
-
+    # Try to find a PNG icon in icons/custom/ or icons/{provider}/
+    repo_root = Path(__file__).resolve().parents[1]
+    icons_dir = repo_root / "icons"
     t = terraform_resource_type.lower()
+    provider = None
+    for pfx in ("aws", "azurerm", "google", "oci", "ibm"):
+        if t.startswith(f"{pfx}_"):
+            provider = pfx
+            t_no_prefix = t[len(pfx) + 1 :]
+            break
+    else:
+        t_no_prefix = t
 
-    # Provider and service module mapping
-    provider_map = {
-        "aws": "diagrams.aws",
-        "azurerm": "diagrams.azure",
-        "google": "diagrams.gcp",
-        "oci": "diagrams.oracle",
-        "ibm": "diagrams.ibm",
-    }
+    # Try custom:// scheme
+    if t.startswith("custom://"):
+        custom_name = t.replace("custom://", "").replace("_", "-")
+        custom_icon_path = icons_dir / "custom" / f"{custom_name}.png"
+        if custom_icon_path.exists():
+            Custom = _import_node_class("diagrams", "Custom")
+            if Custom:
+                def custom_icon_wrapper(label: str = ""):
+                    return Custom(label, str(custom_icon_path))
+                print(f"[DEBUG] Using custom:// icon: {custom_icon_path}")
+                return custom_icon_wrapper
+        print(f"[WARN] custom:// icon not found: {custom_icon_path}")
+
+    # Try icons/{provider}/ directory
+    if provider:
+        provider_icon_path = icons_dir / provider / f"{t_no_prefix}.png"
+        if provider_icon_path.exists():
+            Custom = _import_node_class("diagrams", "Custom")
+            if Custom:
+                def custom_icon_wrapper(label: str = ""):
+                    return Custom(label, str(provider_icon_path))
+                print(f"[DEBUG] Using provider icon: {provider_icon_path}")
+                return custom_icon_wrapper
+
+    # Try icons/custom/ directory
+    custom_icon_path = icons_dir / "custom" / f"{t_no_prefix}.png"
+    if custom_icon_path.exists():
+        Custom = _import_node_class("diagrams", "Custom")
+        if Custom:
+            def custom_icon_wrapper(label: str = ""):
+                return Custom(label, str(custom_icon_path))
+            print(f"[DEBUG] Using custom icon: {custom_icon_path}")
+            return custom_icon_wrapper
+
+    # Fallback to provider general icon
+    if provider:
+        general_icon_path = icons_dir / provider / "general.png"
+        if general_icon_path.exists():
+            Custom = _import_node_class("diagrams", "Custom")
+            if Custom:
+                def custom_icon_wrapper(label: str = ""):
+                    return Custom(label, str(general_icon_path))
+                print(f"[WARN] Fallback to provider general icon: {general_icon_path}")
+                return custom_icon_wrapper
+
+    # Fallback to icons/custom/generic.png
+    generic_icon_path = icons_dir / "custom" / "generic.png"
+    if generic_icon_path.exists():
+        Custom = _import_node_class("diagrams", "Custom")
+        if Custom:
+            def custom_icon_wrapper(label: str = ""):
+                return Custom(label, str(generic_icon_path))
+            print(f"[WARN] Fallback to generic icon: {generic_icon_path}")
+            return custom_icon_wrapper
+
+    print(f"[ERROR] No PNG icon found for {terraform_resource_type}, returning None.")
+    return None
 
     # Try to load icon path catalog
     cloud_icons = load_cloud_icons()
@@ -2045,238 +2100,127 @@ def _icon_class_for(terraform_resource_type: str):
     repo_root = Path(__file__).resolve().parents[1]
     icons_dir = repo_root / "icons"
 
-    # FIRST: Try comprehensive service mappings (diagrams library priority)
-    comprehensive_mappings_file = (
-        repo_root / "tools" / "comprehensive_service_mappings.json"
-    )
+
+    # --- FIXED LOGIC: 1. Mapping file, 2. Normalization, 3. PNG fallback ---
+    repo_root = Path(__file__).resolve().parents[1]
+    comprehensive_mappings_file = repo_root / "tools" / "comprehensive_service_mappings.json"
+    service_mappings = None
     if comprehensive_mappings_file.exists():
         try:
             with open(comprehensive_mappings_file, "r") as f:
                 service_mappings = json.load(f)
-
-            # Get provider for this resource
-            resource_provider = _guess_provider(terraform_resource_type).lower()
-            if resource_provider == "azurerm":
-                resource_provider = "azure"
-            elif resource_provider == "google":
-                resource_provider = "gcp"
-            elif resource_provider == "other":
-                pass  # Skip comprehensive mappings for unknown providers
-
-            provider_normalized = resource_provider
-
-            t_clean = terraform_resource_type.lower()
-            for prefix in ("aws_", "azurerm_", "google_", "oci_", "ibm_"):
-                if t_clean.startswith(prefix):
-                    t_clean = t_clean[len(prefix) :]
-                    break
-
-            # Extract base service name from resource type
-            # Examples: s3_bucket -> s3, storage_account -> storage_account, compute_instance -> compute_instance
-            parts = t_clean.split("_")
-
-            # For some services, we need the full service name (e.g., storage_account, compute_instance)
-            # For others, just the first part (e.g., athena, glue)
-            service_name = parts[0]  # Default to first part
-
-            # Special cases where we need multi-part service names
-            provider_mappings = service_mappings.get(provider_normalized, {})
-
-            # Check four-part names first (highest priority)
-            if len(parts) >= 4:
-                four_part = f"{parts[0]}_{parts[1]}_{parts[2]}_{parts[3]}"
-                if four_part in provider_mappings:
-                    service_name = four_part
-
-            # Check three-part names
-            if (
-                len(parts) >= 3 and service_name == parts[0]
-            ):  # Only if we haven't found a match yet
-                three_part = f"{parts[0]}_{parts[1]}_{parts[2]}"
-                if three_part in provider_mappings:
-                    service_name = three_part
-
-            # Then check two-part names
-            if (
-                len(parts) >= 2 and service_name == parts[0]
-            ):  # Only if we haven't found a match yet
-                two_part = f"{parts[0]}_{parts[1]}"
-                if two_part in provider_mappings:
-                    service_name = two_part
-
-            # Special service name mappings and aliases
-            if service_name == "wafv2":
-                service_name = "waf"  # WAF v2 uses the same icon as WAF
-            elif service_name == "apigatewayv2":
-                service_name = "apigateway"  # API Gateway v2 uses same icon
-            elif service_name == "opensearch":
-                service_name = (
-                    "elasticsearch"  # OpenSearch is successor to Elasticsearch
-                )
-            elif service_name == "msk":
-                service_name = "kinesis"  # MSK is managed Kafka, uses Kinesis icon
-            elif service_name == "fargate":
-                service_name = "ecs"  # Fargate is part of ECS
-            elif service_name == "app_runner":
-                service_name = "elasticbeanstalk"  # App Runner is similar to EB
-            elif service_name == "controltower":
-                service_name = "organizations"  # Control Tower extends Organizations
-            elif service_name == "memorydb":
-                service_name = "elasticache"  # MemoryDB is Redis-compatible
-            elif service_name == "detective":
-                service_name = "guardduty"  # Detective works with GuardDuty
-
-            if (
-                provider_normalized in service_mappings
-                and service_name in service_mappings[provider_normalized]
-            ):
-                service_info = service_mappings[provider_normalized][service_name]
-                category_name = service_info["category"]
-                class_name = service_info["class"]
-
-                # Try diagrams library first
-                try:
-                    # Import provider module (e.g., diagrams.aws)
-                    provider_module = __import__(
-                        f"diagrams.{provider_normalized}", fromlist=[category_name]
-                    )
-                    category_module = getattr(provider_module, category_name)
-                    icon_class = getattr(category_module, class_name)
-                    return icon_class
-                    provider_mod = __import__(
-                        f"diagrams.{provider_normalized}",
-                        fromlist=[provider_normalized],
-                    )
-                    if provider_mod is not None:
-                        # Import category module (e.g., diagrams.aws.analytics)
-                        category_mod = __import__(
-                            f"diagrams.{provider_normalized}.{category_name}",
-                            fromlist=[category_name],
-                        )
-                        if category_mod is not None and hasattr(
-                            category_mod, class_name
-                        ):
-                            service_class = getattr(category_mod, class_name)
-                            if os.getenv("AUTO_ARCH_DEBUG"):
-                                print(
-                                    f"[auto-arch-diagram] Using diagrams library: {provider_normalized}.{category_name}.{class_name} for {service_name}"
-                                )
-                            return service_class
-                except Exception:
-                    pass
-
-                # Fallback to custom downloaded icons
-                category_dir = icons_dir / provider_normalized / category_name
-                icon_path = category_dir / f"{service_name}.png"
-                if icon_path.exists():
-                    try:
-                        Custom = _import_node_class("diagrams", "Custom")
-                        if Custom is not None:
-
-                            def custom_icon_wrapper(label: str = ""):
-                                return Custom(label, str(icon_path))
-
-                            if os.getenv("AUTO_ARCH_DEBUG"):
-                                print(
-                                    f"[auto-arch-diagram] Using custom icon: {icon_path}"
-                                )
-                            return custom_icon_wrapper
-                    except Exception:
-                        pass
-        except Exception as e:
-            if os.getenv("AUTO_ARCH_DEBUG"):
-                print(f"[auto-arch-diagram] Error loading comprehensive mappings: {e}")
-
-    # SECOND: Custom icons are handled by _load_custom_icon (called first in the flow)
-
-    # THIRD: Fallback to legacy logic
-    t = terraform_resource_type.lower()
-
-    # Provider and service module mapping
-    provider_map = {
-        "aws": "diagrams.aws",
-        "azurerm": "diagrams.azure",
-        "google": "diagrams.gcp",
-        "oci": "diagrams.oracle",
-        "ibm": "diagrams.ibm",
-    }
-
-    # Try to load icon path catalog
-    cloud_icons = load_cloud_icons()
-
-    # Try to load dynamic service lists
-    cloud_services = load_cloud_services()
-
-    # Fallback hardcoded service_map (legacy)
-    service_map = {
-        "vpc": "network",
-        "subnet": "network",
-        "route": "network",
-        "gateway": "network",
-        "nat": "network",
-        "vpn": "network",
-        "elb": "network",
-        "alb": "network",
-        "nlb": "network",
-        "lambda": "compute",
-        "ec2": "compute",
-        "instance": "compute",
-        "eks": "compute",
-        "ecs": "compute",
-        "batch": "compute",
-        "s3": "storage",
-        "ebs": "storage",
-        "efs": "storage",
-        "fsx": "storage",
-        "rds": "database",
-        "dynamodb": "database",
-        "aurora": "database",
-        "neptune": "database",
-        "redshift": "database",
-        "glue": "database",
-        "athena": "database",
-        "sqs": "integration",
-        "sns": "integration",
-        "kinesis": "integration",
-        "eventbridge": "integration",
-        "api": "integration",
-        "step": "integration",
-        "iam": "security",
-        "kms": "security",
-        "secretsmanager": "security",
-        "cloudtrail": "security",
-        "guardduty": "security",
-        "waf": "security",
-        "cloudwatch": "management",
-        "xray": "management",
-        "trustedadvisor": "management",
-    }
-
-    t = terraform_resource_type.lower()
-    provider = None
-    for pfx in provider_map:
-        if t.startswith(f"{pfx}_"):
-            provider = pfx
-            t = t[len(pfx) + 1 :]
-            break
-    else:
-        provider = "other"
-
-    service = service_map.get(t, "general")
-
-    # Validate that the target module exists
-    modpath = f"{provider}.{service}"
-    target_mod = _import_node_class("diagrams", modpath)
-    if target_mod is not None:
-        node_cls_name = service.title()
-        # Use getattribute for dynamic class lookup
-        try:
-            return getattr(target_mod, node_cls_name)
         except Exception:
-            pass
+            service_mappings = None
 
-    # Fallback to General for unknown services
-    return _import_node_class("diagrams", "diagrams.general.General")
+    # Normalize provider
+    resource_provider = _guess_provider(terraform_resource_type).lower()
+    if resource_provider == "azurerm":
+        resource_provider = "azure"
+    elif resource_provider == "google":
+        resource_provider = "gcp"
+    provider_normalized = resource_provider
+
+    t_clean = terraform_resource_type.lower()
+    for prefix in ("aws_", "azurerm_", "google_", "oci_", "ibm_"):
+        if t_clean.startswith(prefix):
+            t_clean = t_clean[len(prefix) :]
+            break
+    parts = t_clean.split("_")
+    service_name = "_".join(parts)
+
+    # 1. Try comprehensive mapping file
+    if service_mappings and provider_normalized in service_mappings:
+        provider_map = service_mappings[provider_normalized]
+        # Try longest match first
+        for n in range(len(parts), 0, -1):
+            candidate = "_".join(parts[:n])
+            if candidate in provider_map:
+                info = provider_map[candidate]
+                category = info["category"]
+                cls = info["class"]
+                try:
+                    mod_path = f"diagrams.{provider_normalized}.{category}"
+                    icon_cls = _import_node_class(mod_path, cls)
+                    if icon_cls:
+                        print(f"[DEBUG] Using diagrams class (mapping): {mod_path}.{cls}")
+                        return icon_cls
+                except Exception as e:
+                    print(f"[DEBUG] Mapping diagrams import failed: {mod_path}.{cls}: {e}")
+                break
+
+    # 2. Improved normalization/heuristics for multi-word services
+    # e.g. aws_cloudwatch_event_target -> diagrams.aws.management.CloudwatchEventTarget
+    tried_classes = set()
+    # Try all possible category/class splits
+    for i in range(1, len(parts)):
+        category = parts[0] if i == 1 else "_".join(parts[:i])
+        class_parts = parts[i:]
+        if not class_parts:
+            continue
+        # CamelCase for class name
+        class_guess = "".join([p.title() for p in class_parts])
+        mod_path = f"diagrams.{provider_normalized}.{category}"
+        for variant in [class_guess, class_guess + "s", class_guess.rstrip("s")]:
+            if not variant or variant in tried_classes:
+                continue
+            tried_classes.add(variant)
+            try:
+                icon_cls = _import_node_class(mod_path, variant)
+                if icon_cls:
+                    print(f"[DEBUG] Using diagrams class (normalized): {mod_path}.{variant}")
+                    return icon_cls
+            except Exception as e:
+                print(f"[DEBUG] Normalized diagrams import failed: {mod_path}.{variant}: {e}")
+
+    # 3. Try all categories in provider module for a matching class (fuzzy/partial match)
+    try:
+        provider_mod = __import__(f"diagrams.{provider_normalized}", fromlist=["*"])
+        resource_camel = "".join([p.title() for p in parts[1:]]) if len(parts) > 1 else "".join([p.title() for p in parts])
+        resource_lower = resource_camel.lower()
+        for attr in dir(provider_mod):
+            if attr.startswith("__"):
+                continue
+            try:
+                cat_mod = getattr(provider_mod, attr)
+                for class_name in dir(cat_mod):
+                    if class_name.startswith("__"):
+                        continue
+                    # Fuzzy/partial match: class name contains resource name (case-insensitive)
+                    if resource_lower and resource_lower in class_name.lower():
+                        icon_cls = getattr(cat_mod, class_name, None)
+                        if icon_cls:
+                            print(f"[DEBUG] Using diagrams class (fuzzy/partial): diagrams.{provider_normalized}.{attr}.{class_name}")
+                            return icon_cls
+            except Exception:
+                continue
+    except Exception as e:
+        print(f"[DEBUG] Fuzzy diagrams provider scan failed: {e}")
+
+    # 4. Fallback to PNG/custom icon
+    custom_icon = _load_custom_icon(terraform_resource_type)
+    if custom_icon is not None:
+        print(f"[WARN] Fallback to PNG icon for {terraform_resource_type}")
+        return custom_icon
+
+    # 5. Ultimate fallback: Use BulletproofMapper for guaranteed mapping
+    global _ultimate_mapper
+    if _ultimate_mapper is None:
+        _ultimate_mapper = BulletproofMapper()
+    
+    try:
+        ultimate_icon = _ultimate_mapper.get_icon(terraform_resource_type)
+        if ultimate_icon:
+            print(f"[INFO] BulletproofMapper found icon for {terraform_resource_type}")
+            return ultimate_icon
+    except Exception as e:
+        print(f"[DEBUG] BulletproofMapper failed: {e}")
+    
+    # 6. Absolute final fallback to diagrams.generic.blank.Blank (should never happen now)
+    print(f"[ERROR] All mapping failed for {terraform_resource_type}, using diagrams.generic.blank.Blank")
+    Blank = _import_node_class("diagrams.generic.blank", "Blank")
+    if Blank:
+        return Blank
+    return None
 
 
 def _ensure_generic_fallback_icons():
