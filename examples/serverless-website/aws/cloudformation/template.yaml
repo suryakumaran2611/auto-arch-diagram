@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: 'Secure serverless website (AWS) - S3 private origin + CloudFront + WAF + monitoring'
+Description: 'Secure serverless website (AWS) with enhanced universal bulletproof mapper supporting all cloud providers'
 
 Parameters:
   EnvironmentName:

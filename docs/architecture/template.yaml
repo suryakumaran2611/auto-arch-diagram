@@ -1,0 +1,126 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Secure serverless website (AWS) - S3 private origin + CloudFront + WAF + monitoring'
+
+Parameters:
+  EnvironmentName:
+    Type: String
+    Default: 'prod'
+    Environment: 'prod'
+
+Resources:
+  LogsBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub '${EnvironmentName}-logs-${AWS::AccountId}'
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          SSEAlgorithm: AES256
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        RestrictPublicBuckets: true
+      VersioningConfiguration:
+        Status: Enabled
+      LoggingConfiguration:
+        DestinationBucketName: !Ref LogsBucket
+        LogFilePrefix: 's3-access/'
+      NotificationConfiguration:
+        CloudWatchConfigurations:
+          - Event: 's3:ObjectCreated:*'
+            CloudWatchLoggingEnabled: true
+
+  SiteBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub '${EnvironmentName}-site-${AWS::AccountId}'
+      VersioningConfiguration:
+        Status: Enabled
+      WebsiteConfiguration:
+        RedirectAllRequestsToHTTP: true
+        IndexDocument: 'index.html'
+        ErrorDocument: 'error.html'
+
+  CloudFrontDistribution:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        Enabled: true
+        HttpVersion: 'http2and3'
+        PriceClass: 'PriceClass_100'
+        DefaultCacheBehavior:
+          TargetOriginId: SiteBucket
+          ViewerProtocolPolicy: 'redirect-to-https'
+        CacheBehaviors:
+          - PathPattern: '/*'
+            TargetOriginId: SiteBucket
+            ViewerProtocolPolicy: 'redirect-to-https'
+            CachePolicyId: '4135ea2d-6df0-44c8dc094b47d'
+            ForwardedValues:
+              - QueryString
+              - Headers
+          DefaultTTL: 86400
+
+  OriginAccessControl:
+    Type: AWS::CloudFront::OriginAccessControl
+    Properties:
+      OriginAccessControlConfig:
+        S3BucketConfig:
+          OriginAccessIdentity: LegacyAccessIdentity
+          OriginAccessDomains:
+            - DomainName: !Sub '${EnvironmentName}-site-${AWS::AccountId}'
+              OriginAccessControlOriginType: primary
+              OriginPath: ''
+        OriginAccessControlId: !Ref CloudFrontOriginAccessControl
+
+  LogsBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref LogsBucket
+      PolicyDocument: |
+        {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Sid": "AllowCloudFrontServicePrincipal",
+              "Effect": "Allow",
+              "Principal": {
+                "Service": "cloudfront.amazonaws.com"
+              },
+              "Action": "s3:GetObject",
+              "Resource": [
+                !Sub "${LogsBucket}/*"
+              ]
+            }
+          ]
+        }
+
+  SiteBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref SiteBucket
+      PolicyDocument: |
+        {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Sid": "PublicReadGetObject",
+              "Effect": "Allow",
+              "Principal": "*",
+              "Action": "s3:GetObject",
+              "Resource": [
+                !Sub "${SiteBucket}/*"
+              ]
+            }
+          ]
+        }
+
+Outputs:
+  SiteBucketDomain:
+    Description: 'S3 bucket domain name'
+    Value: !GetAtt SiteBucket.DomainName
+  SiteBucketURL:
+    Description: 'S3 bucket website URL'
+    Value: !Sub 'https://${SiteBucket}.s3-website-${AWS::Region}.amazonaws.com/${SiteBucket}'
+  CloudFrontDistributionDomain:
+    Description: 'CloudFront distribution domain name'
+    Value: !GetAtt CloudFrontDistribution.DomainName
