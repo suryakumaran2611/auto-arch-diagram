@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Auto Architecture Diagram - Generate Cloud Diagrams from IaC (100+ Services)</title>
-    <meta name="description" content="Automatically generate professional architecture diagrams from Terraform, CloudFormation, and other IaC files. Supports 100+ AWS, Azure, and GCP services with automated updates. Perfect for CI/CD pipelines.">
+    <title>Auto Architecture Diagram - Generate Cloud Diagrams from IaC</title>
+    <meta name="description" content="Automatically generate professional architecture diagrams from Terraform, CloudFormation, and other IaC files. Perfect for CI/CD pipelines.">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono&display=swap" rel="stylesheet">
@@ -197,61 +197,6 @@
         .cloud-badge.aws .dot { background: var(--aws); }
         .cloud-badge.azure .dot { background: var(--azure); }
         .cloud-badge.gcp .dot { background: var(--gcp); }
-
-        /* Hero Announcement */
-        .hero-announcement {
-            margin-bottom: 24px;
-        }
-
-        .announcement-badge {
-            display: inline-block;
-            background: linear-gradient(135deg, var(--primary), var(--secondary));
-            color: white;
-            padding: 8px 16px;
-            border-radius: 20px;
-            font-size: 0.875rem;
-            font-weight: 600;
-            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
-            animation: pulse 2s infinite;
-        }
-
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.8; }
-        }
-
-        /* Stats Badges */
-        .stats-badges {
-            display: flex;
-            gap: 24px;
-            justify-content: center;
-            margin: 40px 0;
-        }
-
-        .stat-badge {
-            text-align: center;
-            padding: 16px;
-            background: var(--bg-card);
-            border-radius: 12px;
-            border: 1px solid var(--border);
-            min-width: 80px;
-        }
-
-        .stat-number {
-            font-size: 2rem;
-            font-weight: 700;
-            background: var(--gradient);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            margin-bottom: 4px;
-        }
-
-        .stat-label {
-            font-size: 0.875rem;
-            color: var(--text-muted);
-            font-weight: 500;
-        }
 
         /* Demo Section */
         .demo {
@@ -625,46 +570,6 @@
             text-decoration: underline;
         }
 
-        .footer-content {
-            display: flex;
-            flex-direction: column;
-            gap: 24px;
-            align-items: center;
-        }
-
-        .footer-stats {
-            display: flex;
-            gap: 32px;
-        }
-
-        .footer-stat {
-            text-align: center;
-        }
-
-        .footer-number {
-            display: block;
-            font-size: 1.5rem;
-            font-weight: 700;
-            background: var(--gradient);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-
-        .footer-label {
-            display: block;
-            font-size: 0.875rem;
-            color: var(--text-muted);
-            margin-top: 4px;
-        }
-
-        @media (max-width: 640px) {
-            .footer-stats {
-                flex-direction: column;
-                gap: 16px;
-            }
-        }
-
         /* Responsive */
         @media (max-width: 968px) {
             .features-grid {
@@ -675,61 +580,6 @@
             }
             .formats-grid {
                 grid-template-columns: repeat(2, 1fr);
-            }
-        }
-
-        /* Latest Features Section */
-        .latest-features {
-            padding: 100px 0;
-            background: linear-gradient(180deg, rgba(124, 58, 237, 0.05) 0%, transparent 100%);
-        }
-
-        /* Maintenance Section */
-        .maintenance {
-            padding: 100px 0;
-            background: var(--bg-card);
-        }
-
-        .maintenance-features {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 24px;
-            margin-top: 32px;
-        }
-
-        .maintenance-feature {
-            text-align: center;
-            padding: 24px;
-            background: var(--bg-dark);
-            border-radius: 12px;
-            border: 1px solid var(--border);
-        }
-
-        .maintenance-feature .feature-icon {
-            width: 48px;
-            height: 48px;
-            background: var(--gradient);
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin: 0 auto 16px;
-            font-size: 1.5rem;
-        }
-
-        .maintenance-feature h4 {
-            font-size: 1rem;
-            margin-bottom: 8px;
-        }
-
-        .maintenance-feature p {
-            color: var(--text-muted);
-            font-size: 0.875rem;
-        }
-
-        @media (max-width: 968px) {
-            .maintenance-features {
-                grid-template-columns: 1fr;
             }
         }
 
@@ -747,10 +597,6 @@
                 flex-direction: column;
                 align-items: center;
             }
-            .stats-badges {
-                flex-direction: column;
-                align-items: center;
-            }
         }
     </style>
 </head>
@@ -762,10 +608,8 @@
                 <li><a href="#features">Features</a></li>
                 <li><a href="#custom-icons">Custom Icons</a></li>
                 <li><a href="#gallery">Gallery</a></li>
-                <li><a href="#maintenance">Maintenance</a></li>
                 <li><a href="#usage">Usage</a></li>
                 <li><a href="USER_GUIDE.md">User Guide</a></li>
-                <li><a href="UPDATE_GITHUB_PAGES_README.md">Update Scripts</a></li>
                 <li><a href="https://github.com/suryakumaran2611/auto-arch-diagram">GitHub</a></li>
             </ul>
             <a href="https://github.com/marketplace/actions/auto-architecture-diagram" class="btn btn-primary">
@@ -776,47 +620,21 @@
 
     <section class="hero">
         <div class="container">
-            <div class="hero-announcement">
-                <div class="announcement-badge">✨ Latest: 63+ New Services, Network Labels, Enhanced Examples</div>
-            </div>
             <h1>Auto-Generate <span>Architecture Diagrams</span><br>from Your IaC</h1>
             <p>Transform Terraform, CloudFormation, and other Infrastructure-as-Code into beautiful, professional architecture diagrams. Automatically. In your CI/CD pipeline.</p>
-            <div class="stats-badges">
-                <div class="stat-badge">
-                    <div class="stat-number">100+</div>
-                    <div class="stat-label">Services</div>
-                </div>
-                <div class="stat-badge">
-                    <div class="stat-number">7</div>
-                    <div class="stat-label">Examples</div>
-                </div>
-                <div class="stat-badge">
-                    <div class="stat-number">4</div>
-                    <div class="stat-label">Formats</div>
-                </div>
-            </div>
-        <div class="hero-buttons">
-            <a href="#examples">Examples</a></li>
-            <a href="#features">Features</a></li>
-            <li><a href="#custom-icons">Custom Icons</a></li>
-            <li><a href="#gallery">Gallery</a></li>
-            <li><a href="#maintenance">Maintenance</a></li>
-            <li><a href="#usage">Usage</a></li>
-            <li><a href="#USER_GUIDE.md">User Guide</a></li>
-            <li><a href="#UPDATE_GITHUB_PAGES_README.md">Update Scripts</a></li>
-            <li><a href="https://github.com/suryakumaran2611/auto-arch-diagram">GitHub</a></li>
-        </ul>
-        <a href="https://github.com/marketplace/actions/auto-architecture-diagram" class="btn btn-primary">
-            Get Action
-        </a>
+            <div class="hero-buttons">
+                <a href="https://github.com/marketplace/actions/auto-architecture-diagram" class="btn btn-primary">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+                    GitHub Marketplace
+                </a>
                 <a href="https://github.com/suryakumaran2611/auto-arch-diagram" class="btn btn-secondary">
                     View Source
                 </a>
             </div>
             <div class="cloud-badges">
-                <div class="cloud-badge aws"><span class="dot"></span> AWS (38 services)</div>
-                <div class="cloud-badge azure"><span class="dot"></span> Azure (13 services)</div>
-                <div class="cloud-badge gcp"><span class="dot"></span> GCP (12 services)</div>
+                <div class="cloud-badge aws"><span class="dot"></span> AWS</div>
+                <div class="cloud-badge azure"><span class="dot"></span> Azure</div>
+                <div class="cloud-badge gcp"><span class="dot"></span> GCP</div>
             </div>
         </div>
     </section>
@@ -828,54 +646,47 @@
                                         <div class="demo-code-header">
                                                 <span></span><span></span><span></span>
                                         </div>
-                                        <pre><code><span class="comment"># template.yaml (Enhanced CloudFormation)</span>
+                                        <pre><code><span class="comment"># template.yaml (CloudFormation)</span>
 AWSTemplateFormatVersion: '2010-09-09'
-Description: 'Secure serverless website (AWS) - S3 private origin + CloudFront + WAF + monitoring'
-
-Parameters:
-  EnvironmentName:
-    Type: String
-    Default: 'prod'
+Description: Secure serverless website (AWS) - S3 private origin + CloudFront + WAF
 
 Resources:
-  LogsBucket:
-    Type: AWS::S3::Bucket
-    Properties:
-      BucketName: !Sub '${EnvironmentName}-logs-${AWS::AccountId}'
-      BucketEncryption:
-        ServerSideEncryptionConfiguration:
-          - ServerSideEncryptionByDefault:
-              SSEAlgorithm: AES256
-      PublicAccessBlockConfiguration:
-        BlockPublicAcls: true
-        BlockPublicPolicy: true
-        IgnorePublicAcls: true
-        RestrictPublicBuckets: true
+    LogsBucket:
+        Type: AWS::S3::Bucket
+        Properties:
+            BucketEncryption:
+                ServerSideEncryptionConfiguration:
+                    - ServerSideEncryptionByDefault:
+                            SSEAlgorithm: AES256
 
-  SiteBucket:
-    Type: AWS::S3::Bucket
-    Properties:
-      BucketName: !Sub '${EnvironmentName}-site-${AWS::AccountId}'
-      VersioningConfiguration:
-        Status: Enabled
-      LoggingConfiguration:
-        DestinationBucketName: !Ref LogsBucket
-        LogFilePrefix: 's3-access/'
+    SiteBucket:
+        Type: AWS::S3::Bucket
+        Properties:
+            BucketEncryption:
+                ServerSideEncryptionConfiguration:
+                    - ServerSideEncryptionByDefault:
+                            SSEAlgorithm: AES256
+            VersioningConfiguration:
+                Status: Enabled
+            LoggingConfiguration:
+                DestinationBucketName: !Ref LogsBucket
+                LogFilePrefix: s3/
 
-  CloudFrontDistribution:
-    Type: AWS::CloudFront::Distribution
-    Properties:
-      DistributionConfig:
-        Enabled: true
-        HttpVersion: 'http2and3'
-        Origins:
-          - Id: s3-site
-            DomainName: !GetAtt SiteBucket.RegionalDomainName
-            S3OriginConfig: {}
-        DefaultCacheBehavior:
-          TargetOriginId: s3-site
-          ViewerProtocolPolicy: 'redirect-to-https'
-          CachePolicyId: '4135ea2d-6df8-44a3-9df3-4b5a84be39ad'
+    SiteBucketPublicAccessBlock:
+        Type: AWS::S3::BucketPublicAccessBlock
+        Properties:
+            Bucket: !Ref SiteBucket
+            BlockPublicAcls: true
+            IgnorePublicAcls: true
+            BlockPublicPolicy: true
+            RestrictPublicBuckets: true
+
+    WafAcl:
+        Type: AWS::WAFv2::WebACL
+        Properties:
+            Name: auto-arch-waf
+            Scope: CLOUDFRONT
+            DefaultAction: ...
 </code></pre>
                                 </div>
                                 <div class="demo-image">
@@ -892,65 +703,16 @@ Resources:
                 <h2>Why Auto Architecture Diagram?</h2>
                 <p>Keep your documentation in sync with your infrastructure, automatically.</p>
             </div>
-        <div class="features-grid">
-            <div class="feature-card">
-                <div class="feature-icon">🏗️</div>
-                <div class="feature-text">
-                    <div class="feature-title">CloudFormation Excellence</div>
-                    <div class="feature-description">
-                        Full support for AWS CloudFormation with Ref, GetAtt, Sub, and DependsOn. Intelligent arrow styling and automatic relationship inference.
-                    </div>
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">🔄</div>
+                    <h3>Always Up-to-Date</h3>
+                    <p>Diagrams regenerate on every PR, ensuring documentation never drifts from reality.</p>
                 </div>
-            </div>
-            <div class="feature-card">
-                <div class="feature-icon">📊</div>
-                <div class="feature-text">
-                    <div class="feature-title">AI-Powered Generation</div>
-                    <div class="feature-description">
-                        Optional AI mode for enhanced diagram generation with automatic AWS service detection and optimization.
-                    </div>
-                </div>
-            </div>
-            <div class="feature-card">
-                <div class="feature-icon">🎨</div>
-                <div class="feature-text">
-                    <div class="feature-title">Typography & Design</div>
-                    <div class="feature-description">
-                        Professional typography with Inter font family and consistent modern design system.
-                    </div>
-                </div>
-            </div>
-            <div class="feature-card">
-                <div class="feature-icon">✨</div>
-                <div class="feature-text">
-                    <div class="feature-title">Latest: 63+ AWS Services + Universal Mapping</div>
-                    <div class="feature-description">
-                        Enhanced bulletproof mapper with 100% success rate across AWS, Azure, GCP, OCI, IBM, and Alibaba Cloud providers. Zero-failure guarantee with proper icon fallbacks.
-                    </div>
-                </div>
-            </div>
-            <div class="feature-card">
-                <div class="feature-icon">🚀</div>
-                <div class="feature-text">
-                    <div class="feature-title">Multi-Format Support</div>
-                    <div class="feature-description">
-                        PNG, SVG, and JPG generation with comprehensive verification. GitHub Pages synchronization with automatic documentation updates.
-                    </div>
-                </div>
-            </div>
-            <div class="feature-card">
-                <div class="feature-icon">🧪</div>
-                <div class="feature-text">
-                    <div class="feature-title">Project Organization</div>
-                    <div class="feature-description">
-                        Clean, optimized project structure with comprehensive cleanup scripts. Separation of concerns (examples, tools, tests, docs, artifacts).
-                    </div>
-                </div>
-            </div>
                 <div class="feature-card">
                     <div class="feature-icon">☁️</div>
                     <h3>Multi-Cloud Support</h3>
-                    <p>Comprehensive support for AWS (38 services), Azure (13 services), and GCP (12 services) with official cloud icons.</p>
+                    <p>Native support for AWS, Azure, and GCP with official cloud icons and styling.</p>
                 </div>
                 <div class="feature-card">
                     <div class="feature-icon">📝</div>
@@ -1013,48 +775,6 @@ Resources:
                 <div class="custom-icons-demo-info">
                     <h4>Serverless Data Pipeline with Custom Icons</h4>
                     <p>A complete event-driven data pipeline architecture using custom icons for abstract concepts like data streams, event triggers, and processing stages.</p>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- Latest Features Section -->
-    <section class="latest-features">
-        <div class="container">
-            <div class="section-header">
-                <h2>🚀 Latest Features & Enhancements</h2>
-                <p>Recent improvements that make Auto Architecture Diagram even better.</p>
-            </div>
-            <div class="features-grid">
-                <div class="feature-card">
-                    <div class="feature-icon">🔗</div>
-                    <h3>63+ New Services</h3>
-                    <p>Added comprehensive support for VPC endpoints, Lambda layers, CloudFront functions, and more across AWS, Azure, and GCP.</p>
-                </div>
-                <div class="feature-card">
-                    <div class="feature-icon">🏷️</div>
-                    <h3>Network-Aware Labels</h3>
-                    <p>Multi-cloud diagrams now show network segregation with labels like "vpc aws network" and "s3 global".</p>
-                </div>
-                <div class="feature-card">
-                    <div class="feature-icon">🔧</div>
-                    <h3>Enhanced CloudFormation</h3>
-                    <p>Advanced CloudFormation templates with monitoring, security policies, and production-ready configurations.</p>
-                </div>
-                <div class="feature-card">
-                    <div class="feature-icon">📜</div>
-                    <h3>Automated Updates</h3>
-                    <p>Scripts to automatically regenerate and update all documentation images with latest code changes.</p>
-                </div>
-                <div class="feature-card">
-                    <div class="feature-icon">🎯</div>
-                    <h3>Icon Quality Assurance</h3>
-                    <p>Automated verification ensures all diagrams have the correct number of properly embedded icons.</p>
-                </div>
-                <div class="feature-card">
-                    <div class="feature-icon">🛠️</div>
-                    <h3>Service Name Aliases</h3>
-                    <p>Smart mapping for service variations (WAFv2→WAF, OpenSearch→Elasticsearch) prevents missing icons.</p>
                 </div>
             </div>
         </div>
@@ -1139,49 +859,8 @@ Resources:
                     </ul>
                     <a href="USER_GUIDE.md#confluence-publishing" class="btn btn-secondary">View Full User Guide →</a>
                 </div>
-        </div>
-    </section>
-
-    <!-- Maintenance Scripts Section -->
-    <section class="maintenance">
-        <div class="container">
-            <div class="section-header">
-                <h2>🛠️ Automated Maintenance</h2>
-                <p>Keep your documentation perfectly synchronized with your infrastructure code.</p>
             </div>
-            <div class="usage-card">
-                <h3>📋 Automated Image Updates</h3>
-                <div class="code-block">
-<pre><span class="comment"># Linux/macOS</span>
-./update_github_pages_images.sh
-
-<span class="comment"># Windows</span>
-update_github_pages_images.bat
-
-<span class="comment"># Python (Cross-Platform)</span>
-python update_github_pages_images.py</pre>
-                </div>
-                <p><strong>What it does:</strong> Regenerates all example diagrams, updates GitHub Pages images, and verifies icon quality automatically.</p>
-                <div class="maintenance-features">
-                    <div class="maintenance-feature">
-                        <div class="feature-icon">🔄</div>
-                        <h4>Regenerates 7 Diagrams</h4>
-                        <p>Updates all key examples with latest code changes</p>
-                    </div>
-                    <div class="maintenance-feature">
-                        <div class="feature-icon">📊</div>
-                        <h4>Quality Verification</h4>
-                        <p>Validates icon counts and diagram integrity</p>
-                    </div>
-                    <div class="maintenance-feature">
-                        <div class="feature-icon">🚀</div>
-                        <h4>One-Command Update</h4>
-                        <p>Complete documentation refresh in seconds</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
+        </section>
 
     <section class="formats" id="formats">
         <div class="container">
@@ -1223,17 +902,16 @@ python update_github_pages_images.py</pre>
             <div class="gallery-grid">
                 <div class="gallery-item featured">
                     <img src="images/mlops-multi-cloud.png" alt="MLOps Multi-Cloud Architecture">
-                     <div class="gallery-item-info">
-                         <h4>Multi-Cloud Storage (Network Segregation)</h4>
-                         <p>Simplified multi-cloud storage architecture with network segregation - AWS (aws-network), Azure (azure-network), and GCP (global) showing different network contexts.</p>
-                         <div class="tags">
-                             <span class="tag multi">Multi-Cloud</span>
-                             <span class="tag aws">AWS</span>
-                             <span class="tag azure">Azure</span>
-                             <span class="tag gcp">GCP</span>
-                             <span class="tag">Network Labels</span>
-                         </div>
-                     </div>
+                    <div class="gallery-item-info">
+                        <h4>MLOps Multi-Cloud Pipeline</h4>
+                        <p>Complete ML operations pipeline spanning AWS, Azure, and GCP with data processing, model training, and deployment stages.</p>
+                        <div class="tags">
+                            <span class="tag multi">Multi-Cloud</span>
+                            <span class="tag aws">AWS</span>
+                            <span class="tag azure">Azure</span>
+                            <span class="tag gcp">GCP</span>
+                        </div>
+                    </div>
                 </div>
                 <div class="gallery-item">
                     <img src="images/aws-serverless.png" alt="AWS Serverless Website">
@@ -1303,31 +981,13 @@ python update_github_pages_images.py</pre>
 
     <footer>
         <div class="container">
-            <div class="footer-content">
-                <div class="footer-stats">
-                    <div class="footer-stat">
-                        <span class="footer-number">100+</span>
-                        <span class="footer-label">Services Supported</span>
-                    </div>
-                    <div class="footer-stat">
-                        <span class="footer-number">7</span>
-                        <span class="footer-label">Example Diagrams</span>
-                    </div>
-                    <div class="footer-stat">
-                        <span class="footer-number">4</span>
-                        <span class="footer-label">Output Formats</span>
-                    </div>
-                </div>
-                <p>
-                    Built with ❤️ by <a href="https://github.com/suryakumaran2611">@suryakumaran2611</a>
-                    &nbsp;•&nbsp;
-                    <a href="https://github.com/suryakumaran2611/auto-arch-diagram/blob/main/LICENSE">License</a>
-                    &nbsp;•&nbsp;
-                    <a href="https://github.com/suryakumaran2611/auto-arch-diagram">GitHub</a>
-                    &nbsp;•&nbsp;
-                    <a href="UPDATE_GITHUB_PAGES_README.md">Update Scripts</a>
-                </p>
-            </div>
+            <p>
+                Built with ❤️ by <a href="https://github.com/suryakumaran2611">@suryakumaran2611</a>
+                &nbsp;•&nbsp;
+                <a href="https://github.com/suryakumaran2611/auto-arch-diagram/blob/main/LICENSE">License</a>
+                &nbsp;•&nbsp;
+                <a href="https://github.com/suryakumaran2611/auto-arch-diagram">GitHub</a>
+            </p>
         </div>
     </footer>
 </body>
