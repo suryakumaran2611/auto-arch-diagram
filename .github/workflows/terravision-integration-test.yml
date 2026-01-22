@@ -1,0 +1,512 @@
+name: TerraVision Integration Test
+
+on:
+  push:
+    branches: [ main, develop, '*' ]
+    paths:
+      - 'examples/**'
+      - 'tools/**'
+      - 'test_terravision_integration.py'
+      - 'mock_config_generator.py'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'examples/**'
+      - 'tools/**'
+  workflow_dispatch:
+    inputs:
+      test_all_examples:
+        description: 'Test all Terraform examples with TerraVision'
+        required: false
+        default: false
+        type: boolean
+      specific_example:
+        description: 'Test specific example folder'
+        required: false
+        default: ''
+        type: string
+      enable_terravision:
+        description: 'Enable TerraVision enhanced analysis'
+        required: false
+        default: true
+        type: boolean
+      create_pr:
+        description: 'Create PR with diagram updates'
+        required: false
+        default: true
+        type: boolean
+      force_update:
+        description: 'Force update even if no changes detected'
+        required: false
+        default: false
+        type: boolean
+
+env:
+  PYTHON_VERSION: '3.12'
+  NODE_VERSION: '18'
+
+jobs:
+  discover-examples:
+    runs-on: ubuntu-latest
+    outputs:
+      example_dirs: ${{ steps.discover.outputs.example_dirs }}
+      terraform_files: ${{ steps.discover.outputs.terraform_files }}
+      all_examples: ${{ steps.discover.outputs.all_examples }}
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      
+      - name: Discover Terraform Examples
+        id: discover
+        run: |
+          echo "Discovering Terraform examples..."
+          
+          # Find all directories containing Terraform files using Python
+          python3 << 'EOF'
+          import os
+          import json
+          from pathlib import Path
+
+          def find_terraform_examples():
+              examples_dir = Path("examples")
+              example_dirs = []
+              terraform_files = []
+              
+              # Walk through examples directory
+              for item in examples_dir.iterdir():
+                  if item.is_dir():
+                      # Check if directory contains Terraform files
+                      tf_files = list(item.glob("*.tf"))
+                      if tf_files:
+                          example_dirs.append(str(item.name))
+                          terraform_files.extend([str(f.relative_to(examples_dir)) for f in tf_files])
+              
+              return example_dirs, terraform_files
+
+          if __name__ == "__main__":
+              example_dirs, terraform_files = find_terraform_examples()
+              
+              if not example_dirs:
+                  print("example_dirs=[]")
+                  print("terraform_files=[]")
+                  print("all_examples=false")
+              else:
+                  print(f"example_dirs={json.dumps(example_dirs)}")
+                  print(f"terraform_files={json.dumps(terraform_files)}")
+                  print("all_examples=true")
+          EOF
+          
+          # Capture the output
+          read -r EXAMPLE_DIRS TERRAFORM_FILES ALL_EXAMPLES
+          
+          echo "Found Terraform examples:"
+          echo "$EXAMPLE_DIRS" | while read -r dir; do
+            echo "   - $dir"
+          done
+          
+          echo "Found Terraform files:"
+          echo "$TERRAFORM_FILES" | while read -r file; do
+            echo "   - $file"
+          done
+          
+          echo "example_dirs=$EXAMPLE_DIRS" >> $GITHUB_OUTPUT
+          echo "terraform_files=$TERRAFORM_FILES" >> $GITHUB_OUTPUT
+          echo "all_examples=true" >> $GITHUB_OUTPUT
+      
+      - name: List Discovered Examples
+        run: |
+          echo "Discovered Examples:"
+          echo '${{ steps.discover.outputs.example_dirs }}' | jq -r '.[]' | while read example; do
+            echo "$example"
+          done
+
+  test-terravision:
+    needs: discover-examples
+    if: needs.discover.outputs.all_examples
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        example: ${{ fromJson(needs.discover.outputs.example_dirs) }}
+    outputs:
+      test_results: ${{ steps.test.outputs.test_results }}
+      diagram_files: ${{ steps.test.outputs.diagram_files }}
+      pr_number: ${{ steps.create-pr.outputs.pr_number || 'null' }}
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.ref }}
+      
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      
+      - name: Install Dependencies
+        run: |
+          echo "Installing dependencies..."
+          pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install -r requirements-dev.txt
+          
+          # Install additional testing dependencies
+          pip install pytest pytest-cov pytest-mock
+          pip install checkov tfsec
+          pip install graphviz
+          
+          echo "Dependencies installed successfully"
+      
+      - name: Setup Mock Environment
+        if: github.event.inputs.enable_terravision == 'true'
+        run: |
+          echo "Setting up mock environment for TerraVision testing..."
+          
+          # Generate production mock configuration
+          python tools/mock_config_generator.py \
+            --profile production \
+            --output-dir ./test-mock
+          
+          # Load mock environment
+          if [ -f "./test-mock/production/github.env" ]; then
+            cat ./test-mock/production/github.env >> $GITHUB_ENV
+            echo "Mock environment loaded"
+          fi
+          
+          echo "Mock environment configured"
+          echo "   AWS Region: $AWS_DEFAULT_REGION"
+          echo "   GCP Project: $GOOGLE_PROJECT_ID"
+          echo "   Security Level: $TF_VAR_security_level"
+      
+      - name: Test TerraVision Integration
+        id: test
+        run: |
+          echo "Testing TerraVision integration for ${{ matrix.example }}..."
+          
+          # Create test directory
+          mkdir -p test-results/${{ matrix.example }}
+          
+          # Run TerraVision enhanced analysis
+          if [ "${{ github.event.inputs.enable_terravision }}" = "true" ]; then
+            echo "Running TerraVision enhanced analysis..."
+            
+            python tools/generate_arch_diagram.py \
+              examples/${{ matrix.example }}/ \
+              --enable-terravision \
+              --out-drawio test-results/${{ matrix.example }}/enhanced-architecture.drawio \
+              --out-md test-results/${{ matrix.example }}/enhanced-analysis.md \
+              --out-mmd test-results/${{ matrix.example }}/enhanced-diagram.mmd \
+              --out-png test-results/${{ matrix.example }}/enhanced-architecture.png \
+              --out-svg test-results/${{ matrix.example }}/enhanced-architecture.svg
+              
+            ENHANCED_STATUS=$?
+            echo "Enhanced analysis completed with status: $ENHANCED_STATUS"
+          else
+            echo "Running standard analysis..."
+            
+            python tools/generate_arch_diagram.py \
+              examples/${{ matrix.example }}/ \
+              --out-drawio test-results/${{ matrix.example }}/standard-architecture.drawio \
+              --out-md test-results/${{ matrix.example }}/standard-analysis.md \
+              --out-mmd test-results/${{ matrix.example }}/standard-diagram.mmd \
+              --out-png test-results/${{ matrix.example }}/standard-architecture.png \
+              --out-svg test-results/${{ matrix.example }}/standard-architecture.svg
+              
+            STANDARD_STATUS=$?
+            echo "Standard analysis completed with status: $STANDARD_STATUS"
+          fi
+          
+          # Run security analysis
+          echo "Running security analysis..."
+          checkov -d examples/${{ matrix.example }}/ --output-dir test-results/${{ matrix.example }}/security --quiet
+          SECURITY_STATUS=$?
+          echo "Security analysis completed with status: $SECURITY_STATUS"
+          
+          # Run TerraVision integration test
+          echo "Running TerraVision integration tests..."
+          python test_terravision_integration.py > test-results/${{ matrix.example }}/terravision-test.log 2>&1
+          INTEGRATION_STATUS=$?
+          echo "TerraVision integration test completed with status: $INTEGRATION_STATUS"
+          
+          # Generate test summary
+          cat > test-results/${{ matrix.example }}/test-summary.md << EOF
+          # TerraVision Integration Test Summary
+          
+          ## Example: ${{ matrix.example }}
+          - **Test Date**: $(date)
+          - **TerraVision Enabled**: ${{ github.event.inputs.enable_terravision }}
+          - **Enhanced Analysis Status**: $ENHANCED_STATUS
+          - **Standard Analysis Status**: $STANDARD_STATUS
+          - **Security Analysis Status**: $SECURITY_STATUS
+          - **Integration Test Status**: $INTEGRATION_STATUS
+          
+          ## Generated Files
+          - Enhanced Draw.io: enhanced-architecture.drawio
+          - Enhanced PNG: enhanced-architecture.png
+          - Enhanced SVG: enhanced-architecture.svg
+          - Security Report: security/
+          - Integration Log: terravision-test.log
+          EOF
+          
+          # Collect test results
+          DIAGRAM_FILES=$(find test-results/${{ matrix.example }} -name "*.drawio" -o -name "*.png" -o -name "*.svg" | tr '\n' ' ')
+          TEST_RESULTS=$(find test-results/${{ matrix.example }} -name "*.md" -o -name "*.log" | tr '\n' ' ')
+          
+          echo "Test Results Summary:"
+          echo "   Diagram files: $(echo $DIAGRAM_FILES | wc -w)"
+          echo "   Test reports: $(echo $TEST_RESULTS | wc -w)"
+          
+          # Save results to outputs
+          echo "diagram_files=$DIAGRAM_FILES" >> $GITHUB_OUTPUT
+          echo "test_results=$TEST_RESULTS" >> $GITHUB_OUTPUT
+      
+      - name: Upload Test Results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: terravision-test-results-${{ matrix.example }}
+          path: test-results/${{ matrix.example }}/
+          retention-days: 7
+      
+      - name: Comment Test Results on PR
+        if: github.event_name == 'pull_request' && github.event.inputs.create_pr == 'true'
+        run: |
+          echo "Adding test results comment to PR..."
+          
+          # Create comment body
+          COMMENT_BODY="## TerraVision Integration Test Results
+          
+          **Example**: \`${{ matrix.example }}\`
+          **TerraVision Enabled**: ${{ github.event.inputs.enable_terravision }}
+          **Test Date**: $(date)
+          
+          ### Generated Files
+          ${{ steps.test.outputs.diagram_files }}
+          
+          ### Test Results
+          ${{ steps.test.outputs.test_results }}
+          
+          ---
+          Generated by [auto-arch-diagram](https://github.com/suryakumaran2611/auto-arch-diagram)
+          "
+          
+          # Find existing comment
+          COMMENT_ID=$(gh pr view ${{ github.event.pull_request.number }} --json | jq -r '.comments[] | select(.body | contains("TerraVision Integration Test Results")) | .id')
+          
+          if [ -n "$COMMENT_ID" ]; then
+            echo "Updating existing comment..."
+            gh pr comment ${{ github.event.pull_request.number }} --edit "$COMMENT_ID" --body "$COMMENT_BODY"
+          else
+            echo "Creating new comment..."
+            gh pr comment ${{ github.event.pull_request.number }} --body "$COMMENT_BODY"
+          fi
+      
+      - name: Create Pull Request with Updates
+        id: create-pr
+        if: github.event.inputs.create_pr == 'true' && github.event.inputs.force_update == 'true'
+        run: |
+          echo "Creating PR with diagram updates..."
+          
+          # Create feature branch
+          BRANCH_NAME="terravision-update-$(date +%s)"
+          git checkout -b $BRANCH_NAME
+          
+          # Copy generated diagrams to example directories
+          if [ "${{ github.event.inputs.enable_terravision }}" = "true" ]; then
+            echo "Copying enhanced diagrams..."
+            cp test-results/${{ matrix.example }}/enhanced-architecture.drawio examples/${{ matrix.example }}/architecture-diagram.drawio
+            cp test-results/${{ matrix.example }}/enhanced-architecture.png examples/${{ matrix.example }}/architecture-diagram.png
+            cp test-results/${{ matrix.example }}/enhanced-architecture.svg examples/${{ matrix.example }}/architecture-diagram.svg
+          else
+            echo "Copying standard diagrams..."
+            cp test-results/${{ matrix.example }}/standard-architecture.drawio examples/${{ matrix.example }}/architecture-diagram.drawio
+            cp test-results/${{ matrix.example }}/standard-architecture.png examples/${{ matrix.example }}/architecture-diagram.png
+            cp test-results/${{ matrix.example }}/standard-architecture.svg examples/${{ matrix.example }}/architecture-diagram.svg
+          fi
+          
+          # Copy analysis files
+          cp test-results/${{ matrix.example }}/test-summary.md examples/${{ matrix.example }}/test-summary.md
+          
+          # Commit changes
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add examples/${{ matrix.example }}/
+          git commit -m "Update ${{ matrix.example }} diagrams with TerraVision integration test
+          
+          - Test Date: $(date)
+          - TerraVision Enabled: ${{ github.event.inputs.enable_terravision }}
+          - Generated Files: ${{ steps.test.outputs.diagram_files }}
+          - Test Results: ${{ steps.test.outputs.test_results }}
+          
+          [skip ci]"
+          
+          # Push branch
+          git push origin $BRANCH_NAME
+          
+          # Create pull request
+          PR_URL=$(gh pr create --title "Update ${{ matrix.example }} diagrams with TerraVision integration" \
+            --body "## TerraVision Integration Update
+          
+          This PR updates the \`${{ matrix.example }}\` example with new diagrams generated through TerraVision integration testing.
+          
+          ### Changes
+          - Updated architecture diagrams (Draw.io, PNG, SVG)
+          - Updated test summary and analysis
+          - Enhanced with TerraVision AI-powered analysis
+          
+          ### Test Results
+          ${{ steps.test.outputs.test_results }}
+          
+          ---
+          Generated by [auto-arch-diagram](https://github.com/suryakumaran2611/auto-arch-diagram)
+          " \
+            --head main --base main)
+          
+          echo "PR created: $PR_URL"
+          echo "pr_number=$(echo $PR_URL | grep -oP 'https://github.com/.*/pull/' | sed 's/https:\/\/github.com\/.*\/pull\///')"
+          echo "pr_number=$PR_URL" >> $GITHUB_OUTPUT
+
+  test-all-examples:
+    needs: discover-examples
+    if: github.event.inputs.test_all_examples == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      
+      - name: Install Dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install -r requirements-dev.txt
+      
+      - name: Test All Examples with TerraVision
+        run: |
+          echo "Testing all examples with TerraVision integration..."
+          
+          # Create results directory
+          mkdir -p all-test-results
+          
+          # Find all examples
+          EXAMPLES=$(find examples -name "*.tf" -exec dirname {} \; | sort -u)
+          
+          # Test each example
+          for example in $EXAMPLES; do
+            echo "Testing example: $example"
+            
+            # Create example-specific test directory
+            mkdir -p all-test-results/$example
+            
+            # Run TerraVision test
+            python tools/generate_arch_diagram.py \
+              examples/$example/ \
+              --enable-terravision \
+              --out-drawio all-test-results/$example/architecture-diagram.drawio \
+              --out-md all-test-results/$example/test-summary.md
+            
+            echo "Completed test for $example"
+          done
+          
+          echo "All examples tested successfully"
+      
+      - name: Upload All Test Results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: terravision-all-test-results
+          path: all-test-results/
+          retention-days: 7
+      
+      - name: Create Summary Report
+        run: |
+          echo "## TerraVision Integration Test Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # Count tested examples
+          EXAMPLE_COUNT=$(find examples -name "*.tf" -exec dirname {} \; | sort -u | wc -l)
+          echo "- **Examples Tested**: $EXAMPLE_COUNT" >> $GITHUB_STEP_SUMMARY
+          
+          # List all examples
+          find examples -name "*.tf" -exec dirname {} \; | sort -u | while read example; do
+            echo "- **$example**" >> $GITHUB_STEP_SUMMARY
+          done
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Generated Artifacts" >> $GITHUB_STEP_SUMMARY
+          echo "- **Test Results**: [terravision-all-test-results](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Next Steps" >> $GITHUB_STEP_SUMMARY
+          echo "- Review test results in artifacts" >> $GITHUB_STEP_SUMMARY
+          echo "- Check generated diagrams for accuracy" >> $GITHUB_STEP_SUMMARY
+
+  specific-example-test:
+    needs: discover-examples
+    if: github.event.inputs.specific_example != ''
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      
+      - name: Test Specific Example
+        run: |
+          echo "Testing specific example: ${{ github.event.inputs.specific_example }}"
+          
+          # Validate example exists
+          if [ ! -d "examples/${{ github.event.inputs.specific_example }}" ]; then
+            echo "Example directory not found: examples/${{ github.event.inputs.specific_example }}"
+            exit 1
+          fi
+          
+          # Run TerraVision test for specific example
+          python tools/generate_arch_diagram.py \
+            examples/${{ github.event.inputs.specific_example }}/ \
+            --enable-terravision \
+            --out-drawio specific-test-results/architecture-diagram.drawio \
+            --out-md specific-test-results/test-summary.md
+          
+          echo "Specific example test completed"
+      
+      - name: Upload Specific Test Results
+        uses: actions/upload-artifact@v4
+        with:
+          name: terravision-specific-test-${{ github.event.inputs.specific_example }}
+          path: specific-test-results/
+          retention-days: 7
+
+  cleanup:
+    needs: [test-terravision, test-all-examples, specific-example-test]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Cleanup Test Artifacts
+        run: |
+          echo "Cleaning up test artifacts..."
+          
+          # Remove old test artifacts (older than 7 days)
+          find . -name "terravision-*-test-results" -mtime +7 -exec rm -rf {} \; 2>/dev/null || true
+          
+          echo "Cleanup completed"
