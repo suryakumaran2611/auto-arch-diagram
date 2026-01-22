@@ -1,0 +1,134 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mxfile host="Electron" version="26.0.0" type="device">
+  <diagram id="9b8085f1-cd49-448b-98cc-cb9928be0d60" name="Architecture">
+    <mxGraphModel dx="1422" dy="794" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="0" pageScale="1" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="clust1" value="Compute" style="swimlane;whiteSpace=wrap;html=1;shape=rect;fillColor=#cccccc;strokeColor=#aeb6be;verticalAlign=top;align=left;spacingLeft=20;spacingTop=10;" vertex="1" parent="1">
+          <mxGeometry x="28.0" y="3579.0" width="106.0" height="162.0" as="geometry" />
+        </mxCell>
+        <mxCell id="clust2" value="AWS Cloud" style="swimlane;whiteSpace=wrap;html=1;shape=mxgraph.aws4.aws_cloud;fillColor=none;strokeColor=#248814;verticalAlign=top;align=left;spacingLeft=20;spacingTop=5;" vertex="1" parent="1">
+          <mxGeometry x="36.0" y="3587.0" width="90.0" height="123.0" as="geometry" />
+        </mxCell>
+        <mxCell id="clust3" value="Data" style="swimlane;whiteSpace=wrap;html=1;shape=rect;fillColor=#cccccc;strokeColor=#aeb6be;verticalAlign=top;align=left;spacingLeft=20;spacingTop=10;" vertex="1" parent="1">
+          <mxGeometry x="28.0" y="3749.0" width="106.0" height="162.0" as="geometry" />
+        </mxCell>
+        <mxCell id="clust4" value="AWS Cloud" style="swimlane;whiteSpace=wrap;html=1;shape=mxgraph.aws4.aws_cloud;fillColor=none;strokeColor=#248814;verticalAlign=top;align=left;spacingLeft=20;spacingTop=5;" vertex="1" parent="1">
+          <mxGeometry x="36.0" y="3757.0" width="90.0" height="123.0" as="geometry" />
+        </mxCell>
+        <mxCell id="clust5" value="Other" style="swimlane;whiteSpace=wrap;html=1;shape=rect;fillColor=#cccccc;strokeColor=#aeb6be;verticalAlign=top;align=left;spacingLeft=20;spacingTop=10;" vertex="1" parent="1">
+          <mxGeometry x="25.0" y="3919.0" width="113.0" height="3158.0" as="geometry" />
+        </mxCell>
+        <mxCell id="clust6" value="AWS Cloud" style="swimlane;whiteSpace=wrap;html=1;shape=mxgraph.aws4.aws_cloud;fillColor=none;strokeColor=#248814;verticalAlign=top;align=left;spacingLeft=20;spacingTop=5;" vertex="1" parent="1">
+          <mxGeometry x="36.0" y="5584.0" width="90.0" height="1462.0" as="geometry" />
+        </mxCell>
+        <mxCell id="clust7" value="Azure Cloud" style="swimlane;whiteSpace=wrap;html=1;shape=rect;whiteSpace=wrap;html=1;fillColor=#ffe7c4;strokeColor=#aeb6be;strokeWidth=2;dashed=0;rounded=0;verticalAlign=top;align=left;spacingLeft=20;spacingTop=10;" vertex="1" parent="1">
+          <mxGeometry x="33.0" y="5144.0" width="97.0" height="432.0" as="geometry" />
+        </mxCell>
+        <mxCell id="clust8" value="GCP Cloud" style="swimlane;whiteSpace=wrap;html=1;shape=rect;whiteSpace=wrap;html=1;fillColor=#ffe7c4;strokeColor=#aeb6be;strokeWidth=2;dashed=0;rounded=0;verticalAlign=top;align=left;spacingLeft=20;spacingTop=10;" vertex="1" parent="1">
+          <mxGeometry x="38.0" y="4601.0" width="86.0" height="535.0" as="geometry" />
+        </mxCell>
+        <mxCell id="clust9" value="IBM Cloud" style="swimlane;whiteSpace=wrap;html=1;shape=rect;whiteSpace=wrap;html=1;fillColor=#ffe7c4;strokeColor=#aeb6be;strokeWidth=2;dashed=0;rounded=0;verticalAlign=top;align=left;spacingLeft=20;spacingTop=10;" vertex="1" parent="1">
+          <mxGeometry x="39.0" y="4264.0" width="84.0" height="329.0" as="geometry" />
+        </mxCell>
+        <mxCell id="clust10" value="OCI Cloud" style="swimlane;whiteSpace=wrap;html=1;shape=rect;whiteSpace=wrap;html=1;fillColor=#ffe7c4;strokeColor=#aeb6be;strokeWidth=2;dashed=0;rounded=0;verticalAlign=top;align=left;spacingLeft=20;spacingTop=10;" vertex="1" parent="1">
+          <mxGeometry x="40.0" y="3927.0" width="83.0" height="329.0" as="geometry" />
+        </mxCell>
+        <mxCell id="node1" value="Sagemaker… ml notebook" style="shape=rect;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#aeb6be;strokeWidth=1;rounded=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;" vertex="1" parent="1">
+          <mxGeometry x="52.0" y="3623.0" width="58.0" height="58.0" as="geometry" />
+        </mxCell>
+        <mxCell id="node2" value="Qldb Ledger quantum ledger" style="shape=rect;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#aeb6be;strokeWidth=1;rounded=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;" vertex="1" parent="1">
+          <mxGeometry x="52.0" y="3793.0" width="58.0" height="58.0" as="geometry" />
+        </mxCell>
+        <mxCell id="node3" value="Amplify App web app" style="shape=rect;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#aeb6be;strokeWidth=1;rounded=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;" vertex="1" parent="1">
+          <mxGeometry x="52.0" y="6959.0" width="58.0" height="58.0" as="geometry" />
+        </mxCell>
+        <mxCell id="node4" value="Appsync… graphql api" style="shape=rect;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#aeb6be;strokeWidth=1;rounded=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;" vertex="1" parent="1">
+          <mxGeometry x="52.0" y="6856.0" width="58.0" height="58.0" as="geometry" />
+        </mxCell>
+        <mxCell id="node5" value="Bedrock Agent agent" style="shape=rect;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#aeb6be;strokeWidth=1;rounded=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;" vertex="1" parent="1">
+          <mxGeometry x="52.0" y="6753.0" width="58.0" height="58.0" as="geometry" />
+        </mxCell>
+        <mxCell id="node6" value="Bedrock… knowledge" style="shape=rect;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#aeb6be;strokeWidth=1;rounded=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;" vertex="1" parent="1">
+          <mxGeometry x="52.0" y="6650.0" width="58.0" height="58.0" as="geometry" />
+        </mxCell>
+        <mxCell id="node7" value="Comprehend… nlp analysis" style="shape=rect;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#aeb6be;strokeWidth=1;rounded=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;" vertex="1" parent="1">
+          <mxGeometry x="52.0" y="6547.0" width="58.0" height="58.0" as="geometry" />
+        </mxCell>
+        <mxCell id="node8" value="Lex Bot chatbot" style="shape=rect;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#aeb6be;strokeWidth=1;rounded=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;" vertex="1" parent="1">
+          <mxGeometry x="52.0" y="6444.0" width="58.0" height="58.0" as="geometry" />
+        </mxCell>
+        <mxCell id="node9" value="Managed… blockchain…" style="shape=rect;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#aeb6be;strokeWidth=1;rounded=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;" vertex="1" parent="1">
+          <mxGeometry x="52.0" y="6341.0" width="58.0" height="58.0" as="geometry" />
+        </mxCell>
+        <mxCell id="node10" value="Polly Speech text to speech" style="shape=rect;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#aeb6be;strokeWidth=1;rounded=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;" vertex="1" parent="1">
+          <mxGeometry x="52.0" y="6238.0" width="58.0" height="58.0" as="geometry" />
+        </mxCell>
+        <mxCell id="node11" value="Rekognition… image analysis" style="shape=rect;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#aeb6be;strokeWidth=1;rounded=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;" vertex="1" parent="1">
+          <mxGeometry x="52.0" y="6135.0" width="58.0" height="58.0" as="geometry" />
+        </mxCell>
+        <mxCell id="node12" value="Sagemaker… ml endpoint" style="shape=rect;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#aeb6be;strokeWidth=1;rounded=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;" vertex="1" parent="1">
+          <mxGeometry x="52.0" y="6032.0" width="58.0" height="58.0" as="geometry" />
+        </mxCell>
+        <mxCell id="node13" value="Sagemaker… ml model" style="shape=rect;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#aeb6be;strokeWidth=1;rounded=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;" vertex="1" parent="1">
+          <mxGeometry x="52.0" y="5929.0" width="58.0" height="58.0" as="geometry" />
+        </mxCell>
+        <mxCell id="node14" value="Sagemaker… ml pipeline" style="shape=rect;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#aeb6be;strokeWidth=1;rounded=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;" vertex="1" parent="1">
+          <mxGeometry x="52.0" y="5826.0" width="58.0" height="58.0" as="geometry" />
+        </mxCell>
+        <mxCell id="node15" value="Textract… text…" style="shape=rect;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#aeb6be;strokeWidth=1;rounded=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;" vertex="1" parent="1">
+          <mxGeometry x="52.0" y="5723.0" width="58.0" height="58.0" as="geometry" />
+        </mxCell>
+        <mxCell id="node16" value="Transcribe Job speech to text" style="shape=rect;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#aeb6be;strokeWidth=1;rounded=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;" vertex="1" parent="1">
+          <mxGeometry x="52.0" y="5620.0" width="58.0" height="58.0" as="geometry" />
+        </mxCell>
+        <mxCell id="node17" value="Blockchain… blockchain…" style="shape=rect;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#aeb6be;strokeWidth=1;rounded=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;" vertex="1" parent="1">
+          <mxGeometry x="52.0" y="5489.0" width="58.0" height="58.0" as="geometry" />
+        </mxCell>
+        <mxCell id="node18" value="Cognitive… cognitive…" style="shape=rect;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#aeb6be;strokeWidth=1;rounded=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;" vertex="1" parent="1">
+          <mxGeometry x="52.0" y="5386.0" width="58.0" height="58.0" as="geometry" />
+        </mxCell>
+        <mxCell id="node19" value="Machine… azure ml" style="shape=rect;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#aeb6be;strokeWidth=1;rounded=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;" vertex="1" parent="1">
+          <mxGeometry x="52.0" y="5283.0" width="58.0" height="58.0" as="geometry" />
+        </mxCell>
+        <mxCell id="node20" value="Openai Account openai service" style="shape=rect;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#aeb6be;strokeWidth=1;rounded=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;" vertex="1" parent="1">
+          <mxGeometry x="52.0" y="5180.0" width="58.0" height="58.0" as="geometry" />
+        </mxCell>
+        <mxCell id="node21" value="Ai Platform… vertex…" style="shape=rect;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#aeb6be;strokeWidth=1;rounded=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;" vertex="1" parent="1">
+          <mxGeometry x="52.0" y="5049.0" width="58.0" height="58.0" as="geometry" />
+        </mxCell>
+        <mxCell id="node22" value="Automl Model auto ml" style="shape=rect;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#aeb6be;strokeWidth=1;rounded=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;" vertex="1" parent="1">
+          <mxGeometry x="52.0" y="4946.0" width="58.0" height="58.0" as="geometry" />
+        </mxCell>
+        <mxCell id="node23" value="Vertex Ai… ai endpoint" style="shape=rect;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#aeb6be;strokeWidth=1;rounded=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;" vertex="1" parent="1">
+          <mxGeometry x="52.0" y="4843.0" width="58.0" height="58.0" as="geometry" />
+        </mxCell>
+        <mxCell id="node24" value="Video… video ai" style="shape=rect;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#aeb6be;strokeWidth=1;rounded=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;" vertex="1" parent="1">
+          <mxGeometry x="52.0" y="4740.0" width="58.0" height="58.0" as="geometry" />
+        </mxCell>
+        <mxCell id="node25" value="Vision Produc… vision ai" style="shape=rect;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#aeb6be;strokeWidth=1;rounded=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;" vertex="1" parent="1">
+          <mxGeometry x="52.0" y="4637.0" width="58.0" height="58.0" as="geometry" />
+        </mxCell>
+        <mxCell id="node26" value="Blockchain… blockchain" style="shape=rect;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#aeb6be;strokeWidth=1;rounded=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;" vertex="1" parent="1">
+          <mxGeometry x="52.0" y="4506.0" width="58.0" height="58.0" as="geometry" />
+        </mxCell>
+        <mxCell id="node27" value="Cloud Pak For… analytics" style="shape=rect;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#aeb6be;strokeWidth=1;rounded=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;" vertex="1" parent="1">
+          <mxGeometry x="52.0" y="4404.871" width="58.0" height="56.128999999999905" as="geometry" />
+        </mxCell>
+        <mxCell id="node28" value="Watson Studio watson ml" style="shape=rect;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#aeb6be;strokeWidth=1;rounded=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;" vertex="1" parent="1">
+          <mxGeometry x="52.0" y="4300.0" width="58.0" height="58.0" as="geometry" />
+        </mxCell>
+        <mxCell id="node29" value="Ai Service… ai language" style="shape=rect;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#aeb6be;strokeWidth=1;rounded=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;" vertex="1" parent="1">
+          <mxGeometry x="52.0" y="4169.0" width="58.0" height="58.0" as="geometry" />
+        </mxCell>
+        <mxCell id="node30" value="Ai Service… ai vision" style="shape=rect;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#aeb6be;strokeWidth=1;rounded=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;" vertex="1" parent="1">
+          <mxGeometry x="52.0" y="4066.0" width="58.0" height="58.0" as="geometry" />
+        </mxCell>
+        <mxCell id="node31" value="Blockchain… blockchain" style="shape=rect;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#aeb6be;strokeWidth=1;rounded=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;" vertex="1" parent="1">
+          <mxGeometry x="52.0" y="3963.0" width="58.0" height="58.0" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

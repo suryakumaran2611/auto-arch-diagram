@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mxfile host="Electron" version="26.0.0" type="device">
+  <diagram id="cdb2c4cd-82e9-4b1e-9530-4a36f6929c8f" name="Architecture">
+    <mxGraphModel dx="1422" dy="794" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="0" pageScale="1" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="clust1" value="Compute" style="swimlane;whiteSpace=wrap;html=1;shape=rect;fillColor=#cccccc;strokeColor=#aeb6be;verticalAlign=top;align=left;spacingLeft=20;spacingTop=10;" vertex="1" parent="1">
+          <mxGeometry x="3.0" y="237.24" width="100.0" height="162.0" as="geometry" />
+        </mxCell>
+        <mxCell id="clust2" value="IBM Cloud" style="swimlane;whiteSpace=wrap;html=1;shape=rect;whiteSpace=wrap;html=1;fillColor=#ffe7c4;strokeColor=#aeb6be;strokeWidth=2;dashed=0;rounded=0;verticalAlign=top;align=left;spacingLeft=20;spacingTop=10;" vertex="1" parent="1">
+          <mxGeometry x="11.0" y="245.24" width="84.0" height="123.0" as="geometry" />
+        </mxCell>
+        <mxCell id="clust3" value="Storage" style="swimlane;whiteSpace=wrap;html=1;shape=rect;fillColor=#cccccc;strokeColor=#aeb6be;verticalAlign=top;align=left;spacingLeft=20;spacingTop=10;" vertex="1" parent="1">
+          <mxGeometry x="120.0" y="237.24" width="100.0" height="162.0" as="geometry" />
+        </mxCell>
+        <mxCell id="clust4" value="IBM Cloud" style="swimlane;whiteSpace=wrap;html=1;shape=rect;whiteSpace=wrap;html=1;fillColor=#ffe7c4;strokeColor=#aeb6be;strokeWidth=2;dashed=0;rounded=0;verticalAlign=top;align=left;spacingLeft=20;spacingTop=10;" vertex="1" parent="1">
+          <mxGeometry x="128.0" y="245.24" width="84.0" height="123.0" as="geometry" />
+        </mxCell>
+        <mxCell id="node1" value="Resource… cos" style="shape=rect;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#aeb6be;strokeWidth=1;rounded=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;" vertex="1" parent="1">
+          <mxGeometry x="24.0" y="281.24" width="58.0" height="58.0" as="geometry" />
+        </mxCell>
+        <mxCell id="node2" value="Cos Bucket site" style="shape=rect;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#aeb6be;strokeWidth=1;rounded=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;" vertex="1" parent="1">
+          <mxGeometry x="141.0" y="281.24" width="58.0" height="58.0" as="geometry" />
+        </mxCell>
+        <mxCell id="edge1" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#2196f3;strokeWidth=1.35;" edge="1" parent="1">
+          <mxGeometry as="geometry" relative="1">
+            <Array as="points">
+              <mxPoint x="82.22" y="296.24" />
+              <mxPoint x="134.24" y="296.24" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mxfile host="Electron" version="26.0.0" type="device">
+  <diagram id="00cb7567-fcee-45fe-b7a1-01a16670128f" name="Architecture">
+    <mxGraphModel dx="1422" dy="794" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="0" pageScale="1" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="clust1" value="Network" style="swimlane;whiteSpace=wrap;html=1;shape=rect;fillColor=#cccccc;strokeColor=#aeb6be;verticalAlign=top;align=left;spacingLeft=20;spacingTop=10;" vertex="1" parent="1">
+          <mxGeometry x="8.0" y="430.68" width="308.0" height="354.00000000000006" as="geometry" />
+        </mxCell>
+        <mxCell id="clust2" value="AWS Cloud" style="swimlane;whiteSpace=wrap;html=1;shape=mxgraph.aws4.aws_cloud;fillColor=none;strokeColor=#248814;verticalAlign=top;align=left;spacingLeft=20;spacingTop=5;" vertex="1" parent="1">
+          <mxGeometry x="16.0" y="438.68" width="292.0" height="315.00000000000006" as="geometry" />
+        </mxCell>
+        <mxCell id="clust3" value="VPC main" style="swimlane;whiteSpace=wrap;html=1;shape=mxgraph.aws4.vpc;fillColor=none;strokeColor=#248814;verticalAlign=top;align=left;spacingLeft=30;spacingTop=10;" vertex="1" parent="1">
+          <mxGeometry x="24.0" y="446.68" width="276.0" height="278.00000000000006" as="geometry" />
+        </mxCell>
+        <mxCell id="clust4" value="Subnet public (Public)" style="swimlane;whiteSpace=wrap;html=1;shape=mxgraph.aws4.subnet;fillColor=none;strokeColor=#00A4A6;verticalAlign=top;align=left;spacingLeft=20;spacingTop=5;" vertex="1" parent="1">
+          <mxGeometry x="121.0" y="454.68" width="171.0" height="136.00000000000006" as="geometry" />
+        </mxCell>
+        <mxCell id="node1" value="VPC main" style="shape=mxgraph.aws4.vpc;fillColor=none;strokeColor=#248814;verticalAlign=top;align=left;spacingLeft=30;spacingTop=10;" vertex="1" parent="1">
+          <mxGeometry x="32.0" y="558.6800000000001" width="58.0" height="58.0" as="geometry" />
+        </mxCell>
+        <mxCell id="node2" value="Subnet public" style="shape=mxgraph.aws4.subnet;fillColor=none;strokeColor=#00A4A6;verticalAlign=top;align=left;spacingLeft=20;spacingTop=5;" vertex="1" parent="1">
+          <mxGeometry x="129.0" y="490.68" width="58.0" height="58.00000000000006" as="geometry" />
+        </mxCell>
+        <mxCell id="node3" value="Instance web" style="shape=rect;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#aeb6be;strokeWidth=1;rounded=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;" vertex="1" parent="1">
+          <mxGeometry x="226.0" y="490.68" width="58.0" height="58.00000000000006" as="geometry" />
+        </mxCell>
+        <mxCell id="node4" value="Security Group web" style="shape=mxgraph.aws4.security_group;fillColor=#DF3312;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;align=center;" vertex="1" parent="1">
+          <mxGeometry x="129.0" y="626.6800000000001" width="58.0" height="58.0" as="geometry" />
+        </mxCell>
+        <mxCell id="edge4" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#8d96a7;strokeWidth=0.9;" edge="1" parent="1">
+          <mxGeometry as="geometry" relative="1">
+            <Array as="points">
+              <mxPoint x="90.1" y="539.6800000000001" />
+              <mxPoint x="122.42" y="539.6800000000001" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="edge3" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#f44336;strokeWidth=1.08;dashed=1;" edge="1" parent="1">
+          <mxGeometry as="geometry" relative="1">
+            <Array as="points">
+              <mxPoint x="90.1" y="607.6800000000001" />
+              <mxPoint x="122.42" y="607.6800000000001" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="edge2" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#8d96a7;strokeWidth=0.9;" edge="1" parent="1">
+          <mxGeometry as="geometry" relative="1">
+            <Array as="points">
+              <mxPoint x="187.1" y="505.68" />
+              <mxPoint x="219.42" y="505.68" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="edge1" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#f44336;strokeWidth=1.08;dashed=1;" edge="1" parent="1">
+          <mxGeometry as="geometry" relative="1">
+            <Array as="points">
+              <mxPoint x="215.68" y="641.6800000000001" />
+              <mxPoint x="255.0" y="641.6800000000001" />
+              <mxPoint x="255.0" y="641.6800000000001" />
+              <mxPoint x="255.0" y="641.6800000000001" />
+              <mxPoint x="255.0" y="555.21" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mxfile host="Electron" version="26.0.0" type="device">
+  <diagram id="e8af1d7a-5d44-4e1e-b302-124ba5aa73a8" name="Architecture">
+    <mxGraphModel dx="1422" dy="794" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="0" pageScale="1" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="clust1" value="Network" style="swimlane;whiteSpace=wrap;html=1;shape=rect;fillColor=#cccccc;strokeColor=#aeb6be;verticalAlign=top;align=left;spacingLeft=20;spacingTop=10;" vertex="1" parent="1">
+          <mxGeometry x="8.0" y="770.12" width="325.0" height="259.9999999999999" as="geometry" />
+        </mxCell>
+        <mxCell id="clust2" value="AWS Cloud" style="swimlane;whiteSpace=wrap;html=1;shape=mxgraph.aws4.aws_cloud;fillColor=none;strokeColor=#248814;verticalAlign=top;align=left;spacingLeft=20;spacingTop=5;" vertex="1" parent="1">
+          <mxGeometry x="16.0" y="778.12" width="309.0" height="221.0" as="geometry" />
+        </mxCell>
+        <mxCell id="clust3" value="VPC vpc aws…" style="swimlane;whiteSpace=wrap;html=1;shape=mxgraph.aws4.vpc;fillColor=none;strokeColor=#248814;verticalAlign=top;align=left;spacingLeft=30;spacingTop=10;" vertex="1" parent="1">
+          <mxGeometry x="24.0" y="786.12" width="293.0" height="184.0" as="geometry" />
+        </mxCell>
+        <mxCell id="clust4" value="Subnet subnet aws… (Private)" style="swimlane;whiteSpace=wrap;html=1;shape=mxgraph.aws4.subnet;fillColor=none;strokeColor=#00A4A6;verticalAlign=top;align=left;spacingLeft=20;spacingTop=5;" vertex="1" parent="1">
+          <mxGeometry x="159.0" y="794.12" width="150.0" height="136.0" as="geometry" />
+        </mxCell>
+        <mxCell id="clust5" value="Containers" style="swimlane;whiteSpace=wrap;html=1;shape=rect;whiteSpace=wrap;html=1;fillColor=#ffe7c4;strokeColor=#aeb6be;strokeWidth=2;dashed=0;rounded=0;verticalAlign=top;align=left;spacingLeft=20;spacingTop=10;" vertex="1" parent="1">
+          <mxGeometry x="350.0" y="1169.12" width="113.0" height="162.0" as="geometry" />
+        </mxCell>
+        <mxCell id="clust6" value="Azure Cloud" style="swimlane;whiteSpace=wrap;html=1;shape=rect;whiteSpace=wrap;html=1;fillColor=#ffe7c4;strokeColor=#aeb6be;strokeWidth=2;dashed=0;rounded=0;verticalAlign=top;align=left;spacingLeft=20;spacingTop=10;" vertex="1" parent="1">
+          <mxGeometry x="358.0" y="1177.12" width="97.0" height="123.0" as="geometry" />
+        </mxCell>
+        <mxCell id="clust7" value="Storage" style="swimlane;whiteSpace=wrap;html=1;shape=rect;fillColor=#cccccc;strokeColor=#aeb6be;verticalAlign=top;align=left;spacingLeft=20;spacingTop=10;" vertex="1" parent="1">
+          <mxGeometry x="178.0" y="1038.12" width="113.0" height="424.0" as="geometry" />
+        </mxCell>
+        <mxCell id="clust8" value="AWS Cloud" style="swimlane;whiteSpace=wrap;html=1;shape=mxgraph.aws4.aws_cloud;fillColor=none;strokeColor=#248814;verticalAlign=top;align=left;spacingLeft=20;spacingTop=5;" vertex="1" parent="1">
+          <mxGeometry x="189.0" y="1308.12" width="90.0" height="123.0" as="geometry" />
+        </mxCell>
+        <mxCell id="clust9" value="Azure Cloud" style="swimlane;whiteSpace=wrap;html=1;shape=rect;whiteSpace=wrap;html=1;fillColor=#ffe7c4;strokeColor=#aeb6be;strokeWidth=2;dashed=0;rounded=0;verticalAlign=top;align=left;spacingLeft=20;spacingTop=10;" vertex="1" parent="1">
+          <mxGeometry x="186.0" y="1177.12" width="97.0" height="123.0" as="geometry" />
+        </mxCell>
+        <mxCell id="clust10" value="GCP Cloud" style="swimlane;whiteSpace=wrap;html=1;shape=rect;whiteSpace=wrap;html=1;fillColor=#ffe7c4;strokeColor=#aeb6be;strokeWidth=2;dashed=0;rounded=0;verticalAlign=top;align=left;spacingLeft=20;spacingTop=10;" vertex="1" parent="1">
+          <mxGeometry x="191.0" y="1046.12" width="86.0" height="123.0" as="geometry" />
+        </mxCell>
+        <mxCell id="clust11" value="Other" style="swimlane;whiteSpace=wrap;html=1;shape=rect;fillColor=#cccccc;strokeColor=#aeb6be;verticalAlign=top;align=left;spacingLeft=20;spacingTop=10;" vertex="1" parent="1">
+          <mxGeometry x="5.0" y="1169.12" width="113.0" height="162.0" as="geometry" />
+        </mxCell>
+        <mxCell id="clust12" value="Azure Cloud" style="swimlane;whiteSpace=wrap;html=1;shape=rect;whiteSpace=wrap;html=1;fillColor=#ffe7c4;strokeColor=#aeb6be;strokeWidth=2;dashed=0;rounded=0;verticalAlign=top;align=left;spacingLeft=20;spacingTop=10;" vertex="1" parent="1">
+          <mxGeometry x="13.0" y="1177.12" width="97.0" height="123.0" as="geometry" />
+        </mxCell>
+        <mxCell id="node1" value="VPC vpc aws…" style="shape=mxgraph.aws4.vpc;fillColor=none;strokeColor=#248814;verticalAlign=top;align=left;spacingLeft=30;spacingTop=10;" vertex="1" parent="1">
+          <mxGeometry x="32.0" y="830.12" width="58.0" height="58.0" as="geometry" />
+        </mxCell>
+        <mxCell id="node2" value="Subnet subnet aws…" style="shape=mxgraph.aws4.subnet;fillColor=none;strokeColor=#00A4A6;verticalAlign=top;align=left;spacingLeft=20;spacingTop=5;" vertex="1" parent="1">
+          <mxGeometry x="205.0" y="830.12" width="58.0" height="58.0" as="geometry" />
+        </mxCell>
+        <mxCell id="node3" value="Storage… container…" style="shape=rect;fillColor=#cccccc;strokeColor=#aeb6be;verticalAlign=top;align=left;spacingLeft=20;spacingTop=10;" vertex="1" parent="1">
+          <mxGeometry x="377.0" y="1213.12" width="58.0" height="58.0" as="geometry" />
+        </mxCell>
+        <mxCell id="node4" value="S3 Bucket s3 global" style="shape=mxgraph.aws4.s3;fillColor=#3B48CC;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;align=center;" vertex="1" parent="1">
+          <mxGeometry x="205.0" y="1344.12" width="58.0" height="58.0" as="geometry" />
+        </mxCell>
+        <mxCell id="node5" value="Storage… storage global" style="shape=rect;fillColor=#cccccc;strokeColor=#aeb6be;verticalAlign=top;align=left;spacingLeft=20;spacingTop=10;" vertex="1" parent="1">
+          <mxGeometry x="205.0" y="1213.12" width="58.0" height="58.0" as="geometry" />
+        </mxCell>
+        <mxCell id="node6" value="Storage Bucket bucket global" style="shape=rect;fillColor=#cccccc;strokeColor=#aeb6be;verticalAlign=top;align=left;spacingLeft=20;spacingTop=10;" vertex="1" parent="1">
+          <mxGeometry x="205.0" y="1082.12" width="58.0" height="58.0" as="geometry" />
+        </mxCell>
+        <mxCell id="node7" value="Resource Group rg azure…" style="shape=rect;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#aeb6be;strokeWidth=1;rounded=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;" vertex="1" parent="1">
+          <mxGeometry x="32.0" y="1213.12" width="58.0" height="58.0" as="geometry" />
+        </mxCell>
+        <mxCell id="edge1" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#8d96a7;strokeWidth=0.9;" edge="1" parent="1">
+          <mxGeometry as="geometry" relative="1">
+            <Array as="points">
+              <mxPoint x="90.35" y="845.12" />
+              <mxPoint x="198.3" y="845.12" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="edge3" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#2196f3;strokeWidth=1.35;" edge="1" parent="1">
+          <mxGeometry as="geometry" relative="1">
+            <Array as="points">
+              <mxPoint x="263.18" y="1228.12" />
+              <mxPoint x="370.47" y="1228.12" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="edge2" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#2196f3;strokeWidth=1.35;" edge="1" parent="1">
+          <mxGeometry as="geometry" relative="1">
+            <Array as="points">
+              <mxPoint x="90.35" y="1228.12" />
+              <mxPoint x="198.3" y="1228.12" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
