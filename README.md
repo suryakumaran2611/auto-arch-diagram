@@ -2,14 +2,14 @@
 
 # 🏗️ auto-arch-diagram
 
-**Transform Infrastructure-as-Code into Beautiful Architecture Diagrams**
+**Transform Infrastructure-as-Code into Beautiful Architecture Diagrams with Enhanced TerraVision Integration**
 
 [![Python Tests](https://github.com/suryakumaran2611/auto-arch-diagram/actions/workflows/python-tests.yml/badge.svg)](https://github.com/suryakumaran2611/auto-arch-diagram/actions/workflows/python-tests.yml)
 [![Secret Scan](https://github.com/suryakumaran2611/auto-arch-diagram/actions/workflows/secret-scan.yml/badge.svg)](https://github.com/suryakumaran2611/auto-arch-diagram/actions/workflows/secret-scan.yml)
 [![License: CC BY-NC 4.0](https://img.shields.io/badge/License-CC%20BY--NC%204.0-red.svg)](https://creativecommons.org/licenses/by-nc/4.0/)
-[📖 User Guide](docs/USER_GUIDE.md) • [🛠️ Update Scripts](UPDATE_GITHUB_PAGES_README.md) • [🌐 GitHub Pages](https://suryakumaran2611.github.io/auto-arch-diagram/)
+[📖 User Guide](docs/USER_GUIDE.md) • [🛠️ Update Scripts](UPDATE_GITHUB_PAGES_README.md) • [🌐 GitHub Pages](https://suryakumaran2611.github.io/auto-arch-diagram/) • [🚀 TerraVision Guide](docs/TERRAVISION_MOCK_INTEGRATION.md)
 
-*Automatically generate professional diagrams from Terraform, CloudFormation, Bicep, and Pulumi with 100+ supported services*
+*Automatically generate professional diagrams from Terraform, CloudFormation, Bicep, and Pulumi with 100+ supported services and enterprise-grade TerraVision analysis*
 
 ---
 
@@ -19,31 +19,20 @@
 
 <table>
 <tr>
-<td width="50%">
-
-**Multi-Cloud Storage** (7 resources - Network Segregation)
-
-![MLOps Multi-Cloud](examples/terraform/mlops-multi-cloud/architecture-diagram.png)
-
-*AWS S3 + Azure Blob + GCP Cloud Storage with network-aware labels*
-
+<td width="33%">
+**🚀 TerraVision Enhanced** (Multi-Cloud Analysis)
+![TerraVision Enhanced](examples/terraform/mlops-multi-cloud/architecture-diagram.png)
+*AI-powered dependency mapping with zero credential requirements*
 </td>
-<td width="50%">
-
-**Custom Icons Demo** (40+ resources)
-
-![Custom Icons Demo](examples/terraform/custom-icons-demo/architecture-diagram.png)
-
-*Event-driven serverless with 11 custom icons*
-
+<td width="33%">
+**🎨 Professional Draw.io** (Smart Stencils)
+![Draw.io Professional](examples/terraform/custom-icons-demo/architecture-diagram.drawio.png)
+*Universal Smart Architect with heuristic resource resolution*
 </td>
-</tr>
-<tr>
-<td width="50%">
-
-**MLOps Multi-Region AWS** (46 resources)
-
-![MLOps Multi-Region](examples/terraform/mlops-multi-region-aws/architecture-diagram.png)
+<td width="34%">
+**🛡️ Enterprise Security** (CI/CD Ready)
+![Enterprise Security](.github/workflows/enhanced-diagram-generation.yml/badge.svg)
+*Mock-based analysis with production-grade security*
 
 *Primary + DR with VPC peering*
 
@@ -64,17 +53,63 @@
 
 ## ✨ Key Features
 
-- 🎯 **VPC/Network Grouping** - Automatic VPC organization with subnet distinction
-- 🧠 **AUTO Layout** - Intelligent orientation selection (6-factor analysis)
-- 🏗️ **Multi-Cloud** - 100+ services supported across AWS (38), Azure (13), GCP (12)
-- 📤 **Multiple Formats** - Mermaid, PNG, SVG, JPEG with embedded icons
-- 🎨 **Open Sans Bold Typography** - Enhanced readability with professional bold fonts
-- 🏷️ **Network-Aware Labels** - Diagrams show network segregation (aws-network, global, etc.)
-- ☁️ **Enhanced CloudFormation** - Production-ready templates with monitoring and security
-- 🔧 **Automated Updates** - Scripts for keeping documentation synchronized
-- 🚀 **GitHub Actions** - One-line workflow integration with PR comments
-- 🔒 **Security-First** - Secret scanning, redaction, minimal permissions
-- 📚 **Comprehensive Docs** - Detailed [User Guide](docs/USER_GUIDE.md) and [Update Scripts](UPDATE_GITHUB_PAGES_README.md)
+### 🚀 **TerraVision Integration** (NEW!)
+- **AI-Powered Analysis**: Enhanced dependency mapping and complexity scoring
+- **Zero Credential Requirements**: Mock-based analysis for secure CI/CD
+- **Multi-Cloud Support**: AWS, Azure, GCP, OCI, IBM with smart provider detection
+- **Intelligent Fallback**: TerraVision → HCL2 → Regex parsing chain
+- **Enterprise Security**: Production-grade mock configurations with audit trails
+
+### 🎨 **Professional Draw.io Generation**
+- **Universal Smart Architect**: AI-Lite heuristic resource resolution
+- **Dynamic Stencil Paths**: Official mxGraph schema with automatic provider detection
+- **Multi-Provider Styling**: AWS (orange), Azure (blue), GCP (red), professional boundaries
+- **Enhanced Connections**: Orthogonal routing with jump arcs and smart labeling
+
+### 🏗️ **Multi-Cloud Architecture Support**
+- **100+ Services**: AWS (38), Azure (13), GCP (12), OCI (8), IBM (5)
+- **VPC/Network Grouping**: Automatic network segregation and contextual labeling
+- **Cross-Cloud Dependencies**: Intelligent resource relationship mapping
+- **Provider Detection**: Automatic cloud provider identification from resource types
+
+### 📊 **Enhanced Output Formats**
+- **Mermaid**: Rich metadata with complexity analysis and provider information
+- **Draw.io**: Professional XML templates with enhanced styling
+- **PNG/SVG/JPEG**: High-quality raster and vector outputs
+- **Embedded Icons**: Base64-encoded icons for portability
+
+### 🛡️ **Enterprise Security & CI/CD**
+- **Mock Configuration Generator**: Profile-based environments (Dev, Staging, Prod, Multi-Cloud)
+- **GitHub Actions Integration**: Enhanced workflow with profile selection and fallback
+- **Security Scanning**: Automated dependency and code security analysis
+- **Zero Secret Exposure**: No real credentials required for analysis
+
+### 🧠 **Intelligent Automation**
+- **AUTO Layout**: 6-factor complexity analysis for optimal orientation
+- **Smart Service Aliases**: Automatic resolution of service name variations
+- **Network-Aware Labels**: Contextual network segregation display
+- **Performance Monitoring**: Resource usage and timing metrics
+
+## 🎯 Recent Major Updates
+
+### 🚀 **TerraVision Mock Integration** (Latest)
+- **Comprehensive Mock System**: Multi-cloud provider configurations with security levels
+- **Profile-Based Management**: Development, Staging, Production, Multi-Cloud profiles
+- **CI/CD Ready**: GitHub Actions, GitLab CI, Jenkins integration
+- **Docker Integration**: Containerized analysis with comprehensive environment setup
+- **Security-First Design**: Zero real credential requirements with audit trails
+
+### 🎨 **Enhanced Draw.io Capabilities**
+- **UniversalSmartArchitect Class**: AI-Lite heuristic resource resolution
+- **Dynamic Stencil Resolution**: Smart path construction with fallback handling
+- **Professional Styling**: Provider-specific colors and boundary designs
+- **Multi-Format Output**: Enhanced Mermaid, Draw.io, PNG, SVG generation
+
+### 📈 **Performance & Reliability**
+- **Resilient Architecture**: Multiple fallback strategies for maximum uptime
+- **Parallel Processing**: Concurrent analysis for large infrastructure
+- **Caching Strategy**: TerraVision result caching for faster builds
+- **Error Recovery**: Graceful degradation with detailed logging
 
 ### 🎨 Recent Improvements
 
@@ -92,9 +127,124 @@
 
 **SVG Icon Embedding**: Fixed SVG diagrams to properly embed icons as base64 data URIs, ensuring portability and correct display in all viewers.
 
-## 🎯 Quick Start
+## 🚀 Quick Start
 
-### Using Reusable Workflow (Recommended)
+### 🎯 **TerraVision-Enhanced Generation** (Recommended)
+
+#### **Basic Enhanced Analysis**
+```bash
+# Generate diagrams with TerraVision using mock credentials
+python tools/generate_arch_diagram.py \
+  examples/terraform/aws-basic/ \
+  --enable-terravision \
+  --out-drawio enhanced-architecture.drawio
+```
+
+#### **Profile-Based Generation**
+```bash
+# Generate using specific environment profile
+export PROFILE=staging
+python tools/mock_config_generator.py --profile $PROFILE --output-dir ./mock-configs
+source ./mock-configs/$PROFILE/github.env
+
+python tools/generate_arch_diagram.py \
+  examples/terraform/production/ \
+  --enable-terravision \
+  --no-mock-credentials \
+  --out-drawio production-architecture.drawio
+```
+
+#### **Multi-Cloud Analysis**
+```bash
+# Generate all mock configurations for different environments
+python tools/mock_config_generator.py --generate-all --output-dir ./mock-configs
+
+# Use multi-cloud profile for complex architectures
+python tools/generate_arch_diagram.py \
+  examples/terraform/multi-cloud/ \
+  --enable-terravision \
+  --out-drawio multi-cloud-architecture.drawio
+```
+
+### 🛠️ **Mock Configuration Management**
+
+#### **List Available Profiles**
+```bash
+python tools/mock_config_generator.py --list-profiles
+```
+
+#### **Generate Custom Profile**
+```bash
+# Generate production profile with enhanced security
+python tools/mock_config_generator.py \
+  --profile production \
+  --terraform-only \
+  --output-dir ./prod-mock
+```
+
+#### **Docker Compose Integration**
+```bash
+# Generate Docker setup for TerraVision
+python tools/mock_config_generator.py \
+  --profile multi-cloud \
+  --docker-only \
+  --output-dir ./docker-setup
+
+# Run TerraVision with Docker Compose
+cd docker-setup
+docker-compose --profile multi-cloud up terravision
+```
+
+### 🔄 **CI/CD Integration**
+
+#### **GitHub Actions Workflow**
+```yaml
+# .github/workflows/enhanced-diagram-generation.yml
+name: Enhanced Architecture Diagram Generation
+
+on:
+  workflow_dispatch:
+    inputs:
+      profile:
+        description: 'Configuration profile to use'
+        default: 'development'
+        type: choice
+        options:
+          - development
+          - staging
+          - production
+          - multi-cloud
+      enable_terravision:
+        type: boolean
+        default: true
+
+jobs:
+  generate-diagrams:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Generate Mock Configuration
+        run: |
+          python tools/mock_config_generator.py --profile ${{ github.event.inputs.profile }}
+      - name: Generate Enhanced Diagrams
+        run: |
+          python tools/generate_arch_diagram.py --enable-terravision --out-drawio architecture.drawio
+```
+
+#### **Environment Variables**
+```bash
+# TerraVision Configuration
+export ENABLE_TERRAVISION=true
+export TERRAVISION_DEBUG=false
+export TERRAVISION_CACHE_DIR=./.terravision-cache
+
+# Profile Selection
+export PROFILE=production
+export TF_VAR_security_level=high
+export TF_VAR_environment=production
+```
+
+## 🎯 Using Reusable Workflow (Recommended)
 
 Create `.github/workflows/auto-arch-diagram.yml` in your repository:
 

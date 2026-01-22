@@ -31,6 +31,14 @@ from cloud_icons_util import load_cloud_icons, load_public_cloud_icons
 # Import the BulletproofMapper for improved icon mapping
 from refined_bulletproof_mapper import RefinedBulletproofMapper as BulletproofMapper
 
+# Import enhanced Terraform parser with TerraVision integration
+try:
+    from enhanced_terraform_parser import enhance_terraform_parsing
+    ENHANCED_PARSER_AVAILABLE = True
+except ImportError:
+    ENHANCED_PARSER_AVAILABLE = False
+    enhance_terraform_parsing = None
+
 try:
     from openai import OpenAI  # type: ignore[import-not-found]
 except Exception:  # pragma: no cover
@@ -2884,9 +2892,96 @@ def _render_icon_diagram_from_terraform(
         _embed_images_in_svg(out_path)
 
 
+def _generate_mermaid_from_enhanced_data(
+    resources: Dict[str, Dict[str, Any]], 
+    dependencies: List[Tuple[str, str]], 
+    node_id_by_res: Dict[str, str], 
+    direction: str,
+    metadata: Dict[str, Any]
+) -> str:
+    """Generate Mermaid diagram from enhanced TerraVision analysis data."""
+    
+    # Create enhanced Mermaid with metadata
+    mermaid_lines = [
+        "graph TD",
+        f"    %% Enhanced by TerraVision Analysis",
+        f"    %% Complexity Score: {metadata.get('complexity_score', 0)}",
+        f"    %% Providers: {', '.join(metadata.get('cloud_providers', []))}",
+        f"    %% Analysis Source: {metadata.get('source', 'unknown')}",
+        ""
+    ]
+    
+    # Add resources with enhanced styling
+    for res_name, res_data in resources.items():
+        node_id = node_id_by_res[res_name]
+        res_type = res_data.get("type", "unknown")
+        provider = res_data.get("provider", "unknown")
+        
+        # Enhanced node styling based on provider and analysis
+        if provider == "aws":
+            style = "fill:#FF9900,stroke:#FF6600,color:#fff"
+        elif provider == "azure":
+            style = "fill:#0078D4,stroke:#005A9E,color:#fff"
+        elif provider == "gcp":
+            style = "fill:#4285F4,stroke:#1A73E8,color:#fff"
+        else:
+            style = "fill:#666,stroke:#333,color:#fff"
+        
+        # Add resource node with enhanced information
+        display_name = res_name.split(".")[-1]  # Use only the resource name part
+        mermaid_lines.append(f'    {node_id}["{display_name}"]:::{res_type}["{style}"]')
+    
+    # Add dependencies with enhanced relationship information
+    for source, target in dependencies:
+        source_id = node_id_by_res.get(source, source)
+        target_id = node_id_by_res.get(target, target)
+        
+        # Enhanced edge styling
+        mermaid_lines.append(f'    {source_id} --> {target_id}')
+    
+    # Add complexity analysis as subgraph
+    if metadata.get("complexity_score", 0) > 10:
+        mermaid_lines.extend([
+            "",
+            "    subgraph \"Complexity Analysis\"",
+            f'        complexity["Score: {metadata.get("complexity_score", 0)}"]',
+            f'        providers["{len(metadata.get("cloud_providers", []))} providers"]',
+            f'        resources["{len(resources)} resources"]',
+            "    end",
+            ""
+        ])
+    
+    return "\n".join(mermaid_lines)
+
+
 def _static_terraform_mermaid(
-    files: list[Path], direction: str, limits: Limits
+    files: list[Path], direction: str, limits: Limits, enable_terravision: bool = False, no_mock_credentials: bool = False
 ) -> tuple[str, str, str]:
+    # Try enhanced parser first if TerraVision is enabled
+    if enable_terravision and ENHANCED_PARSER_AVAILABLE:
+        try:
+            print("🚀 Using enhanced TerraVision analysis...")
+            all_resources, all_dependencies, metadata = enhance_terraform_parsing(
+                files, enable_terravision=True, mock_credentials=not no_mock_credentials
+            )
+            
+            # Convert to expected format for existing workflow
+            node_id_by_res = {
+                res: _safe_node_id(f"tf_{res}") for res in all_resources.keys()
+            }
+            
+            # Generate Mermaid using enhanced data
+            mermaid = _generate_mermaid_from_enhanced_data(
+                all_resources, all_dependencies, node_id_by_res, direction, metadata
+            )
+            
+            return mermaid, "enhanced", metadata.get("complexity_score", 0)
+            
+        except Exception as e:
+            print(f"⚠️  Enhanced parsing failed: {e}")
+            print("   Falling back to standard HCL2 parsing...")
+    
+    # Fallback to standard HCL2 parsing
     if hcl2 is None:
         raise RuntimeError(
             "Missing dependency python-hcl2. Install it to enable Terraform static diagrams."
@@ -3883,7 +3978,10 @@ def _static_markdown(
     out_png: Path | None,
     out_jpg: Path | None,
     out_svg: Path | None,
+    out_drawio: Path | None,
     render: RenderConfig,
+    enable_terravision: bool = False,
+    no_mock_credentials: bool = False,
 ) -> tuple[str, str]:
     # Prefer Terraform first, then CloudFormation, then Bicep, then Pulumi YAML.
     mermaid = None
@@ -3903,7 +4001,7 @@ def _static_markdown(
     try:
         tf_resources, tf_edges = _static_terraform_graph(changed_paths, limits)
         mermaid, summary, assumptions = _static_terraform_mermaid(
-            changed_paths, direction, limits
+            changed_paths, direction, limits, enable_terravision, no_mock_credentials
         )
         diag_kind = "terraform"
     except Exception:  # nosec B110
@@ -4230,6 +4328,17 @@ def main() -> int:
     parser.add_argument("--out-png", default="artifacts/architecture-diagram.png")
     parser.add_argument("--out-jpg", default="artifacts/architecture-diagram.jpg")
     parser.add_argument("--out-svg", default="artifacts/architecture-diagram.svg")
+    parser.add_argument("--out-drawio", default="artifacts/architecture-diagram.drawio")
+    parser.add_argument(
+        "--enable-terravision",
+        action="store_true",
+        help="Enable TerraVision enhanced analysis (requires Docker)"
+    )
+    parser.add_argument(
+        "--no-mock-credentials",
+        action="store_true",
+        help="Use real credentials instead of mock credentials for TerraVision"
+    )
     args = parser.parse_args()
 
     repo_root = Path.cwd()
@@ -4329,7 +4438,10 @@ def main() -> int:
             out_png=out_png,
             out_jpg=out_jpg,
             out_svg=out_svg,
+            out_drawio=out_drawio,
             render=render,
+            enable_terravision=args.enable_terravision,
+            no_mock_credentials=args.no_mock_credentials,
         )
         out_md.write_text(md, encoding="utf-8")
         out_mmd.write_text(mermaid, encoding="utf-8")

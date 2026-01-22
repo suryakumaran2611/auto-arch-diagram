@@ -1,38 +1,65 @@
 # Auto Architecture Diagram User Guide
 
-This comprehensive guide will help you set up and use the Auto Architecture Diagram action to automatically generate and maintain architecture diagrams for your Infrastructure as Code (IaC) projects.
+This comprehensive guide will help you set up and use the Auto Architecture Diagram action to automatically generate and maintain architecture diagrams for your Infrastructure as Code (IaC) projects with **enhanced TerraVision integration**.
 
 ## Table of Contents
 
 1. [Overview](#overview)
 2. [Quick Start](#quick-start)
-3. [Configuration](#configuration)
-4. [Supported IaC Formats](#supported-iac-formats)
-5. [Workflow Modes](#workflow-modes)
-6. [PR Creation and Updates](#pr-creation-and-updates)
-7. [Customization Options](#customization-options)
-8. [Troubleshooting](#troubleshooting)
-9. [Advanced Usage](#advanced-usage)
-10. [Best Practices](#best-practices)
-11. [Confluence Publishing and Image Replacement](#confluence-publishing-and-image-replacement)
+3. [TerraVision Integration](#terravision-integration) ⭐ **NEW!**
+4. [Configuration](#configuration)
+5. [Supported IaC Formats](#supported-iac-formats)
+6. [Workflow Modes](#workflow-modes)
+7. [PR Creation and Updates](#pr-creation-and-updates)
+8. [Customization Options](#customization-options)
+9. [Troubleshooting](#troubleshooting)
+10. [Advanced Usage](#advanced-usage)
+11. [Best Practices](#best-practices)
+12. [Confluence Publishing and Image Replacement](#confluence-publishing-and-image-replacement)
 
 ## Overview
 
 The Auto Architecture Diagram action automatically:
-- Detects changes in your IaC files
-- Generates architecture diagrams in multiple formats (Mermaid, PNG, SVG, JPEG)
-- Comments on pull requests with updated diagrams
-- Optionally creates pull requests to update diagram files in your repository
+- **Detects changes** in your IaC files
+- **Generates architecture diagrams** in multiple formats (Mermaid, PNG, SVG, JPEG, Draw.io)
+- **Enhanced analysis** with TerraVision AI-powered dependency mapping
+- **Comments on pull requests** with updated diagrams
+- **Optionally creates pull requests** to update diagram files in your repository
+- **Zero credential requirements** with comprehensive mock system
 
 ### Key Features
 
-- **Multi-format Support**: Terraform, CloudFormation, Bicep, Pulumi, AWS CDK
-- **Flexible Output**: Mermaid markdown, rendered images (PNG/SVG/JPEG)
-- **Typography**: Open Sans font family for professional, readable diagrams
-- **CloudFormation Excellence**: Full icon support with intelligent arrow styling
-- **SVG Portability**: Embedded icons ensure SVGs work in any viewer
-- **AI-Powered**: Optional AI mode for enhanced diagram generation
-- **PR Integration**: Automatic commenting and diagram PR creation
+- **🚀 TerraVision Integration**: AI-powered analysis with enhanced dependency mapping
+- **🎨 Professional Draw.io**: Universal Smart Architect with heuristic resource resolution
+- **🏗️ Multi-Cloud Support**: AWS, Azure, GCP, OCI, IBM with 100+ services
+- **🛡️ Enterprise Security**: Mock-based analysis for secure CI/CD environments
+- **📊 Enhanced Outputs**: Rich metadata with complexity scoring and provider information
+- **🔄 Resilient Architecture**: Multiple fallback strategies for maximum uptime
+
+## TerraVision Integration ⭐ **NEW!**
+
+### What is TerraVision Integration?
+
+TerraVision integration provides **enterprise-grade HCL analysis** without requiring real cloud credentials. It uses Docker-based TerraVision containers with comprehensive mock environments for secure CI/CD deployment.
+
+### Key Benefits
+
+- **🔒 Zero Security Risk**: No real cloud credentials needed for analysis
+- **🧠 Enhanced Intelligence**: AI-powered dependency mapping and complexity scoring
+- **☁️ Multi-Cloud Analysis**: Support for AWS, Azure, GCP, OCI, IBM
+- **📈 Performance Metrics**: Resource usage monitoring and timing analysis
+- **🔄 Graceful Fallback**: TerraVision → HCL2 → Regex parsing chain
+
+### TerraVision vs Standard Analysis
+
+| Feature | TerraVision Enhanced | Standard Analysis |
+|----------|-------------------|-------------------|
+| Dependency Mapping | ✅ AI-powered deep analysis | ⚠️ Basic pattern matching |
+| Complexity Scoring | ✅ Automated scoring algorithm | ❌ Not available |
+| Multi-Cloud Support | ✅ All major providers | ⚠️ Limited to AWS/Azure/GCP |
+| Credential Requirements | ❌ No real credentials needed | ⚠️ May need some access |
+| Analysis Speed | 🐢 Slower (comprehensive) | ⚡ Faster (basic) |
+| Accuracy | 🎯 High (enterprise-grade) | 👥 Medium (standard) |
 - **Highly Configurable**: Extensive customization options
 
 ## Quick Start

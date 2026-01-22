@@ -1,0 +1,318 @@
+name: Enhanced Architecture Diagram Generation
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+    inputs:
+      profile:
+        description: 'Configuration profile to use'
+        required: false
+        default: 'development'
+        type: choice
+        options:
+          - development
+          - staging
+          - production
+          - multi-cloud
+      enable_terravision:
+        description: 'Enable TerraVision enhanced analysis'
+        required: false
+        default: true
+        type: boolean
+      diagram_formats:
+        description: 'Diagram formats to generate'
+        required: false
+        default: 'md,mmd,png,svg,drawio'
+        type: string
+
+env:
+  # Default to development profile for security
+  PROFILE: ${{ github.event.inputs.profile || 'development' }}
+  ENABLE_TERRAVISION: ${{ github.event.inputs.enable_terravision || 'true' }}
+  DIAGRAM_FORMATS: ${{ github.event.inputs.diagram_formats || 'md,mmd,png,svg,drawio' }}
+
+jobs:
+  generate-diagrams:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+      
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install -r requirements-dev.txt
+      
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        with:
+          buildx-version: latest
+          platform: linux/amd64
+      
+      - name: Generate Mock Configuration
+        run: |
+          python tools/mock_config_generator.py \
+            --profile $PROFILE \
+            --output-dir ./mock-configs
+      
+      - name: Load Mock Environment
+        if: env.ENABLE_TERRAVISION == 'true'
+        run: |
+          echo "🔧 Loading mock environment for profile: $PROFILE"
+          
+          # Load profile-specific environment
+          if [ -f "./mock-configs/$PROFILE/github.env" ]; then
+            cat ./mock-configs/$PROFILE/github.env >> $GITHUB_ENV
+            echo "✅ Loaded GitHub environment variables"
+          fi
+          
+          # Display loaded environment (without secrets)
+          echo "📋 Environment Configuration:"
+          echo "   Profile: $PROFILE"
+          echo "   TerraVision: $ENABLE_TERRAVISION"
+          echo "   Formats: $DIAGRAM_FORMATS"
+          echo "   AWS Region: $AWS_DEFAULT_REGION"
+          echo "   Security Level: $TF_VAR_security_level"
+      
+      - name: Detect IaC Files
+        id: detect-files
+        run: |
+          echo "🔍 Detecting IaC files..."
+          
+          # Find all IaC files
+          FILES=$(find . -name "*.tf" -o -name "*.hcl" -o -name "*.bicep" -o -name "template.yml" -o -name "template.yaml" -o -name "Pulumi.yaml" -o -name "Pulumi.yml" | tr '\n' ' ')
+          
+          if [ -z "$FILES" ]; then
+            echo "❌ No IaC files found"
+            echo "files=[]" >> $GITHUB_OUTPUT
+          else
+            echo "✅ Found IaC files:"
+            echo "$FILES" | tr ' ' '\n' | while read file; do
+              echo "   - $file"
+            done
+            
+            # Convert to JSON array for GitHub Actions
+            JSON_FILES=$(echo "$FILES" | sed 's/[^[:space:]]\+/\n/g' | awk '{printf "%s%s", $0, (NR==1?"":"", "\n")}' | sed 's/,$//' | sed 's/^/[/')
+            echo "files=[$JSON_FILES]" >> $GITHUB_OUTPUT
+          fi
+      
+      - name: Generate Architecture Diagrams
+        if: steps.detect-files.outputs.files != '[]'
+        run: |
+          echo "🎨 Generating architecture diagrams..."
+          
+          # Create artifacts directory
+          mkdir -p artifacts
+          
+          # Prepare formats
+          IFS=',' read -ra FORMATS <<< "$DIAGRAM_FORMATS"
+          
+          # Build command based on available formats
+          CMD="python tools/generate_arch_diagram.py"
+          
+          # Add IaC files
+          for file in ${{ steps.detect-files.outputs.files }}; do
+            CMD="$CMD --changed-files $file"
+          done
+          
+          # Add TerraVision if enabled
+          if [ "$ENABLE_TERRAVISION" = "true" ]; then
+            CMD="$CMD --enable-terravision"
+          fi
+          
+          # Add output formats
+          for format in "${FORMATS[@]}"; do
+            case $format in
+              md)
+                CMD="$CMD --out-md artifacts/architecture-diagram.md"
+                ;;
+              mmd)
+                CMD="$CMD --out-mmd artifacts/architecture-diagram.mmd"
+                ;;
+              png)
+                CMD="$CMD --out-png artifacts/architecture-diagram.png"
+                ;;
+              svg)
+                CMD="$CMD --out-svg artifacts/architecture-diagram.svg"
+                ;;
+              drawio)
+                CMD="$CMD --out-drawio artifacts/architecture-diagram.drawio"
+                ;;
+            esac
+          done
+          
+          # Add direction
+          CMD="$CMD --direction AUTO"
+          
+          echo "🚀 Running: $CMD"
+          eval $CMD
+          
+          echo "✅ Diagram generation completed"
+          
+          # Display generated files
+          echo "📁 Generated files:"
+          ls -la artifacts/
+      
+      - name: Generate Diagrams without TerraVision (Fallback)
+        if: failure() && steps.detect-files.outputs.files != '[]'
+        run: |
+          echo "⚠️ TerraVision failed, falling back to standard generation..."
+          
+          mkdir -p artifacts
+          
+          CMD="python tools/generate_arch_diagram.py"
+          
+          # Add IaC files
+          for file in ${{ steps.detect-files.outputs.files }}; do
+            CMD="$CMD --changed-files $file"
+          done
+          
+          # Add output formats
+          IFS=',' read -ra FORMATS <<< "$DIAGRAM_FORMATS"
+          for format in "${FORMATS[@]}"; do
+            case $format in
+              md)
+                CMD="$CMD --out-md artifacts/architecture-diagram.md"
+                ;;
+              mmd)
+                CMD="$CMD --out-mmd artifacts/architecture-diagram.mmd"
+                ;;
+              png)
+                CMD="$CMD --out-png artifacts/architecture-diagram.png"
+                ;;
+              svg)
+                CMD="$CMD --out-svg artifacts/architecture-diagram.svg"
+                ;;
+              drawio)
+                CMD="$CMD --out-drawio artifacts/architecture-diagram.drawio"
+                ;;
+            esac
+          done
+          
+          CMD="$CMD --direction AUTO"
+          
+          echo "🔄 Running fallback: $CMD"
+          eval $CMD
+      
+      - name: Upload Diagram Artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: architecture-diagrams-${{ env.PROFILE }}
+          path: artifacts/
+          retention-days: 30
+      
+      - name: Generate Diagram Summary
+        if: always()
+        run: |
+          echo "## 📊 Diagram Generation Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Configuration" >> $GITHUB_STEP_SUMMARY
+          echo "- **Profile**: $PROFILE" >> $GITHUB_STEP_SUMMARY
+          echo "- **TerraVision**: $ENABLE_TERRAVISION" >> $GITHUB_STEP_SUMMARY
+          echo "- **Formats**: $DIAGRAM_FORMATS" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [ -f "artifacts/architecture-diagram.md" ]; then
+            echo "### 📄 Generated Files" >> $GITHUB_STEP_SUMMARY
+            echo "| Format | File | Size |" >> $GITHUB_STEP_SUMMARY
+            echo "|--------|------|------|" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          for file in artifacts/*; do
+            if [ -f "$file" ]; then
+              filename=$(basename "$file")
+              size=$(stat -c%s "$file" 2>/dev/null || stat -f%z "$file" 2>/dev/null || echo "N/A")
+              echo "| $filename | [📎 $filename](artifacts/$filename) | $size bytes |" >> $GITHUB_STEP_SUMMARY
+            fi
+          done
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 🎯 Usage Examples" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo '```bash' >> $GITHUB_STEP_SUMMARY
+          echo "# Generate with TerraVision (recommended)" >> $GITHUB_STEP_SUMMARY
+          echo "python tools/generate_arch_diagram.py \\" >> $GITHUB_STEP_SUMMARY
+          echo "  examples/terraform/ \\" >> $GITHUB_STEP_SUMMARY
+          echo "  --enable-terravision \\" >> $GITHUB_STEP_SUMMARY
+          echo "  --out-drawio enhanced-architecture.drawio" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "# Generate without TerraVision" >> $GITHUB_STEP_SUMMARY
+          echo "python tools/generate_arch_diagram.py \\" >> $GITHUB_STEP_SUMMARY
+          echo "  examples/terraform/ \\" >> $GITHUB_STEP_SUMMARY
+          echo "  --out-drawio standard-architecture.drawio" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+      
+      - name: Performance Metrics
+        if: always()
+        run: |
+          echo "## ⚡ Performance Metrics" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # Measure generation time
+          if [ -f "artifacts/architecture-diagram.md" ]; then
+            echo "✅ **Generation Status**: Success" >> $GITHUB_STEP_SUMMARY
+            
+            # Count resources (if we can extract from the files)
+            TF_COUNT=$(find . -name "*.tf" -exec grep -l "resource " {} \; | wc -l)
+            echo "📊 **Terraform Files**: $TF_COUNT" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ **Generation Status**: Failed" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 🔧 Environment Details" >> $GITHUB_STEP_SUMMARY
+          echo "- **Runner**: ${{ runner.os }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Python**: $(python --version)" >> $GITHUB_STEP_SUMMARY
+          echo "- **Docker**: $(docker --version | head -n1)" >> $GITHUB_STEP_SUMMARY
+
+  security-scan:
+    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request'
+    needs: generate-diagrams
+    permissions:
+      contents: read
+      security-events: write
+    
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+      
+      - name: Run Security Scan
+        run: |
+          echo "🔒 Running security scan on generated diagrams..."
+          
+          # Install security tools
+          pip install pip-audit bandit
+          
+          # Scan dependencies
+          echo "📦 Scanning dependencies..."
+          pip-audit -r requirements.txt --format=json > audit-report.json || true
+          bandit -r tools/ -f json -o bandit-report.json || true
+          
+          echo "✅ Security scan completed"
+      
+      - name: Upload Security Reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: security-reports
+          path: |
+            audit-report.json
+            bandit-report.json
+          retention-days: 30
