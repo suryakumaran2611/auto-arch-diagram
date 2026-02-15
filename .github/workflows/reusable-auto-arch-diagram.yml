@@ -116,6 +116,16 @@ on:
         required: false
         type: string
         default: auto-arch-diagram/update
+      tool_repo:
+        description: "Override tool repository (owner/repo)."
+        required: false
+        type: string
+        default: ''
+      tool_ref:
+        description: "Override tool ref (branch/tag/sha)."
+        required: false
+        type: string
+        default: ''
       force_full:
         description: "Force full architecture generation (ignore change detection)."
         required: false
@@ -150,6 +160,8 @@ jobs:
           echo "Full workflow ref: ${REF}"
           CALLER_REPO="${GITHUB_REPOSITORY}"
           echo "Caller repo: ${CALLER_REPO}"
+          INPUT_TOOL_REPO="${{ inputs.tool_repo }}"
+          INPUT_TOOL_REF="${{ inputs.tool_ref }}"
           
           TOOL_REPO="${REF%%/.github/workflows/*}"
           TOOL_REF="${REF##*@}"
@@ -157,14 +169,35 @@ jobs:
           echo "Extracted repo: ${TOOL_REPO}"
           echo "Extracted ref: ${TOOL_REF}"
           
+          if [[ -n "${INPUT_TOOL_REPO}" ]]; then
+            TOOL_REPO="${INPUT_TOOL_REPO}"
+            echo "Using input tool repo: ${TOOL_REPO}"
+          fi
+
           # Fallback to the canonical tool repo if the computed repo appears to be the caller repo
           if [[ -z "${TOOL_REPO}" || "${TOOL_REPO}" == "${CALLER_REPO}" ]]; then
             TOOL_REPO="suryakumaran2611/auto-arch-diagram"
             echo "Using fallback repo: ${TOOL_REPO}"
           fi
-          if [[ -z "${TOOL_REF}" || "${TOOL_REF}" == "@" || "${TOOL_REF}" == "${REF}" ]]; then
+
+          if [[ "${TOOL_REPO}" != "${CALLER_REPO}" ]]; then
+            if [[ -n "${INPUT_TOOL_REF}" ]]; then
+              TOOL_REF="${INPUT_TOOL_REF}"
+              echo "Using input tool ref: ${TOOL_REF}"
+            else
+              TOOL_REF="main"
+              echo "Using fallback ref for external tool repo: ${TOOL_REF}"
+            fi
+          else
+            if [[ -z "${TOOL_REF}" || "${TOOL_REF}" == "@" || "${TOOL_REF}" == "${REF}" ]]; then
+              TOOL_REF="main"
+              echo "Using fallback ref: ${TOOL_REF}"
+            fi
+          fi
+
+          if [[ "${TOOL_REPO}" != "${CALLER_REPO}" && "${TOOL_REF}" == refs/pull/* ]]; then
             TOOL_REF="main"
-            echo "Using fallback ref: ${TOOL_REF}"
+            echo "Tool ref is a PR merge ref for an external repo; using ${TOOL_REF} instead"
           fi
           
           echo "Final tool_repo=${TOOL_REPO}"
@@ -540,6 +573,8 @@ jobs:
           echo "Full workflow ref: ${REF}"
           CALLER_REPO="${GITHUB_REPOSITORY}"
           echo "Caller repo: ${CALLER_REPO}"
+          INPUT_TOOL_REPO="${{ inputs.tool_repo }}"
+          INPUT_TOOL_REF="${{ inputs.tool_ref }}"
           
           TOOL_REPO="${REF%%/.github/workflows/*}"
           TOOL_REF="${REF##*@}"
@@ -547,14 +582,35 @@ jobs:
           echo "Extracted repo: ${TOOL_REPO}"
           echo "Extracted ref: ${TOOL_REF}"
           
+          if [[ -n "${INPUT_TOOL_REPO}" ]]; then
+            TOOL_REPO="${INPUT_TOOL_REPO}"
+            echo "Using input tool repo: ${TOOL_REPO}"
+          fi
+
           # Fallback to the canonical tool repo if the computed repo appears to be the caller repo
           if [[ -z "${TOOL_REPO}" || "${TOOL_REPO}" == "${CALLER_REPO}" ]]; then
             TOOL_REPO="suryakumaran2611/auto-arch-diagram"
             echo "Using fallback repo: ${TOOL_REPO}"
           fi
-          if [[ -z "${TOOL_REF}" || "${TOOL_REF}" == "@" || "${TOOL_REF}" == "${REF}" ]]; then
+
+          if [[ "${TOOL_REPO}" != "${CALLER_REPO}" ]]; then
+            if [[ -n "${INPUT_TOOL_REF}" ]]; then
+              TOOL_REF="${INPUT_TOOL_REF}"
+              echo "Using input tool ref: ${TOOL_REF}"
+            else
+              TOOL_REF="main"
+              echo "Using fallback ref for external tool repo: ${TOOL_REF}"
+            fi
+          else
+            if [[ -z "${TOOL_REF}" || "${TOOL_REF}" == "@" || "${TOOL_REF}" == "${REF}" ]]; then
+              TOOL_REF="main"
+              echo "Using fallback ref: ${TOOL_REF}"
+            fi
+          fi
+
+          if [[ "${TOOL_REPO}" != "${CALLER_REPO}" && "${TOOL_REF}" == refs/pull/* ]]; then
             TOOL_REF="main"
-            echo "Using fallback ref: ${TOOL_REF}"
+            echo "Tool ref is a PR merge ref for an external repo; using ${TOOL_REF} instead"
           fi
           
           echo "Final tool_repo=${TOOL_REPO}"
