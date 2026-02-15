@@ -1037,6 +1037,8 @@ def _terraform_resources_from_hcl(
         if not isinstance(block, dict):
             continue
         for r_type, r_body in block.items():
+            if r_type.startswith("null_"):
+                continue
             if isinstance(r_body, dict):
                 # { "aws_vpc": {"main": {...}} }
                 for name, attrs in r_body.items():
