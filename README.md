@@ -116,6 +116,20 @@ on:
 
 jobs:
   diagram:
+    permissions:
+      contents: read
+      pull-requests: write
+    uses: suryakumaran2611/auto-arch-diagram/.github/workflows/reusable-auto-arch-diagram.yml@main
+    with:
+      direction: AUTO                 # Intelligent layout
+      image_formats: png,svg
+      comment_on_pr: true
+      edge_color: "#4B5563"
+      edge_penwidth: "1.3"
+      edge_arrowsize: "0.8"
+      force_full: ${{ github.event.inputs.force_update || false }}  # Force generation if manually triggered
+```
+
 ### Publishing Diagrams to Confluence Pages
 
 You can automatically publish or replace architecture diagrams to a Confluence page using the workflow's Confluence integration feature. This is useful for keeping your documentation up-to-date with the latest infrastructure changes.
@@ -149,19 +163,6 @@ with:
 **Notes:**
 - The workflow will upload the generated diagram (PNG/SVG/Markdown) to the specified Confluence page after each run.
 - For more details, see the [User Guide](docs/USER_GUIDE.md#confluence-integration).
-    permissions:
-      contents: read
-      pull-requests: write
-    uses: suryakumaran2611/auto-arch-diagram/.github/workflows/reusable-auto-arch-diagram.yml@v1
-    with:
-      direction: AUTO                 # Intelligent layout
-      image_formats: png,svg
-      comment_on_pr: true
-      edge_color: "#4B5563"
-      edge_penwidth: "1.3"
-      edge_arrowsize: "0.8"
-      force_full: ${{ github.event.inputs.force_update || false }}  # Force generation if manually triggered
-```
 
 📖 **For complete documentation, see the [User Guide](docs/USER_GUIDE.md)**
 
@@ -188,6 +189,20 @@ with:
   out_md: docs/architecture/diagram.md
 ```
 
+**Matrix Builds with Unique Artifacts**
+```yaml
+strategy:
+  matrix:
+    target:
+      - name: dev
+      - name: prod
+
+with:
+  out_png: artifacts/architecture-diagram-${{ matrix.target.name }}.png
+  out_svg: artifacts/architecture-diagram-${{ matrix.target.name }}.svg
+  artifact_name: auto-arch-diagram-${{ matrix.target.name }}-${{ github.run_attempt }}
+```
+
 **Production-Ready (Recommended)**
 ```yaml
 name: Architecture Diagrams
@@ -206,7 +221,7 @@ jobs:
     permissions:
       contents: read
       pull-requests: write
-    uses: suryakumaran2611/auto-arch-diagram/.github/workflows/reusable-auto-arch-diagram.yml@v1
+    uses: suryakumaran2611/auto-arch-diagram/.github/workflows/reusable-auto-arch-diagram.yml@main
     with:
       direction: AUTO
       image_formats: png,svg
@@ -228,16 +243,20 @@ with:
 **AI Mode (Experimental)** ⚠️
 > **Not for Production Use** - See [Security Considerations](docs/USER_GUIDE.md#security-considerations)
 
+Note: Draw.io MCP is for interactive chat clients (Claude Desktop, VS Code MCP, etc.). GitHub Actions uses the Draw.io CLI to import CSV and export PNG/SVG/JPG.
+
 ```yaml
 with:
   mode: ai
-  model: gpt-4o-mini
   direction: AUTO
 env:
-  OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}  # Transmits IaC code to external services
+  AZURE_OPENAI_API_KEY: ${{ secrets.AZURE_OPENAI_API_KEY }}
+  AZURE_OPENAI_ENDPOINT: ${{ secrets.AZURE_OPENAI_ENDPOINT }}
+  DEPLOYMENT_NAME: ${{ secrets.DEPLOYMENT_NAME }}  # Azure OpenAI deployment name
+  # Transmits IaC code to external services
 ```
 
-**Diagram Update PR (Auto-commit)**
+**Diagram Update PR (Create PR)**
 ```yaml
 on:
   pull_request_target:  # For fork safety
@@ -248,12 +267,31 @@ jobs:
     permissions:
       contents: write
       pull-requests: write
-    uses: suryakumaran2611/auto-arch-diagram/.github/workflows/reusable-auto-arch-diagram.yml@v1
+    uses: suryakumaran2611/auto-arch-diagram/.github/workflows/reusable-auto-arch-diagram.yml@main
     with:
       direction: AUTO
       publish_enabled: true
       create_diagram_pr: true
       # comment_on_pr: false  # Only create PR, don't comment
+```
+
+**Auto-Commit Diagrams to Repo (No PR)**
+```yaml
+on:
+  push:
+    branches: [main]
+
+jobs:
+  diagram:
+    permissions:
+      contents: write
+      pull-requests: write
+    uses: suryakumaran2611/auto-arch-diagram/.github/workflows/reusable-auto-arch-diagram.yml@main
+    with:
+      direction: AUTO
+      image_formats: png,svg
+      auto_commit_artifacts: true
+      create_diagram_pr: false
 ```
 
 **Force Updates (Repository Variable)**
@@ -263,7 +301,11 @@ jobs:
 on:
   push:
     branches: [main, develop]
-    if: vars.AUTO_ARCH_FORCE_UPDATE == 'true'
+
+jobs:
+  diagram:
+    if: ${{ vars.AUTO_ARCH_FORCE_UPDATE == 'true' }}
+    uses: suryakumaran2611/auto-arch-diagram/.github/workflows/reusable-auto-arch-diagram.yml@main
 ```
 
 ### 🧪 CI/CD Testing Workflow
@@ -322,7 +364,7 @@ jobs:
       - uses: actions/checkout@v4
       
       - name: Generate Architecture Diagram
-        uses: suryakumaran2611/auto-arch-diagram/.github/workflows/reusable-auto-arch-diagram.yml@v1
+        uses: suryakumaran2611/auto-arch-diagram/.github/workflows/reusable-auto-arch-diagram.yml@main
         with:
           direction: AUTO
           image_formats: png,svg
@@ -408,7 +450,7 @@ jobs:
       - uses: actions/checkout@v4
       
       - name: Generate Test Diagram
-        uses: suryakumaran2611/auto-arch-diagram/.github/workflows/reusable-auto-arch-diagram.yml@v1
+        uses: suryakumaran2611/auto-arch-diagram/.github/workflows/reusable-auto-arch-diagram.yml@main
         with:
           direction: AUTO
           image_formats: png,jpg,svg
@@ -419,7 +461,9 @@ jobs:
           edge_penwidth: "1.3"
           edge_arrowsize: "0.8"
         env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          AZURE_OPENAI_API_KEY: ${{ secrets.AZURE_OPENAI_API_KEY }}
+          AZURE_OPENAI_ENDPOINT: ${{ secrets.AZURE_OPENAI_ENDPOINT }}
+          DEPLOYMENT_NAME: ${{ secrets.DEPLOYMENT_NAME }}
 ```
 
 **Multi-Environment Pipeline**
@@ -448,7 +492,7 @@ jobs:
       - uses: actions/checkout@v4
       
       - name: Generate Architecture for Review
-        uses: suryakumaran2611/auto-arch-diagram/.github/workflows/reusable-auto-arch-diagram.yml@v1
+        uses: suryakumaran2611/auto-arch-diagram/.github/workflows/reusable-auto-arch-diagram.yml@main
         with:
           direction: AUTO
           image_formats: png
@@ -476,12 +520,12 @@ jobs:
           # Your deployment logic here
       
       - name: Update Architecture Documentation
-        uses: suryakumaran2611/auto-arch-diagram/.github/workflows/reusable-auto-arch-diagram.yml@v1
+        uses: suryakumaran2611/auto-arch-diagram/.github/workflows/reusable-auto-arch-diagram.yml@main
         with:
           direction: AUTO
           image_formats: png,svg
-          create_diagram_pr: true
-          publish_enabled: true
+          auto_commit_artifacts: true
+          create_diagram_pr: false
           out_md: docs/architecture/${{ env.ENVIRONMENT }}/diagram.md
           out_png: assets/images/architecture-${{ env.ENVIRONMENT }}.png
           edge_color: "#4B5563"
@@ -534,7 +578,7 @@ icons/
 | Parameter | Default | Description |
 |-----------|---------|-------------|
 | `direction` | `LR` | `AUTO`, `LR`, `TB`, `RL`, `BT` |
-| `mode` | `static` | `static` or `ai` (requires OPENAI_API_KEY) |
+| `mode` | `static` | `static` or `ai` (requires Azure OpenAI env vars) |
 | `image_formats` | `png,jpg,svg` | Formats to generate or `none` |
 | `iac_globs` | `**/*.tf` etc | Newline-separated IaC glob patterns |
 | `iac_root` | `.` | Root directory for IaC files |
@@ -544,6 +588,7 @@ icons/
 | `out_png` | `<out_dir>/architecture-diagram.png` | Output PNG path |
 | `out_jpg` | `<out_dir>/architecture-diagram.jpg` | Output JPG path |
 | `out_svg` | `<out_dir>/architecture-diagram.svg` | Output SVG path |
+| `artifact_name` | _(auto)_ | Artifact name override (use for matrix jobs) |
 | `render_layout` | `lanes` | `lanes` or `providers` |
 | `render_bg` | `transparent` | `transparent` or `white` |
 | `edge_color` | `#4B5563` | Edge color for PNG/SVG |
@@ -552,6 +597,7 @@ icons/
 | `force_full` | `false` | Render full architecture (ignore changes) |
 | `comment_on_pr` | `true` | Post/update sticky PR comment |
 | `create_diagram_pr` | `false` | Create diagram update PR |
+| `auto_commit_artifacts` | `false` | Commit generated artifacts directly to the repo |
 | `tool_repo` | _(auto)_ | Override tool repository (owner/repo) |
 | `tool_ref` | _(auto)_ | Override tool ref (branch/tag/sha) |
 
@@ -770,8 +816,10 @@ pip install -r requirements-dev.txt
 # Generate from example directory
 python tools/generate_arch_diagram.py --iac-root examples --out-md diagram.md --out-png diagram.png
 
-# Test with AI mode (requires OPENAI_API_KEY)
-$env:OPENAI_API_KEY = "your-api-key"
+# Test with AI mode (Azure OpenAI)
+$env:AZURE_OPENAI_API_KEY = "your-key-here"
+$env:AZURE_OPENAI_ENDPOINT = "https://your-resource.openai.azure.com"
+$env:DEPLOYMENT_NAME = "gpt-4o"
 python tools/generate_arch_diagram.py --mode ai --iac-root examples/test-ai-ml-blockchain --out-md ai-diagram.md
 
 # Generate all formats
@@ -804,7 +852,9 @@ python tools/generate_arch_diagram.py \
 
 # AI mode
 export AUTO_ARCH_MODE=ai
-export OPENAI_API_KEY=sk-...
+export AZURE_OPENAI_API_KEY=your-key-here
+export AZURE_OPENAI_ENDPOINT=https://your-resource.openai.azure.com
+export DEPLOYMENT_NAME=gpt-4o
 python tools/generate_arch_diagram.py \
   --changed-files "cdk/app.ts" \
   --direction AUTO \
@@ -950,8 +1000,8 @@ with:
 
 ### Reusable Workflow Issues
 **Workflow fails with "tool not found"**
-- Ensure you're using `@v1` or specific tag: `@v1.2.3`
-- Check workflow ref: `suryakumaran2611/auto-arch-diagram/.github/workflows/reusable-auto-arch-diagram.yml@v1`
+- Ensure you're using `@main` or a specific tag: `@v1.2.3`
+- Check workflow ref: `suryakumaran2611/auto-arch-diagram/.github/workflows/reusable-auto-arch-diagram.yml@main`
 
 **No IaC files detected**
 - Verify `iac_globs` patterns match your file structure
@@ -1069,6 +1119,8 @@ env:
 
 ### 🧠 AI Mode (Experimental)
 > **Not for Production Use** - See [User Guide](docs/USER_GUIDE.md#ai-mode-experimental) for details
+
+Note: Draw.io MCP is a chat-client integration. The workflow uses the Draw.io CLI for CSV imports and image exports.
 
 - **Status**: Experimental - May contain inaccuracies
 - **Security**: Transmits IaC code to external AI services  
