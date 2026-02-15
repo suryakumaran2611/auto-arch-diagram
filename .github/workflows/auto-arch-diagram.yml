@@ -48,11 +48,10 @@ on:
       force_update:
         description: 'Force architecture diagram update even if no IaC files changed'
         required: false
-        default: 'false'
+        default: false
         type: boolean
   push:
     branches: [main, develop]
-    if: vars.AUTO_ARCH_FORCE_UPDATE == 'true'
 
 jobs:
   comment:
