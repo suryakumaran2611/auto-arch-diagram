@@ -1108,9 +1108,126 @@ def _module_prefix_for_resource(res_name: str) -> str | None:
         _rtype, rname = res_name.split(".", 1)
     except ValueError:
         return None
-    if rname.startswith("module_") and "__" in rname:
-        return rname.split("__", 1)[0] + "__"
+    base_name = rname
+    env_prefix = None
+    if "__" in rname:
+        prefix, rest = rname.split("__", 1)
+        if _is_known_env(prefix):
+            env_prefix = prefix
+            base_name = rest
+    if base_name.startswith("module_") and "__" in base_name:
+        module_prefix = base_name.split("__", 1)[0] + "__"
+        if env_prefix:
+            return f"{env_prefix}__{module_prefix}"
+        return module_prefix
     return None
+
+
+_KNOWN_ENV_NAMES = {
+    "dev",
+    "development",
+    "preprod",
+    "pre-prod",
+    "prod",
+    "production",
+    "stage",
+    "staging",
+    "qa",
+    "test",
+    "uat",
+    "sandbox",
+    "shared",
+}
+
+_ENV_DIR_EXCLUDE = {
+    "modules",
+    "module",
+    "account_config",
+    "accounts",
+    "artifacts",
+    "templates",
+    "template",
+    "img",
+    "images",
+    "cloud_formation",
+    "config",
+    "configs",
+}
+
+
+def _is_known_env(name: str) -> bool:
+    return name.strip().lower() in _KNOWN_ENV_NAMES
+
+
+def _normalize_env_name(name: str | None) -> str | None:
+    if not name:
+        return None
+    return name.strip().lower()
+
+
+def _format_env_label(name: str) -> str:
+    return name.replace("-", " ").title()
+
+
+def _detect_environment_from_path(path: Path, repo_root: Path) -> str | None:
+    try:
+        rel = path.relative_to(repo_root)
+        parts = rel.parts
+    except Exception:
+        parts = path.parts
+
+    parts_lower = [p.lower() for p in parts]
+    for idx, part in enumerate(parts_lower):
+        if part == "terraform" and idx + 1 < len(parts_lower):
+            candidate = parts[idx + 1]
+            candidate_lower = candidate.lower()
+            if _is_known_env(candidate_lower):
+                return candidate_lower
+            if candidate_lower not in _ENV_DIR_EXCLUDE:
+                return candidate_lower
+
+    for part in parts_lower:
+        if _is_known_env(part):
+            return part
+    return None
+
+
+def _apply_env_prefix_to_res_id(res_id: str, env: str) -> str:
+    r_type, name = res_id.split(".", 1)
+    return f"{r_type}.{env}__{name}"
+
+
+def _strip_env_prefix_from_name(name: str) -> str:
+    if "__" in name:
+        prefix, rest = name.split("__", 1)
+        if _is_known_env(prefix):
+            return rest
+    return name
+
+
+def _group_resources_by_env(
+    resources: dict[str, dict[str, Any]]
+) -> dict[str, list[str]]:
+    groups: dict[str, list[str]] = {}
+    for res, attrs in resources.items():
+        env = _normalize_env_name(attrs.get("_auto_arch_env")) if attrs else None
+        env_key = env or "shared"
+        groups.setdefault(env_key, []).append(res)
+    return groups
+
+
+def _filter_resources_and_edges(
+    resources: dict[str, dict[str, Any]],
+    edges: set[tuple[str, str]],
+    resource_ids: set[str],
+) -> tuple[dict[str, dict[str, Any]], set[tuple[str, str]]]:
+    filtered_resources = {rid: resources[rid] for rid in resource_ids}
+    filtered_edges = {
+        (src, dst)
+        for (src, dst) in edges
+        if src in resource_ids and dst in resource_ids
+    }
+    return filtered_resources, filtered_edges
 
 
 def _fallback_chain_edges(resources: dict[str, dict[str, Any]]) -> set[tuple[str, str]]:
@@ -1130,24 +1247,60 @@ def _fallback_chain_edges(resources: dict[str, dict[str, Any]]) -> set[tuple[str
 
 def _terraform_resources_from_files(
     files: list[Path], limits: Limits, repo_root: Path
-) -> tuple[dict[str, dict[str, Any]], dict[str, dict[str, str]]]:
+) -> tuple[
+    dict[str, dict[str, Any]],
+    dict[str, dict[str, str]],
+    dict[str, dict[str, str]],
+]:
     resources: dict[str, dict[str, Any]] = {}
     module_ref_maps: dict[str, dict[str, str]] = {}
+    env_ref_maps: dict[str, dict[str, str]] = {}
+
+    envs_in_files = {
+        _normalize_env_name(_detect_environment_from_path(f, repo_root))
+        for f in files
+        if f.suffix in {".tf", ".hcl"}
+    }
+    envs_in_files.discard(None)
+    env_prefix_enabled = len(envs_in_files) > 1
+
     for f in files:
         if f.suffix not in {".tf", ".hcl"}:
             continue
+
+        env = _normalize_env_name(_detect_environment_from_path(f, repo_root))
+        if env_prefix_enabled and env is None:
+            env = "shared"
+
         try:
             text = _read_file_limited(f, max_bytes=limits.max_bytes_per_file)
             parsed = hcl2.loads(text)
         except Exception:  # nosec B112
             continue
-        resources.update(_terraform_resources_from_hcl(parsed))
+
+        base_resources = _terraform_resources_from_hcl(parsed)
+        for res_id, attrs in base_resources.items():
+            final_res_id = (
+                _apply_env_prefix_to_res_id(res_id, env)
+                if env_prefix_enabled and env
+                else res_id
+            )
+            attrs_copy = dict(attrs)
+            attrs_copy["_auto_arch_env"] = env
+            attrs_copy["_auto_arch_logical_id"] = res_id
+            attrs_copy["_auto_arch_source_file"] = f.as_posix()
+            resources[final_res_id] = attrs_copy
+            if env_prefix_enabled and env:
+                env_ref_maps.setdefault(env, {})[res_id] = final_res_id
 
         for module_name, source in _terraform_modules_from_hcl(parsed):
             module_dir = _resolve_local_module_dir(source, f.parent, repo_root)
             if module_dir is None:
                 continue
             module_prefix = f"module_{module_name}__"
+            env_module_prefix = (
+                f"{env}__{module_prefix}" if env_prefix_enabled and env else module_prefix
+            )
             module_files = sorted(module_dir.glob("*.tf")) + sorted(
                 module_dir.glob("*.hcl")
             )
@@ -1159,16 +1312,24 @@ def _terraform_resources_from_files(
                     parsed_module = hcl2.loads(text)
                 except Exception:  # nosec B112
                     continue
-                base_resources = _terraform_resources_from_hcl(parsed_module)
+                base_module_resources = _terraform_resources_from_hcl(parsed_module)
                 module_resources = _terraform_resources_from_hcl(
-                    parsed_module, name_prefix=module_prefix
+                    parsed_module, name_prefix=env_module_prefix
                 )
-                ref_map = module_ref_maps.setdefault(module_prefix, {})
-                for ref in base_resources.keys():
+                ref_map = module_ref_maps.setdefault(env_module_prefix, {})
+                for ref in base_module_resources.keys():
                     r_type, r_name = ref.split(".", 1)
-                    ref_map[ref] = f"{r_type}.{module_prefix}{r_name}"
-                resources.update(module_resources)
-    return resources, module_ref_maps
+                    ref_map[ref] = f"{r_type}.{env_module_prefix}{r_name}"
+                for res_id, attrs in module_resources.items():
+                    attrs_copy = dict(attrs)
+                    attrs_copy["_auto_arch_env"] = env
+                    attrs_copy["_auto_arch_logical_id"] = res_id
+                    attrs_copy["_auto_arch_source_file"] = module_file.as_posix()
+                    resources[res_id] = attrs_copy
+                    if env_prefix_enabled and env:
+                        env_ref_maps.setdefault(env, {})[res_id] = res_id
+
+    return resources, module_ref_maps, env_ref_maps
 
 
 def _guess_provider(resource_type: str) -> str:
@@ -1727,6 +1888,7 @@ def _tf_node_label(res_id: str) -> str:
         r_type, name = res_id.split(".", 1)
     except ValueError:
         return _wrap_text(res_id)
+    name = _strip_env_prefix_from_name(name)
     kind = _tf_pretty_kind(r_type)
     # Wrap kind and keep name on its own line.
     kind_wrapped = _wrap_text(kind, max_width=14, max_lines=1)
@@ -2497,6 +2659,36 @@ def _render_icon_diagram_from_terraform(
     # Skip extremely complex diagrams that may cause performance issues
     max_allowed_nodes = 120  # Allow larger diagrams before skipping render
     if complexity.node_count > max_allowed_nodes:
+        env_groups = _group_resources_by_env(all_resources)
+        if len(env_groups) > 1:
+            print(
+                f"⚠️  Diagram too large ({complexity.node_count} > {max_allowed_nodes}). Splitting by environment."
+            )
+            for env_key, res_list in sorted(env_groups.items()):
+                res_set = set(res_list)
+                if not res_set:
+                    continue
+                sub_resources, sub_edges = _filter_resources_and_edges(
+                    all_resources, edges, res_set
+                )
+                if not sub_resources:
+                    continue
+                env_suffix = env_key or "shared"
+                sub_out_path = out_path.with_name(
+                    f"{out_path.stem}-{env_suffix}{out_path.suffix}"
+                )
+                env_label = _format_env_label(env_suffix)
+                sub_title = f"{title} - {env_label}"
+                _render_icon_diagram_from_terraform(
+                    sub_resources,
+                    sub_edges,
+                    out_path=sub_out_path,
+                    title=sub_title,
+                    direction=direction,
+                    render=render,
+                )
+            return
+
         print(
             f"⚠️  Skipping diagram generation: Too many resources ({complexity.node_count} > {max_allowed_nodes})"
         )
@@ -3039,7 +3231,7 @@ def _static_terraform_mermaid(
         )
 
     repo_root = Path.cwd()
-    all_resources, module_ref_maps = _terraform_resources_from_files(
+    all_resources, module_ref_maps, env_ref_maps = _terraform_resources_from_files(
         files, limits, repo_root
     )
 
@@ -3049,13 +3241,21 @@ def _static_terraform_mermaid(
     node_id_by_res: dict[str, str] = {
         res: _safe_node_id(f"tf_{res}") for res in all_resources.keys()
     }
-    groups: dict[str, list[str]] = {}
+    groups: dict[str, dict[str, list[str]]] = {}
     edges: set[tuple[str, str]] = set()
+
+    env_groups = _group_resources_by_env(all_resources)
+    use_env_grouping = len(env_groups) > 1
 
     for res, attrs in all_resources.items():
         r_type, _name = res.split(".", 1)
         provider = _guess_provider(r_type)
-        groups.setdefault(provider, []).append(res)
+        env = _normalize_env_name(attrs.get("_auto_arch_env")) if attrs else None
+        env_key = env or "shared"
+        if use_env_grouping:
+            groups.setdefault(env_key, {}).setdefault(provider, []).append(res)
+        else:
+            groups.setdefault("_all", {}).setdefault(provider, []).append(res)
 
         refs = set()
         refs |= _extract_tf_resource_refs(attrs)
@@ -3066,6 +3266,9 @@ def _static_terraform_mermaid(
         if module_prefix and module_prefix in module_ref_maps:
             ref_map = module_ref_maps[module_prefix]
             refs = {ref_map.get(r, r) for r in refs}
+        if env and env in env_ref_maps:
+            env_map = env_ref_maps[env]
+            refs = {env_map.get(r, r) for r in refs}
 
         for ref in sorted(refs):
             if ref == res:
@@ -3083,12 +3286,21 @@ def _static_terraform_mermaid(
 
     lines: list[str] = [f"flowchart {direction}"]
 
-    for provider, resources in sorted(groups.items()):
-        lines.append(f"subgraph {provider}[{provider}]")
-        for res in sorted(resources):
-            label = res
-            lines.append(f'  {node_id_by_res[res]}["{label}"]')
-        lines.append("end")
+    for env_key, providers in sorted(groups.items()):
+        if use_env_grouping:
+            env_label = _format_env_label(env_key)
+            env_id = _safe_node_id(f"env_{env_key}")
+            lines.append(f"subgraph {env_id}[{env_label}]")
+        for provider, resources in sorted(providers.items()):
+            provider_id = _safe_node_id(f"{env_key}_{provider}")
+            lines.append(f"  subgraph {provider_id}[{provider}]")
+            for res in sorted(resources):
+                logical_id = all_resources.get(res, {}).get("_auto_arch_logical_id")
+                label = logical_id or res
+                lines.append(f'    {node_id_by_res[res]}["{label}"]')
+            lines.append("  end")
+        if use_env_grouping:
+            lines.append("end")
 
     for src, dst in sorted(edges):
         lines.append(f"{src} --> {dst}")
@@ -3112,7 +3324,7 @@ def _static_terraform_graph(
         )
 
     repo_root = Path.cwd()
-    all_resources, module_ref_maps = _terraform_resources_from_files(
+    all_resources, module_ref_maps, env_ref_maps = _terraform_resources_from_files(
         files, limits, repo_root
     )
 
@@ -3130,6 +3342,10 @@ def _static_terraform_graph(
         if module_prefix and module_prefix in module_ref_maps:
             ref_map = module_ref_maps[module_prefix]
             refs = {ref_map.get(r, r) for r in refs}
+        env = _normalize_env_name(attrs.get("_auto_arch_env")) if attrs else None
+        if env and env in env_ref_maps:
+            env_map = env_ref_maps[env]
+            refs = {env_map.get(r, r) for r in refs}
         for ref in sorted(refs):
             if ref in all_resources and ref != res:
                 edges.add((ref, res))

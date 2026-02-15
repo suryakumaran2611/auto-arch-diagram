@@ -3,8 +3,15 @@ name: Test Reusable Architecture Diagram Workflow
 on:
   workflow_dispatch:
 
+permissions:
+  contents: read
+  pull-requests: write
+
 jobs:
   test-reusable-diagram:
+    permissions:
+      contents: write
+      pull-requests: write
     uses: ./.github/workflows/reusable-auto-arch-diagram.yml
     with:
       changed_files: ''
@@ -18,13 +25,20 @@ jobs:
       direction: AUTO
       render_layout: lanes
       render_bg: transparent
+      edge_color: "#4B5563"
+      edge_penwidth: "1.3"
+      edge_arrowsize: "0.8"
+      artifact_name: auto-arch-diagram-test
     secrets: inherit
   validate-artifacts:
     runs-on: ubuntu-latest
     needs: test-reusable-diagram
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: auto-arch-diagram-test
+          path: test-output
       - name: List output files
         run: |
           ls -l test-output
@@ -33,4 +47,4 @@ jobs:
           test -f test-output/architecture-diagram.png
           test -f test-output/architecture-diagram.svg
       - name: Print success message
-        run: echo "Reusable workflow test passed: output diagrams found."
+        run: echo "Reusable workflow test passed - output diagrams found"
