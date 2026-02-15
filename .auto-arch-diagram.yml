@@ -30,7 +30,7 @@ diagram:
 
 generator:
   # static: no external AI (uses parsers/libs)
-  # ai: uses OpenAI (requires OPENAI_API_KEY)
+  # ai: uses Azure OpenAI (requires AZURE_OPENAI_API_KEY, AZURE_OPENAI_ENDPOINT, DEPLOYMENT_NAME)
   mode: static
 
 publish:
@@ -45,9 +45,9 @@ publish:
     svg: docs/architecture/auto-arch-diagram.svg
 
 model:
-  provider: openai
-  # Override in GitHub Actions via env `AUTO_ARCH_MODEL`
-  name: gpt-4o-mini
+  provider: azure_openai
+  # Override in GitHub Actions via env `AUTO_ARCH_MODEL` or DEPLOYMENT_NAME
+  name: gpt-4o
 
 limits:
   max_files: 25

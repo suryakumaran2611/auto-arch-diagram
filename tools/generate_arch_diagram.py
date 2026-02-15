@@ -6,6 +6,9 @@ import base64
 import json
 import os
 import re
+import subprocess
+import urllib.parse
+import zlib
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Iterable, Optional
@@ -32,9 +35,9 @@ from cloud_icons_util import load_cloud_icons, load_public_cloud_icons
 from refined_bulletproof_mapper import RefinedBulletproofMapper as BulletproofMapper
 
 try:
-    from openai import OpenAI  # type: ignore[import-not-found]
+    from openai import AzureOpenAI  # type: ignore[import-not-found]
 except Exception:  # pragma: no cover
-    OpenAI = None  # type: ignore
+    AzureOpenAI = None  # type: ignore
 
 try:
     import hcl2  # type: ignore
@@ -4459,6 +4462,13 @@ def _split_changed_files(changed_files_raw: str) -> list[str]:
     return [p.replace("\\", "/") for p in parts]
 
 
+def _normalize_mermaid_direction(direction: str) -> str:
+    d = (direction or "").strip().upper()
+    if d == "AUTO" or d not in {"LR", "RL", "TB", "BT"}:
+        return "LR"
+    return d
+
+
 _SECRET_ASSIGNMENT_RE = re.compile(
     r"(?ix)"
     r"(password|passwd|secret|token|access[_-]?key|secret[_-]?key|private[_-]?key)"
@@ -4532,6 +4542,128 @@ def _build_prompt(
         {"role": "system", "content": system},
         {"role": "user", "content": user},
     ]
+
+
+def _build_drawio_csv_prompt(
+    changed_files: list[Path], file_snippets: dict[str, str]
+) -> list[dict[str, str]]:
+    file_list = "\n".join(f"- {p.as_posix()}" for p in changed_files)
+    snippets = []
+    for filename, contents in file_snippets.items():
+        snippets.append(f"FILE: {filename}\n---\n{contents}\n---\n")
+    snippets_text = "\n".join(snippets)
+
+    system = (
+        "You are a Principal Solutions Architect. Parse the provided IaC and output a Draw.io CSV string.\n\n"
+        "ARCHITECTURE GUIDELINES:\n"
+        "1. CONTAINMENT: Use 'parent' column. Create parents for Cloud Provider (AWS/Azure/GCP) -> Region -> VPC/VNET -> Subnet.\n"
+        "2. ICON PATHS:\n"
+        "   - AWS: mxgraph.aws4.<service> (e.g., s3, ec2, lambda)\n"
+        "   - Azure: mxgraph.azure.<service> (e.g., sql_database, virtual_networks)\n"
+        "   - GCP: mxgraph.gcp2.<service> (e.g., bigquery, compute_engine)\n"
+        "3. CONNECTIONS: Focus on traffic flow (User -> LB -> App -> DB). Use 'edgeStyle=orthogonalEdgeStyle;rounded=1'.\n\n"
+        "CSV FORMAT:\n"
+        "# label: %name%\n"
+        "# style: shape=%shape%;fillColor=%fill%;strokeColor=%stroke%;verticalLabelPosition=bottom;\n"
+        "# connect: {\"from\":\"refs\", \"to\":\"id\", \"style\": \"edgeStyle=orthogonalEdgeStyle;rounded=1;\"}\n"
+        "# parent: parent\n"
+        "# layout: horizontalflow\n"
+        "# ignore: id,shape,fill,stroke,refs,parent\n"
+        "id,name,shape,fill,stroke,parent,refs\n"
+    )
+
+    user = (
+        f"Generate a diagram for these changed IaC files:\n{file_list}\n\n"
+        f"IaC snippets (redacted + may be truncated):\n\n{snippets_text}"
+    )
+
+    return [
+        {"role": "system", "content": system},
+        {"role": "user", "content": user},
+    ]
+
+
+def _clean_drawio_csv(csv_text: str) -> str:
+    cleaned = (csv_text or "").replace("```csv", "").replace("```", "").strip()
+    return cleaned + "\n" if cleaned else ""
+
+
+def _drawio_create_url(data: str, diagram_type: str) -> str:
+    if not data:
+        return ""
+    encoded = urllib.parse.quote(data, safe="-_.!~*'()")
+    compressor = zlib.compressobj(wbits=-15)
+    compressed = compressor.compress(encoded.encode("utf-8")) + compressor.flush()
+    compressed_b64 = base64.b64encode(compressed).decode("ascii")
+
+    create_obj = {"type": diagram_type, "compressed": True, "data": compressed_b64}
+    params = urllib.parse.urlencode(
+        {"grid": "0", "pv": "0", "border": "10", "edit": "_blank"}
+    )
+    create_hash = "#create=" + urllib.parse.quote(
+        json.dumps(create_obj, separators=(",", ":"))
+    )
+    return f"https://app.diagrams.net/?{params}{create_hash}"
+
+
+def _drawio_csv_preview_url(csv_text: str) -> str | None:
+    max_chars = int(os.getenv("DRAWIO_PREVIEW_MAX_CHARS") or "8000")
+    if not csv_text or len(csv_text) > max_chars:
+        return None
+    return _drawio_create_url(csv_text, "csv")
+
+
+def _run_drawio_cli(args: list[str]) -> bool:
+    try:
+        subprocess.run(args, check=True)
+        return True
+    except Exception as exc:  # pragma: no cover
+        if os.getenv("AUTO_ARCH_DEBUG"):
+            print(f"Draw.io CLI failed: {exc}")
+        return False
+
+
+def _write_drawio_outputs(
+    csv_text: str,
+    *,
+    repo_root: Path,
+    out_png: Path | None,
+    out_jpg: Path | None,
+    out_svg: Path | None,
+) -> tuple[Path, Path | None]:
+    artifacts_dir = repo_root / "artifacts"
+    artifacts_dir.mkdir(parents=True, exist_ok=True)
+
+    csv_path = artifacts_dir / "architecture-diagram.drawio.csv"
+    drawio_path = artifacts_dir / "architecture-diagram.drawio"
+
+    csv_path.write_text(csv_text, encoding="utf-8")
+
+    drawio_cli = (os.getenv("DRAWIO_CLI") or "drawio").strip()
+
+    # Attempt to import CSV into a drawio file.
+    imported = _run_drawio_cli(
+        [drawio_cli, "-x", "-f", "xml", "-o", str(drawio_path), str(csv_path)]
+    )
+
+    if imported and drawio_path.exists():
+        if out_png is not None:
+            out_png.parent.mkdir(parents=True, exist_ok=True)
+            _run_drawio_cli(
+                [drawio_cli, "-x", "-f", "png", "-o", str(out_png), str(drawio_path)]
+            )
+        if out_jpg is not None:
+            out_jpg.parent.mkdir(parents=True, exist_ok=True)
+            _run_drawio_cli(
+                [drawio_cli, "-x", "-f", "jpg", "-o", str(out_jpg), str(drawio_path)]
+            )
+        if out_svg is not None:
+            out_svg.parent.mkdir(parents=True, exist_ok=True)
+            _run_drawio_cli(
+                [drawio_cli, "-x", "-f", "svg", "-o", str(out_svg), str(drawio_path)]
+            )
+
+    return csv_path, drawio_path if drawio_path.exists() else None
 
 
 def _extract_mermaid(markdown: str) -> str | None:
@@ -4692,10 +4824,12 @@ def main() -> int:
             out_svg.write_text("", encoding="utf-8")
         return 0
 
+    mermaid_direction = _normalize_mermaid_direction(direction)
+
     if mode != "ai":
         md, mermaid = _static_markdown(
             changed_paths,
-            direction,
+            mermaid_direction,
             limits,
             out_png=out_png,
             out_jpg=out_jpg,
@@ -4725,47 +4859,69 @@ def main() -> int:
             p, max_bytes=limits.max_bytes_per_file
         )
 
-    api_key = (os.getenv("OPENAI_API_KEY") or "").strip()
-    if not api_key or OpenAI is None:
-        reason = "Missing OPENAI_API_KEY (or OpenAI client unavailable). Set it as a repo secret to enable generation."
+    api_key = (os.getenv("AZURE_OPENAI_API_KEY") or "").strip()
+    endpoint = (os.getenv("AZURE_OPENAI_ENDPOINT") or "").strip()
+    deployment = (os.getenv("DEPLOYMENT_NAME") or model or "").strip()
+    if not api_key or not endpoint or not deployment or AzureOpenAI is None:
+        reason = (
+            "Missing Azure OpenAI configuration (AZURE_OPENAI_API_KEY, AZURE_OPENAI_ENDPOINT, "
+            "DEPLOYMENT_NAME) or AzureOpenAI client unavailable."
+        )
         out_md.write_text(_fallback_markdown(selected, reason), encoding="utf-8")
         out_mmd.write_text("", encoding="utf-8")
         return 0
 
-    client = OpenAI(api_key=api_key)
-    messages = _build_prompt(changed_paths, direction, file_snippets)
+    client = AzureOpenAI(
+        api_key=api_key,
+        api_version="2024-05-01-preview",
+        azure_endpoint=endpoint,
+    )
+    messages = _build_drawio_csv_prompt(changed_paths, file_snippets)
 
     try:
         resp = client.chat.completions.create(
-            model=model,
+            model=deployment,
             messages=messages,
-            temperature=0.2,
+            temperature=0,
         )
-        markdown = (resp.choices[0].message.content or "").strip()
+        csv_text = _clean_drawio_csv(resp.choices[0].message.content or "")
     except Exception as exc:
         out_md.write_text(
-            _fallback_markdown(selected, f"OpenAI request failed: {exc}"),
+            _fallback_markdown(selected, f"Azure OpenAI request failed: {exc}"),
             encoding="utf-8",
         )
         out_mmd.write_text("", encoding="utf-8")
         return 0
 
-    if COMMENT_MARKER not in markdown:
-        markdown = f"{COMMENT_MARKER}\n\n" + markdown
-
-    mermaid = _extract_mermaid(markdown)
-    if mermaid is None:
+    if not csv_text:
         out_md.write_text(
-            _fallback_markdown(
-                selected, "Model response did not contain a Mermaid code block."
-            ),
+            _fallback_markdown(selected, "Model response did not contain CSV output."),
             encoding="utf-8",
         )
         out_mmd.write_text("", encoding="utf-8")
         return 0
 
-    out_md.write_text(markdown + "\n", encoding="utf-8")
-    out_mmd.write_text(mermaid, encoding="utf-8")
+    csv_path, drawio_path = _write_drawio_outputs(
+        csv_text,
+        repo_root=repo_root,
+        out_png=out_png,
+        out_jpg=out_jpg,
+        out_svg=out_svg,
+    )
+
+    preview_url = _drawio_csv_preview_url(csv_text)
+
+    md = (
+        f"{COMMENT_MARKER}\n\n"
+        f"## Architecture Diagram (Auto)\n\n"
+        f"Summary: Generated a Draw.io CSV diagram from changed resources.\n\n"
+        f"Draw.io CSV: {csv_path.as_posix()}\n\n"
+        f"Draw.io preview: {preview_url if preview_url else 'not available (CSV too large for URL preview)'}\n\n"
+        f"Draw.io file: {drawio_path.as_posix() if drawio_path else 'not available (Draw.io CLI import failed)'}\n\n"
+        f"Rendered diagram: {'available as workflow artifact' if drawio_path else 'not available'}\n"
+    )
+    out_md.write_text(md, encoding="utf-8")
+    out_mmd.write_text("", encoding="utf-8")
 
     _maybe_publish_outputs(
         repo_root,

@@ -66,7 +66,9 @@ python tools/generate_arch_diagram.py \
 
 ```powershell
 # Enhanced analysis with AI mode
-$env:OPENAI_API_KEY = "your-openai-key"
+$env:AZURE_OPENAI_API_KEY = "your-key-here"
+$env:AZURE_OPENAI_ENDPOINT = "https://your-resource.openai.azure.com"
+$env:DEPLOYMENT_NAME = "gpt-4o"
 python tools/generate_arch_diagram.py \
   --mode ai \
   --iac-root test-ai-ml-blockchain \
@@ -142,7 +144,7 @@ Debug output shows:
 
 ### Azure Services (23 total)
 - [x] Azure ML (Workspace, Compute, Model, Endpoint)
-- [x] OpenAI Service
+- [x] Azure OpenAI Service
 - [x] Cognitive Services (Computer Vision, Face, Speech, Language)
 - [x] Blockchain Service (Members, Nodes)
 - [x] Integration (Databricks, Synapse)

@@ -72,29 +72,33 @@ pip install -r requirements.txt
 
 ### 1. Basic Setup
 
-Create `.github/workflows/auto-arch-diagram.yml` in your repository:
-
-```yaml
 name: Auto Architecture Diagram
 
-on:
+ Uses Azure OpenAI to generate Draw.io CSV (and optional .drawio + exports) for more intelligent diagrams.
   pull_request:
     types: [opened, synchronize, reopened]
-    paths:
-      - '**/*.tf'
+ **Requirements:**
+ - `AZURE_OPENAI_API_KEY` secret in your repository
+ - `AZURE_OPENAI_ENDPOINT` secret in your repository
+ - `DEPLOYMENT_NAME` secret or variable for your Azure OpenAI deployment
+ - API costs may apply
       - '**/*.tfvars'
-      - '**/*.bicep'
+ **AI Mode**: Azure OpenAI transmits your IaC code to external services
       - '**/*.cfn.yaml'
       - '**/*.cfn.yml'
-      - '**/template.yaml'
+ **Cause**: Missing or invalid Azure OpenAI configuration.
       - '**/template.yml'
-
-jobs:
-  comment:
-    permissions:
+ **Solution**:
+ - Add `AZURE_OPENAI_API_KEY`, `AZURE_OPENAI_ENDPOINT`, and `DEPLOYMENT_NAME`
+ - Verify the deployment name matches your Azure OpenAI deployment
+ - Check that the Azure OpenAI resource has sufficient quota
       contents: read
       pull-requests: write
     uses: suryakumaran2611/auto-arch-diagram/.github/workflows/reusable-auto-arch-diagram.yml@main
+ # Test with AI mode for enhanced analysis (Azure OpenAI)
+ $env:AZURE_OPENAI_API_KEY = "your-key-here"
+ $env:AZURE_OPENAI_ENDPOINT = "https://your-resource.openai.azure.com"
+ $env:DEPLOYMENT_NAME = "gpt-4o"
     with:
       mode: static
       direction: LR
@@ -106,11 +110,14 @@ jobs:
 ```
 
 ### 2. Enable PR Creation (Optional)
-
+      AZURE_OPENAI_API_KEY: ${{ secrets.AZURE_OPENAI_API_KEY }}
+      AZURE_OPENAI_ENDPOINT: ${{ secrets.AZURE_OPENAI_ENDPOINT }}
+      DEPLOYMENT_NAME: ${{ secrets.DEPLOYMENT_NAME }}
 To automatically create PRs that update diagram files:
 
-```yaml
-  diagram_pr:
+generator:
+  mode: ai
+  name: gpt-4o
     if: github.event_name == 'pull_request_target'
     permissions:
       contents: write
@@ -150,7 +157,7 @@ You can configure the action using GitHub repository variables:
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `AUTO_ARCH_MODE` | `static` | Generation mode: `static` or `ai` |
-| `AUTO_ARCH_MODEL` | `gpt-4o-mini` | AI model (when mode=ai) - **Experimental** |
+| `AUTO_ARCH_MODEL` | `gpt-4o` | Azure OpenAI deployment name (mode=ai) - **Experimental** |
 | `AUTO_ARCH_DIRECTION` | `LR` | Diagram direction: `LR`, `TB`, `RL`, `BT`, `AUTO` |
 | `AUTO_ARCH_RENDER_LAYOUT` | `lanes` | Layout: `lanes` or `providers` |
 | `AUTO_ARCH_RENDER_BG` | `transparent` | Background: `transparent` or `white` |
@@ -171,7 +178,7 @@ You can configure the action using GitHub repository variables:
 | `iac_root` | `.` | Root directory to read IaC files from |
 | `direction` | `LR` | `AUTO`, `LR`, `TB`, `RL`, `BT` |
 | `mode` | `static` | `static` or `ai` |
-| `model` | `gpt-4o-mini` | AI model name (mode=ai) |
+| `model` | `gpt-4o` | Azure OpenAI deployment name (mode=ai) |
 | `image_formats` | `png,jpg,svg` | Formats to generate or `none` |
 | `out_dir` | `artifacts` | Output directory |
 | `out_md` | `<out_dir>/architecture-diagram.md` | Output Markdown path |
@@ -200,7 +207,7 @@ diagram:
   direction: LR  # LR, TB, RL, BT, or AUTO
 
 generator:
-  mode: static  # static or ai (requires OPENAI_API_KEY)
+  mode: static  # static or ai (requires Azure OpenAI env vars)
 
 render:
   layout: lanes  # lanes or providers
@@ -221,8 +228,8 @@ publish:
     svg: docs/architecture/auto-arch-diagram.svg
 
 model:
-  provider: openai
-  name: gpt-4o-mini
+  provider: azure_openai
+  name: gpt-4o
 
 limits:
   max_files: 25
@@ -281,10 +288,14 @@ Uses parsers and libraries to analyze IaC files without external AI services.
 
 ⚠️ **Experimental Feature - Not for Production Use**
 
-Uses OpenAI's models to analyze and generate more intelligent diagrams.
+Uses Azure OpenAI to generate Draw.io CSV (and optional .drawio + exports).
+
+Note: Draw.io MCP is for interactive chat clients (Claude Desktop, VS Code MCP, etc.). The GitHub Actions workflow uses the Draw.io CLI to import CSV and export PNG/SVG/JPG.
 
 **Requirements:**
-- `OPENAI_API_KEY` secret in your repository
+- `AZURE_OPENAI_API_KEY` secret in your repository
+- `AZURE_OPENAI_ENDPOINT` secret in your repository
+- `DEPLOYMENT_NAME` secret or variable for your Azure OpenAI deployment
 - API costs may apply
 
 **Advantages:**
@@ -414,12 +425,12 @@ publish:
 - Set `create_diagram_pr: true`
 
 #### 4. AI Mode Not Working
-**Cause**: Missing or invalid `OPENAI_API_KEY`.
+**Cause**: Missing or invalid Azure OpenAI configuration.
 
 **Solution**:
-- Add `OPENAI_API_KEY` as a repository secret
-- Verify the API key has sufficient credits
-- Check that the model name is correct
+- Add `AZURE_OPENAI_API_KEY`, `AZURE_OPENAI_ENDPOINT`, and `DEPLOYMENT_NAME`
+- Verify the deployment name matches your Azure OpenAI deployment
+- Check that the Azure OpenAI resource has sufficient quota
 
 #### 5. SVG Icons Not Displaying
 **Cause**: SVG files may not have embedded icons or the viewer doesn't support embedded images.
@@ -552,7 +563,7 @@ your-repo/
 - Use repository secrets for sensitive data
 - Review generated diagrams for sensitive information
 - Use `pull_request_target` for untrusted forks
-- **AI Mode**: OpenAI API keys transmit your IaC code to external services
+- **AI Mode**: Azure OpenAI transmits your IaC code to external services
 - **AI Mode**: Review your organization's data sharing policies before use
 - **AI Mode**: Consider the implications of sending infrastructure code to third parties
 
@@ -653,7 +664,9 @@ python tools/generate_arch_diagram.py \
   --out-md azure-ai-ml-test.md
 
 # Test with AI mode for enhanced analysis
-$env:OPENAI_API_KEY = "your-key-here"
+$env:AZURE_OPENAI_API_KEY = "your-key-here"
+$env:AZURE_OPENAI_ENDPOINT = "https://your-resource.openai.azure.com"
+$env:DEPLOYMENT_NAME = "gpt-4o"
 python tools/generate_arch_diagram.py \
   --mode ai \
   --iac-root examples/test-ai-ml-blockchain \
@@ -749,8 +762,6 @@ jobs:
       mode: static
       direction: TB
       comment_on_pr: true
-    secrets:
-      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
 ```
 
 ### Multi-Cloud Setup
@@ -800,7 +811,9 @@ jobs:
       image_formats: png,svg
       force_full: false
     secrets:
-      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      AZURE_OPENAI_API_KEY: ${{ secrets.AZURE_OPENAI_API_KEY }}
+      AZURE_OPENAI_ENDPOINT: ${{ secrets.AZURE_OPENAI_ENDPOINT }}
+      DEPLOYMENT_NAME: ${{ secrets.DEPLOYMENT_NAME }}
 
   update-diagrams:
     if: github.event_name == 'pull_request_target'
@@ -812,7 +825,9 @@ jobs:
       create_diagram_pr: true
       publish_enabled: true
     secrets:
-      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      AZURE_OPENAI_API_KEY: ${{ secrets.AZURE_OPENAI_API_KEY }}
+      AZURE_OPENAI_ENDPOINT: ${{ secrets.AZURE_OPENAI_ENDPOINT }}
+      DEPLOYMENT_NAME: ${{ secrets.DEPLOYMENT_NAME }}
 ```
 
 ## Force Updates

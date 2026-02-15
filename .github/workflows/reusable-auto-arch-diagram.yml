@@ -157,7 +157,11 @@ on:
         type: boolean
         default: true
     secrets:
-      OPENAI_API_KEY:
+      AZURE_OPENAI_API_KEY:
+        required: false
+      AZURE_OPENAI_ENDPOINT:
+        required: false
+      DEPLOYMENT_NAME:
         required: false
 
 permissions:
@@ -263,6 +267,22 @@ jobs:
         with:
           python-version: '3.11'
 
+      - name: Setup Node (AI mode)
+        if: ${{ inputs.mode == 'ai' }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Draw.io CLI + MCP (AI mode)
+        if: ${{ inputs.mode == 'ai' }}
+        shell: bash
+        run: |
+          npm install -g @drawio/drawio-desktop @drawio/mcp
+          if ! command -v drawio >/dev/null 2>&1; then
+            echo "Draw.io CLI not found after install. Set DRAWIO_CLI to the executable path."
+            exit 1
+          fi
+
       - name: Install Graphviz (for icon rendering)
         shell: bash
         run: |
@@ -314,7 +334,7 @@ jobs:
               pip install -r "${REQ_FILE}"
             else
               echo "Requirements file not found, installing fallback deps for AI mode"
-              pip install PyYAML python-hcl2 diagrams graphviz openai
+              pip install PyYAML python-hcl2 diagrams graphviz "openai>=1.40.0"
             fi
           else
             REQ_FILE=".auto-arch-diagram-tool/requirements.txt"
@@ -411,7 +431,9 @@ jobs:
           CHANGED_IAC_FILES: ${{ inputs.changed_files != '' && steps.changed_direct.outputs.all_changed_files || (inputs.force_full && steps.all_iac.outputs.all_changed_files || steps.changed.outputs.all_changed_files) }}
           AUTO_ARCH_MODE: ${{ inputs.mode }}
           AUTO_ARCH_MODEL: ${{ inputs.model }}
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          AZURE_OPENAI_API_KEY: ${{ secrets.AZURE_OPENAI_API_KEY }}
+          AZURE_OPENAI_ENDPOINT: ${{ secrets.AZURE_OPENAI_ENDPOINT }}
+          DEPLOYMENT_NAME: ${{ secrets.DEPLOYMENT_NAME }}
           AUTO_ARCH_DIRECTION: ${{ inputs.direction }}
           AUTO_ARCH_RENDER_LAYOUT: ${{ inputs.render_layout }}
           AUTO_ARCH_RENDER_BG: ${{ inputs.render_bg }}
@@ -739,6 +761,22 @@ jobs:
         with:
           python-version: '3.11'
 
+      - name: Setup Node (AI mode)
+        if: ${{ inputs.mode == 'ai' }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Draw.io CLI + MCP (AI mode)
+        if: ${{ inputs.mode == 'ai' }}
+        shell: bash
+        run: |
+          npm install -g @drawio/drawio-desktop @drawio/mcp
+          if ! command -v drawio >/dev/null 2>&1; then
+            echo "Draw.io CLI not found after install. Set DRAWIO_CLI to the executable path."
+            exit 1
+          fi
+
       - name: Install Graphviz (for icon rendering)
         shell: bash
         run: |
@@ -907,7 +945,9 @@ jobs:
           CHANGED_IAC_FILES: ${{ inputs.force_full && '.' || (github.event_name == 'pull_request_target' && steps.pr_files.outputs.iac_files || steps.changed.outputs.all_changed_files) }}
           AUTO_ARCH_MODE: ${{ inputs.mode }}
           AUTO_ARCH_MODEL: ${{ inputs.model }}
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          AZURE_OPENAI_API_KEY: ${{ secrets.AZURE_OPENAI_API_KEY }}
+          AZURE_OPENAI_ENDPOINT: ${{ secrets.AZURE_OPENAI_ENDPOINT }}
+          DEPLOYMENT_NAME: ${{ secrets.DEPLOYMENT_NAME }}
           AUTO_ARCH_DIRECTION: ${{ inputs.direction }}
           AUTO_ARCH_RENDER_LAYOUT: ${{ inputs.render_layout }}
           AUTO_ARCH_RENDER_BG: ${{ inputs.render_bg }}
