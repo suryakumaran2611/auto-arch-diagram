@@ -157,6 +157,9 @@ with:
       direction: AUTO                 # Intelligent layout
       image_formats: png,svg
       comment_on_pr: true
+      edge_color: "#4B5563"
+      edge_penwidth: "1.3"
+      edge_arrowsize: "0.8"
       force_full: ${{ github.event.inputs.force_update || false }}  # Force generation if manually triggered
 ```
 
@@ -208,6 +211,9 @@ jobs:
       direction: AUTO
       image_formats: png,svg
       comment_on_pr: true
+      edge_color: "#4B5563"
+      edge_penwidth: "1.3"
+      edge_arrowsize: "0.8"
       force_full: ${{ github.event.inputs.force_update || false }}
 ```
 
@@ -321,6 +327,9 @@ jobs:
           direction: AUTO
           image_formats: png,svg
           comment_on_pr: true
+          edge_color: "#4B5563"
+          edge_penwidth: "1.3"
+          edge_arrowsize: "0.8"
           # Only processes changed IaC files (default behavior)
 
   # Integration Tests
@@ -406,6 +415,9 @@ jobs:
           force_full: ${{ github.event.inputs.test_type == 'full' }}
           mode: ${{ github.event.inputs.test_type == 'ai_mode' && 'ai' || 'static' }}
           comment_on_pr: ${{ github.event_name == 'pull_request' }}
+          edge_color: "#4B5563"
+          edge_penwidth: "1.3"
+          edge_arrowsize: "0.8"
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
 ```
@@ -441,6 +453,9 @@ jobs:
           direction: AUTO
           image_formats: png
           comment_on_pr: true
+          edge_color: "#4B5563"
+          edge_penwidth: "1.3"
+          edge_arrowsize: "0.8"
           out_dir: architecture-review
   
   # Deploy and update diagrams
@@ -469,6 +484,9 @@ jobs:
           publish_enabled: true
           out_md: docs/architecture/${{ env.ENVIRONMENT }}/diagram.md
           out_png: assets/images/architecture-${{ env.ENVIRONMENT }}.png
+          edge_color: "#4B5563"
+          edge_penwidth: "1.3"
+          edge_arrowsize: "0.8"
 ```
 
 **CI/CD Best Practices**

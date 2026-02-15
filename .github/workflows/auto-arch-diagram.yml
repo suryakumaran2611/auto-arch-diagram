@@ -62,11 +62,17 @@ jobs:
       pull-requests: write
     uses: ./.github/workflows/reusable-auto-arch-diagram.yml
     with:
+      iac_root: ${{ vars.AUTO_ARCH_IAC_ROOT || '.' }}
       mode: ${{ vars.AUTO_ARCH_MODE || 'static' }}
       model: ${{ vars.AUTO_ARCH_MODEL || 'gpt-4o-mini' }}
       direction: ${{ vars.AUTO_ARCH_DIRECTION || 'LR' }}
       render_layout: ${{ vars.AUTO_ARCH_RENDER_LAYOUT || 'lanes' }}
       render_bg: ${{ vars.AUTO_ARCH_RENDER_BG || 'transparent' }}
+      edge_color: ${{ vars.AUTO_ARCH_EDGE_COLOR || '#4B5563' }}
+      edge_penwidth: ${{ vars.AUTO_ARCH_EDGE_PENWIDTH || '1.3' }}
+      edge_arrowsize: ${{ vars.AUTO_ARCH_EDGE_ARROWSIZE || '0.8' }}
+      tool_repo: ${{ vars.AUTO_ARCH_TOOL_REPO || '' }}
+      tool_ref: ${{ vars.AUTO_ARCH_TOOL_REF || '' }}
       publish_enabled: false
       comment_on_pr: true
       create_diagram_pr: false
@@ -81,11 +87,17 @@ jobs:
       pull-requests: write
     uses: ./.github/workflows/reusable-auto-arch-diagram.yml
     with:
+      iac_root: ${{ vars.AUTO_ARCH_IAC_ROOT || '.' }}
       mode: ${{ vars.AUTO_ARCH_MODE || 'static' }}
       model: ${{ vars.AUTO_ARCH_MODEL || 'gpt-4o-mini' }}
       direction: ${{ vars.AUTO_ARCH_DIRECTION || 'LR' }}
       render_layout: ${{ vars.AUTO_ARCH_RENDER_LAYOUT || 'lanes' }}
       render_bg: ${{ vars.AUTO_ARCH_RENDER_BG || 'transparent' }}
+      edge_color: ${{ vars.AUTO_ARCH_EDGE_COLOR || '#4B5563' }}
+      edge_penwidth: ${{ vars.AUTO_ARCH_EDGE_PENWIDTH || '1.3' }}
+      edge_arrowsize: ${{ vars.AUTO_ARCH_EDGE_ARROWSIZE || '0.8' }}
+      tool_repo: ${{ vars.AUTO_ARCH_TOOL_REPO || '' }}
+      tool_ref: ${{ vars.AUTO_ARCH_TOOL_REF || '' }}
       publish_enabled: true
       comment_on_pr: false
       create_diagram_pr: ${{ vars.AUTO_ARCH_CREATE_DIAGRAM_PR || 'true' }}

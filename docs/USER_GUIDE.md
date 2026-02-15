@@ -98,6 +98,9 @@ jobs:
     with:
       mode: static
       direction: LR
+      edge_color: "#4B5563"
+      edge_penwidth: "1.3"
+      edge_arrowsize: "0.8"
       comment_on_pr: true
       create_diagram_pr: false
 ```
@@ -116,6 +119,9 @@ To automatically create PRs that update diagram files:
     with:
       mode: static
       direction: LR
+      edge_color: "#4B5563"
+      edge_penwidth: "1.3"
+      edge_arrowsize: "0.8"
       comment_on_pr: false
       create_diagram_pr: true
       publish_enabled: true
@@ -151,6 +157,9 @@ You can configure the action using GitHub repository variables:
 | `AUTO_ARCH_EDGE_COLOR` | `#4B5563` | Edge color for PNG/SVG |
 | `AUTO_ARCH_EDGE_PENWIDTH` | `1.3` | Edge line width |
 | `AUTO_ARCH_EDGE_ARROWSIZE` | `0.8` | Edge arrow size |
+| `AUTO_ARCH_IAC_ROOT` | `.` | Root directory to read IaC files from |
+| `AUTO_ARCH_TOOL_REPO` | _(auto)_ | Override tool repository (owner/repo) |
+| `AUTO_ARCH_TOOL_REF` | _(auto)_ | Override tool ref (branch/tag/sha) |
 | `AUTO_ARCH_CREATE_DIAGRAM_PR` | `false` | Enable automatic diagram PR creation |
 | `AUTO_ARCH_FORCE_UPDATE` | `false` | Force diagram updates even without IaC changes |
 
