@@ -3,6 +3,10 @@ name: Test Reusable Architecture Diagram Workflow
 on:
   workflow_dispatch:
 
+permissions:
+  contents: read
+  pull-requests: write
+
 jobs:
   test-reusable-diagram:
     uses: ./.github/workflows/reusable-auto-arch-diagram.yml
