@@ -25,6 +25,7 @@ jobs:
       edge_color: "#4B5563"
       edge_penwidth: "1.3"
       edge_arrowsize: "0.8"
+      artifact_name: auto-arch-diagram-test
     secrets: inherit
   validate-artifacts:
     runs-on: ubuntu-latest
