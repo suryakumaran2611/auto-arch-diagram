@@ -148,8 +148,37 @@ You can configure the action using GitHub repository variables:
 | `AUTO_ARCH_DIRECTION` | `LR` | Diagram direction: `LR`, `TB`, `RL`, `BT`, `AUTO` |
 | `AUTO_ARCH_RENDER_LAYOUT` | `lanes` | Layout: `lanes` or `providers` |
 | `AUTO_ARCH_RENDER_BG` | `transparent` | Background: `transparent` or `white` |
+| `AUTO_ARCH_EDGE_COLOR` | `#4B5563` | Edge color for PNG/SVG |
+| `AUTO_ARCH_EDGE_PENWIDTH` | `1.3` | Edge line width |
+| `AUTO_ARCH_EDGE_ARROWSIZE` | `0.8` | Edge arrow size |
 | `AUTO_ARCH_CREATE_DIAGRAM_PR` | `false` | Enable automatic diagram PR creation |
 | `AUTO_ARCH_FORCE_UPDATE` | `false` | Force diagram updates even without IaC changes |
+
+### Workflow Inputs (Reusable Workflow)
+
+| Input | Default | Description |
+|-------|---------|-------------|
+| `iac_globs` | IaC defaults | Newline-separated IaC file patterns |
+| `iac_root` | `.` | Root directory to read IaC files from |
+| `direction` | `LR` | `AUTO`, `LR`, `TB`, `RL`, `BT` |
+| `mode` | `static` | `static` or `ai` |
+| `model` | `gpt-4o-mini` | AI model name (mode=ai) |
+| `image_formats` | `png,jpg,svg` | Formats to generate or `none` |
+| `out_dir` | `artifacts` | Output directory |
+| `out_md` | `<out_dir>/architecture-diagram.md` | Output Markdown path |
+| `out_mmd` | `<out_dir>/architecture-diagram.mmd` | Output Mermaid path |
+| `out_png` | `<out_dir>/architecture-diagram.png` | Output PNG path |
+| `out_jpg` | `<out_dir>/architecture-diagram.jpg` | Output JPG path |
+| `out_svg` | `<out_dir>/architecture-diagram.svg` | Output SVG path |
+| `render_layout` | `lanes` | `lanes` or `providers` |
+| `render_bg` | `transparent` | `transparent` or `white` |
+| `edge_color` | `#4B5563` | Edge color for PNG/SVG |
+| `edge_penwidth` | `1.3` | Edge line width |
+| `edge_arrowsize` | `0.8` | Edge arrow size |
+| `comment_on_pr` | `true` | Post/update sticky PR comment |
+| `create_diagram_pr` | `false` | Create diagram update PR |
+| `tool_repo` | _(auto)_ | Override tool repository (owner/repo) |
+| `tool_ref` | _(auto)_ | Override tool ref (branch/tag/sha) |
 
 ### Configuration File
 
@@ -168,6 +197,10 @@ render:
   layout: lanes  # lanes or providers
   background: transparent  # transparent or white
   lanes: [Network, Security, Containers, Compute, Data, Storage, Other]
+
+  edge_color: "#4B5563"
+  edge_penwidth: 1.3
+  edge_arrowsize: 0.8
 
 publish:
   enabled: true

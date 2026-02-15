@@ -56,6 +56,21 @@ on:
         required: false
         type: string
         default: transparent
+      edge_color:
+        description: "Edge color for PNG/SVG diagrams (Graphviz color)."
+        required: false
+        type: string
+        default: "#4B5563"
+      edge_penwidth:
+        description: "Edge line width for PNG/SVG diagrams."
+        required: false
+        type: string
+        default: "1.3"
+      edge_arrowsize:
+        description: "Edge arrow size for PNG/SVG diagrams."
+        required: false
+        type: string
+        default: "0.8"
       image_formats:
         description: "Comma-separated image formats to generate: png,jpg,svg. Use 'none' to skip image rendering."
         required: false
@@ -91,6 +106,11 @@ on:
         required: false
         type: string
         default: ''
+      iac_root:
+        description: "Root directory to read IaC files from (relative)."
+        required: false
+        type: string
+        default: '.'
       publish_enabled:
         description: "Whether to write outputs into publish.paths from .auto-arch-diagram.yml."
         required: false
@@ -111,6 +131,16 @@ on:
         required: false
         type: string
         default: auto-arch-diagram/update
+      tool_repo:
+        description: "Override tool repository (owner/repo)."
+        required: false
+        type: string
+        default: ''
+      tool_ref:
+        description: "Override tool ref (branch/tag/sha)."
+        required: false
+        type: string
+        default: ''
       force_full:
         description: "Force full architecture generation (ignore change detection)."
         required: false
@@ -143,6 +173,10 @@ jobs:
           # github.workflow_ref looks like: owner/repo/.github/workflows/reusable-auto-arch-diagram.yml@ref
           REF="${{ github.workflow_ref }}"
           echo "Full workflow ref: ${REF}"
+          CALLER_REPO="${GITHUB_REPOSITORY}"
+          echo "Caller repo: ${CALLER_REPO}"
+          INPUT_TOOL_REPO="${{ inputs.tool_repo }}"
+          INPUT_TOOL_REF="${{ inputs.tool_ref }}"
           
           TOOL_REPO="${REF%%/.github/workflows/*}"
           TOOL_REF="${REF##*@}"
@@ -150,14 +184,35 @@ jobs:
           echo "Extracted repo: ${TOOL_REPO}"
           echo "Extracted ref: ${TOOL_REF}"
           
+          if [[ -n "${INPUT_TOOL_REPO}" ]]; then
+            TOOL_REPO="${INPUT_TOOL_REPO}"
+            echo "Using input tool repo: ${TOOL_REPO}"
+          fi
+
           # Fallback to the canonical tool repo if the computed repo appears to be the caller repo
-          if [[ -z "${TOOL_REPO}" || "${TOOL_REPO}" == *"mlops-multi-account-terraform"* ]]; then
+          if [[ -z "${TOOL_REPO}" || "${TOOL_REPO}" == "${CALLER_REPO}" ]]; then
             TOOL_REPO="suryakumaran2611/auto-arch-diagram"
             echo "Using fallback repo: ${TOOL_REPO}"
           fi
-          if [[ -z "${TOOL_REF}" || "${TOOL_REF}" == "@" || "${TOOL_REF}" == "${REF}" ]]; then
+
+          if [[ "${TOOL_REPO}" != "${CALLER_REPO}" ]]; then
+            if [[ -n "${INPUT_TOOL_REF}" ]]; then
+              TOOL_REF="${INPUT_TOOL_REF}"
+              echo "Using input tool ref: ${TOOL_REF}"
+            else
+              TOOL_REF="main"
+              echo "Using fallback ref for external tool repo: ${TOOL_REF}"
+            fi
+          else
+            if [[ -z "${TOOL_REF}" || "${TOOL_REF}" == "@" || "${TOOL_REF}" == "${REF}" ]]; then
+              TOOL_REF="main"
+              echo "Using fallback ref: ${TOOL_REF}"
+            fi
+          fi
+
+          if [[ "${TOOL_REPO}" != "${CALLER_REPO}" && "${TOOL_REF}" == refs/pull/* ]]; then
             TOOL_REF="main"
-            echo "Using fallback ref: ${TOOL_REF}"
+            echo "Tool ref is a PR merge ref for an external repo; using ${TOOL_REF} instead"
           fi
           
           echo "Final tool_repo=${TOOL_REPO}"
@@ -198,37 +253,39 @@ jobs:
         with:
           python-version: '3.11'
 
-       - name: Install Graphviz (for icon rendering)
-         run: |
-           FORMATS_RAW='${{ inputs.image_formats }}'
-           FORMATS="$(echo "${FORMATS_RAW}" | tr '[:upper:]' '[:lower:]' | tr -d ' ' )"
-           if [ -z "${FORMATS}" ] || [ "${FORMATS}" = "none" ]; then
-             exit 0
-           fi
+      - name: Install Graphviz (for icon rendering)
+        shell: bash
+        run: |
+          FORMATS_RAW='${{ inputs.image_formats }}'
+          FORMATS="$(echo "${FORMATS_RAW}" | tr '[:upper:]' '[:lower:]' | tr -d ' ' )"
+          if [ -z "${FORMATS}" ] || [ "${FORMATS}" = "none" ]; then
+            exit 0
+          fi
 
-           sudo apt-get update
-           sudo apt-get install -y graphviz
+          sudo apt-get update
+          sudo apt-get install -y graphviz
 
-       - name: Install Open Sans font
-         run: |
-           FORMATS_RAW='${{ inputs.image_formats }}'
-           FORMATS="$(echo "${FORMATS_RAW}" | tr '[:upper:]' '[:lower:]' | tr -d ' ' )"
-           if [ -z "${FORMATS}" ] || [ "${FORMATS}" = "none" ]; then
-             exit 0
-           fi
+      - name: Install Open Sans font
+        shell: bash
+        run: |
+          FORMATS_RAW='${{ inputs.image_formats }}'
+          FORMATS="$(echo "${FORMATS_RAW}" | tr '[:upper:]' '[:lower:]' | tr -d ' ' )"
+          if [ -z "${FORMATS}" ] || [ "${FORMATS}" = "none" ]; then
+            exit 0
+          fi
 
-           echo "Installing Open Sans font family..."
+          echo "Installing Open Sans font family..."
 
-           # Install fonts-open-sans package which includes the full font family
-           sudo apt-get update
-           sudo apt-get install -y fonts-open-sans
+          # Install fonts-open-sans package which includes the full font family
+          sudo apt-get update
+          sudo apt-get install -y fonts-open-sans
 
-           # Update font cache
-           sudo fc-cache -f -v
+          # Update font cache
+          sudo fc-cache -f -v
 
-           # Verify Open Sans is installed
-           echo "Available fonts:"
-           fc-list | grep -i "open.sans" | head -5 || echo "Warning: Open Sans fonts may not be properly installed"
+          # Verify Open Sans is installed
+          echo "Available fonts:"
+          fc-list | grep -i "open.sans" | head -5 || echo "Warning: Open Sans fonts may not be properly installed"
 
       - name: Install dependencies
         shell: bash
@@ -274,95 +331,85 @@ jobs:
         if: ${{ inputs.changed_files != '' }}
         shell: bash
         run: |
-          echo "all_changed_files=${{ inputs.changed_files }}" >> "$GITHUB_OUTPUT"
+          {
+            echo 'all_changed_files<<EOF'
+            printf '%s\n' '${{ inputs.changed_files }}'
+            echo 'EOF'
+          } >> "$GITHUB_OUTPUT"
 
       - name: Collect full IaC file list (force_full)
         id: all_iac
         if: ${{ inputs.force_full }}
         shell: bash
         run: |
-          set -euo pipefail
-          # Build pattern list from iac_globs
-          raw='${{ inputs.iac_globs }}'
-          mapfile -t patterns < <(printf "%s\n" "${raw}")
-          
-          # Function to match a file against a pattern
-          match_pattern() {
-            local file="$1"
-            local pattern="$2"
-            local file_lower="${file,,}"
-            local pattern_lower="${pattern,,}"
-            
-            # Remove any leading/trailing whitespace
-            pattern_lower="${pattern_lower// /}"
-            
-            # Handle different pattern types
-            if [[ "${pattern_lower}" == **/* ]]; then
-              # Pattern like: **/*.tf or base-infrastructure/terraform/**/*.tf
-              # Extract the directory prefix if present
-              local dir_prefix=""
-              local glob_part="${pattern_lower}"
-              
-              if [[ "${pattern_lower}" == */**/* ]]; then
-                # Has a directory prefix like: base-infrastructure/terraform/**/*.tf
-                dir_prefix="${pattern_lower%%/**/*}"
-                glob_part="${pattern_lower#*/}"
-              fi
-              
-              # Check directory prefix match
-              if [[ -n "${dir_prefix}" ]]; then
-                [[ "${file_lower}" != ${dir_prefix}/* ]] && return 1
-              fi
-              
-              # Extract and check file extension/suffix
-              if [[ "${glob_part}" == **/*.* ]]; then
-                local suffix="${glob_part##**/}"
-                suffix="${suffix#\*}"
-                [[ "${file_lower}" == *"${suffix}" ]] && return 0
-              fi
-            elif [[ "${pattern_lower}" == **/template.yaml ]] || [[ "${pattern_lower}" == **/template.yml ]]; then
-              [[ "${file_lower}" == */template.yaml ]] || [[ "${file_lower}" == */template.yml ]] || \
-              [[ "${file_lower}" == template.yaml ]] || [[ "${file_lower}" == template.yml ]] && return 0
-            fi
-            
-            return 1
-          }
-          
-          files=()
-          while IFS= read -r f; do
-            for p in "${patterns[@]}"; do
-              if match_pattern "${f}" "${p}"; then
-                files+=("${f}")
+          python - <<'PY'
+          import os
+          import fnmatch
+          import subprocess
+
+          raw = """${{ inputs.iac_globs }}"""
+          patterns = [p.strip() for p in raw.splitlines() if p.strip()]
+          expanded_patterns = []
+          for p in patterns:
+            expanded_patterns.append(p)
+            if p.startswith("**/"):
+              expanded_patterns.append(p[3:])
+
+          iac_root = "${{ inputs.iac_root }}".strip() or "."
+          iac_root = iac_root.replace("\\", "/").lstrip("./").rstrip("/")
+
+          tracked = subprocess.check_output(["git", "ls-files"], text=True).splitlines()
+          matched = []
+          seen = set()
+
+          for f in tracked:
+            if iac_root and iac_root != ".":
+              if not (f == iac_root or f.startswith(iac_root + "/")):
+                continue
+            lower = f.lower()
+            for p in expanded_patterns:
+              p2 = p.strip()
+              if not p2:
+                continue
+              if fnmatch.fnmatch(lower, p2.lower()):
+                if f not in seen:
+                  seen.add(f)
+                  matched.append(f)
                 break
-              fi
-            done
-          done < <(git ls-files)
-          
-          echo "=== IaC Files Found ==="
-          echo "Total files: ${#files[@]}"
-          if [ ${#files[@]} -gt 0 ]; then
-            echo "Files:"
-            printf "  - %s\n" "${files[@]}"
-          else
-            echo "WARNING: No IaC files found matching the patterns!"
-            echo "Patterns used:"
-            printf "  - %s\n" "${patterns[@]}"
-          fi
-          echo "========================"
-          
-          printf "all_changed_files=%s\n" "${files[*]}" >> "$GITHUB_OUTPUT"
+
+          print("=== IaC Files Found ===")
+          print(f"Total files: {len(matched)}")
+          if matched:
+            print("Files:")
+            for f in matched:
+              print(f"  - {f}")
+          else:
+            print("WARNING: No IaC files found matching the patterns!")
+            print("Patterns used:")
+            for p in patterns:
+              print(f"  - {p}")
+          print("========================")
+
+          out_file = os.environ["GITHUB_OUTPUT"]
+          with open(out_file, "a", encoding="utf-8") as fp:
+            fp.write("all_changed_files=" + " ".join(matched) + "\n")
+          PY
 
       - name: Generate diagrams
         id: gen
         env:
-          CHANGED_IAC_FILES: ${{ inputs.changed_files != '' && steps.changed_direct.outputs.all_changed_files || (inputs.force_full == 'true' && steps.all_iac.outputs.all_changed_files || steps.changed.outputs.all_changed_files) }}
+          CHANGED_IAC_FILES: ${{ inputs.changed_files != '' && steps.changed_direct.outputs.all_changed_files || (inputs.force_full && steps.all_iac.outputs.all_changed_files || steps.changed.outputs.all_changed_files) }}
           AUTO_ARCH_MODE: ${{ inputs.mode }}
           AUTO_ARCH_MODEL: ${{ inputs.model }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           AUTO_ARCH_DIRECTION: ${{ inputs.direction }}
           AUTO_ARCH_RENDER_LAYOUT: ${{ inputs.render_layout }}
           AUTO_ARCH_RENDER_BG: ${{ inputs.render_bg }}
+          AUTO_ARCH_EDGE_COLOR: ${{ inputs.edge_color }}
+          AUTO_ARCH_EDGE_PENWIDTH: ${{ inputs.edge_penwidth }}
+          AUTO_ARCH_EDGE_ARROWSIZE: ${{ inputs.edge_arrowsize }}
           AUTO_ARCH_PUBLISH_ENABLED: ${{ inputs.publish_enabled && 'true' || 'false' }}
+        shell: bash
         run: |
           set -e  # Exit on any error
           
@@ -377,6 +424,30 @@ jobs:
           OUT_PNG='${{ inputs.out_png }}'
           OUT_JPG='${{ inputs.out_jpg }}'
           OUT_SVG='${{ inputs.out_svg }}'
+
+          IAC_ROOT='${{ inputs.iac_root }}'
+          if [ -z "${IAC_ROOT}" ]; then IAC_ROOT="."; fi
+          export IAC_ROOT
+
+          export CHANGED_IAC_FILES
+          if [ "${IAC_ROOT}" != "." ]; then
+            CHANGED_IAC_FILES=$(python - <<'PY'
+          import os
+
+          raw = os.environ.get("CHANGED_IAC_FILES", "")
+          iac_root = os.environ.get("IAC_ROOT", ".").strip()
+
+          files = []
+          for token in raw.replace("\n", " ").split():
+            t = token.lstrip("./")
+            if iac_root != "." and t.startswith(iac_root.rstrip("/") + "/"):
+              t = t[len(iac_root.rstrip("/")) + 1 :]
+            files.append(t)
+
+          print(" ".join(files))
+          PY
+          )
+          fi
 
           if [ -z "${OUT_MD}" ]; then OUT_MD="${OUT_DIR}/architecture-diagram.md"; fi
           if [ -z "${OUT_MMD}" ]; then OUT_MMD="${OUT_DIR}/architecture-diagram.mmd"; fi
@@ -408,13 +479,17 @@ jobs:
           if [ -n "${OUT_SVG_ARG}" ]; then echo "Output SVG: ${OUT_SVG_ARG}"; fi
           echo "========================="
 
-          python .auto-arch-diagram-tool/tools/generate_arch_diagram.py \
-            --changed-files "${CHANGED_IAC_FILES}" \
-            --out-md "${OUT_MD}" \
-            --out-mmd "${OUT_MMD}" \
-            --out-png "${OUT_PNG_ARG}" \
-            --out-jpg "${OUT_JPG_ARG}" \
-            --out-svg "${OUT_SVG_ARG}"
+          args=(
+            --changed-files "${CHANGED_IAC_FILES}"
+            --iac-root "${{ inputs.iac_root }}"
+            --out-md "${OUT_MD}"
+            --out-mmd "${OUT_MMD}"
+          )
+          if [ -n "${OUT_PNG_ARG}" ]; then args+=(--out-png "${OUT_PNG_ARG}"); fi
+          if [ -n "${OUT_JPG_ARG}" ]; then args+=(--out-jpg "${OUT_JPG_ARG}"); fi
+          if [ -n "${OUT_SVG_ARG}" ]; then args+=(--out-svg "${OUT_SVG_ARG}"); fi
+
+          python .auto-arch-diagram-tool/tools/generate_arch_diagram.py "${args[@]}"
 
           echo "" >> "${OUT_MD}"
           echo "Rendered PNG/JPEG/SVG are uploaded as workflow artifacts." >> "${OUT_MD}"
@@ -428,6 +503,8 @@ jobs:
 
       - name: Validate generated files
         shell: bash
+        env:
+          CHANGED_IAC_FILES: ${{ inputs.changed_files != '' && steps.changed_direct.outputs.all_changed_files || (inputs.force_full && steps.all_iac.outputs.all_changed_files || steps.changed.outputs.all_changed_files) }}
         run: |
           set -e
           echo "=== Validating generated diagram files ==="
@@ -453,15 +530,19 @@ jobs:
             exit 1
           fi
           
-          # Check that files are not empty
-          if [ ! -s "${MD_PATH}" ]; then
-            echo "ERROR: Markdown file is empty: ${MD_PATH}"
-            exit 1
-          fi
-          
-          if [ ! -s "${MMD_PATH}" ]; then
-            echo "ERROR: Mermaid file is empty: ${MMD_PATH}"
-            exit 1
+          if [ -z "${CHANGED_IAC_FILES}" ]; then
+            echo "No IaC changes detected; allowing empty outputs."
+          else
+            # Check that files are not empty
+            if [ ! -s "${MD_PATH}" ]; then
+              echo "ERROR: Markdown file is empty: ${MD_PATH}"
+              exit 1
+            fi
+            
+            if [ ! -s "${MMD_PATH}" ]; then
+              echo "ERROR: Mermaid file is empty: ${MMD_PATH}"
+              exit 1
+            fi
           fi
           
           echo "✓ Markdown file: ${MD_PATH} ($(stat -c%s "${MD_PATH}") bytes)"
@@ -538,6 +619,10 @@ jobs:
         run: |
           REF="${{ github.workflow_ref }}"
           echo "Full workflow ref: ${REF}"
+          CALLER_REPO="${GITHUB_REPOSITORY}"
+          echo "Caller repo: ${CALLER_REPO}"
+          INPUT_TOOL_REPO="${{ inputs.tool_repo }}"
+          INPUT_TOOL_REF="${{ inputs.tool_ref }}"
           
           TOOL_REPO="${REF%%/.github/workflows/*}"
           TOOL_REF="${REF##*@}"
@@ -545,14 +630,35 @@ jobs:
           echo "Extracted repo: ${TOOL_REPO}"
           echo "Extracted ref: ${TOOL_REF}"
           
+          if [[ -n "${INPUT_TOOL_REPO}" ]]; then
+            TOOL_REPO="${INPUT_TOOL_REPO}"
+            echo "Using input tool repo: ${TOOL_REPO}"
+          fi
+
           # Fallback to the canonical tool repo if the computed repo appears to be the caller repo
-          if [[ -z "${TOOL_REPO}" || "${TOOL_REPO}" == *"mlops-multi-account-terraform"* ]]; then
+          if [[ -z "${TOOL_REPO}" || "${TOOL_REPO}" == "${CALLER_REPO}" ]]; then
             TOOL_REPO="suryakumaran2611/auto-arch-diagram"
             echo "Using fallback repo: ${TOOL_REPO}"
           fi
-          if [[ -z "${TOOL_REF}" || "${TOOL_REF}" == "@" || "${TOOL_REF}" == "${REF}" ]]; then
+
+          if [[ "${TOOL_REPO}" != "${CALLER_REPO}" ]]; then
+            if [[ -n "${INPUT_TOOL_REF}" ]]; then
+              TOOL_REF="${INPUT_TOOL_REF}"
+              echo "Using input tool ref: ${TOOL_REF}"
+            else
+              TOOL_REF="main"
+              echo "Using fallback ref for external tool repo: ${TOOL_REF}"
+            fi
+          else
+            if [[ -z "${TOOL_REF}" || "${TOOL_REF}" == "@" || "${TOOL_REF}" == "${REF}" ]]; then
+              TOOL_REF="main"
+              echo "Using fallback ref: ${TOOL_REF}"
+            fi
+          fi
+
+          if [[ "${TOOL_REPO}" != "${CALLER_REPO}" && "${TOOL_REF}" == refs/pull/* ]]; then
             TOOL_REF="main"
-            echo "Using fallback ref: ${TOOL_REF}"
+            echo "Tool ref is a PR merge ref for an external repo; using ${TOOL_REF} instead"
           fi
           
           echo "Final tool_repo=${TOOL_REPO}"
@@ -594,33 +700,35 @@ jobs:
         with:
           python-version: '3.11'
 
-       - name: Install Graphviz (for icon rendering)
-         run: |
-           sudo apt-get update
-           sudo apt-get install -y graphviz
+      - name: Install Graphviz (for icon rendering)
+        shell: bash
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y graphviz
 
-       - name: Install Open Sans font
-         run: |
-           FORMATS_RAW='${{ inputs.image_formats }}'
-           FORMATS="$(echo "${FORMATS_RAW}" | tr '[:upper:]' '[:lower:]' | tr -d ' ' )"
-           if [ -z "${FORMATS}" ] || [ "${FORMATS}" = "none" ]; then
-             exit 0
-           fi
+      - name: Install Open Sans font
+        shell: bash
+        run: |
+          FORMATS_RAW='${{ inputs.image_formats }}'
+          FORMATS="$(echo "${FORMATS_RAW}" | tr '[:upper:]' '[:lower:]' | tr -d ' ' )"
+          if [ -z "${FORMATS}" ] || [ "${FORMATS}" = "none" ]; then
+            exit 0
+          fi
 
-           echo "Installing Open Sans font family..."
+          echo "Installing Open Sans font family..."
 
-           # Install fonts-open-sans package which includes the full font family
-           sudo apt-get update
-           sudo apt-get install -y fonts-open-sans
+          # Install fonts-open-sans package which includes the full font family
+          sudo apt-get update
+          sudo apt-get install -y fonts-open-sans
 
-           # Update font cache
-           sudo fc-cache -f -v
+          # Update font cache
+          sudo fc-cache -f -v
 
-           # Verify Open Sans is installed
-           echo "Available fonts:"
-           fc-list | grep -i "open.sans" | head -5 || echo "Warning: Open Sans fonts may not be properly installed"
+          # Verify Open Sans is installed
+          echo "Available fonts:"
+          fc-list | grep -i "open.sans" | head -5 || echo "Warning: Open Sans fonts may not be properly installed"
 
-       - name: Install dependencies
+      - name: Install dependencies
         shell: bash
         run: |
           set -e
@@ -757,14 +865,18 @@ jobs:
 
       - name: Generate and publish into repo paths
         env:
-          CHANGED_IAC_FILES: ${{ inputs.force_full == 'true' && '.' || (github.event_name == 'pull_request_target' && steps.pr_files.outputs.iac_files || steps.changed.outputs.all_changed_files) }}
+          CHANGED_IAC_FILES: ${{ inputs.force_full && '.' || (github.event_name == 'pull_request_target' && steps.pr_files.outputs.iac_files || steps.changed.outputs.all_changed_files) }}
           AUTO_ARCH_MODE: ${{ inputs.mode }}
           AUTO_ARCH_MODEL: ${{ inputs.model }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           AUTO_ARCH_DIRECTION: ${{ inputs.direction }}
           AUTO_ARCH_RENDER_LAYOUT: ${{ inputs.render_layout }}
           AUTO_ARCH_RENDER_BG: ${{ inputs.render_bg }}
+          AUTO_ARCH_EDGE_COLOR: ${{ inputs.edge_color }}
+          AUTO_ARCH_EDGE_PENWIDTH: ${{ inputs.edge_penwidth }}
+          AUTO_ARCH_EDGE_ARROWSIZE: ${{ inputs.edge_arrowsize }}
           AUTO_ARCH_PUBLISH_ENABLED: 'true'
+        shell: bash
         run: |
           set -e  # Exit on any error
           
@@ -778,7 +890,27 @@ jobs:
           OUT_MMD='${{ inputs.out_mmd }}'
           OUT_PNG='${{ inputs.out_png }}'
           OUT_JPG='${{ inputs.out_jpg }}'
-          OUT_SVG='${{ inputs.out_svg }}'
+            OUT_SVG='${{ inputs.out_svg }}'
+
+            export CHANGED_IAC_FILES
+            if [ "${IAC_ROOT}" != "." ]; then
+              CHANGED_IAC_FILES=$(python - <<'PY'
+            import os
+
+            raw = os.environ.get("CHANGED_IAC_FILES", "")
+            iac_root = os.environ.get("IAC_ROOT", ".").strip()
+
+            files = []
+            for token in raw.replace("\n", " ").split():
+              t = token.lstrip("./")
+              if iac_root != "." and t.startswith(iac_root.rstrip("/") + "/"):
+                t = t[len(iac_root.rstrip("/")) + 1 :]
+              files.append(t)
+
+            print(" ".join(files))
+            PY
+            )
+            fi
 
           if [ -z "${OUT_MD}" ]; then OUT_MD="${OUT_DIR}/architecture-diagram.md"; fi
           if [ -z "${OUT_MMD}" ]; then OUT_MMD="${OUT_DIR}/architecture-diagram.mmd"; fi
@@ -801,14 +933,23 @@ jobs:
             if [ -n "${OUT_SVG}" ]; then OUT_SVG_ARG="${OUT_SVG}"; else OUT_SVG_ARG="${OUT_DIR}/architecture-diagram.svg"; fi
           fi
 
-          python .auto-arch-diagram-tool/tools/generate_arch_diagram.py \
-            --iac-root ${{ github.event_name == 'pull_request_target' && 'pr' || '.' }} \
-            --changed-files "${CHANGED_IAC_FILES}" \
-            --out-md "${OUT_MD}" \
-            --out-mmd "${OUT_MMD}" \
-            --out-png "${OUT_PNG_ARG}" \
-            --out-jpg "${OUT_JPG_ARG}" \
-            --out-svg "${OUT_SVG_ARG}"
+          IAC_ROOT='${{ inputs.iac_root }}'
+          if [ -z "${IAC_ROOT}" ]; then IAC_ROOT="."; fi
+          if [ "${{ github.event_name }}" = "pull_request_target" ]; then
+            IAC_ROOT="pr"
+          fi
+
+          args=(
+            --iac-root "${IAC_ROOT}"
+            --changed-files "${CHANGED_IAC_FILES}"
+            --out-md "${OUT_MD}"
+            --out-mmd "${OUT_MMD}"
+          )
+          if [ -n "${OUT_PNG_ARG}" ]; then args+=(--out-png "${OUT_PNG_ARG}"); fi
+          if [ -n "${OUT_JPG_ARG}" ]; then args+=(--out-jpg "${OUT_JPG_ARG}"); fi
+          if [ -n "${OUT_SVG_ARG}" ]; then args+=(--out-svg "${OUT_SVG_ARG}"); fi
+
+          python .auto-arch-diagram-tool/tools/generate_arch_diagram.py "${args[@]}"
           
           # Validate that files were created
           echo "=== Validating generated files ==="
@@ -822,9 +963,13 @@ jobs:
             exit 1
           fi
           
-          if [ ! -s "${OUT_MD}" ] || [ ! -s "${OUT_MMD}" ]; then
-            echo "ERROR: Generated files are empty"
-            exit 1
+          if [ -z "${CHANGED_IAC_FILES}" ]; then
+            echo "No IaC changes detected; allowing empty outputs."
+          else
+            if [ ! -s "${OUT_MD}" ] || [ ! -s "${OUT_MMD}" ]; then
+              echo "ERROR: Generated files are empty"
+              exit 1
+            fi
           fi
           
           echo "✓ Files validated successfully"

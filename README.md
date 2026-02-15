@@ -168,7 +168,7 @@ with:
 - 📊 **Generates PNG + SVG** with embedded cloud icons
 - 💬 **Posts diagram as PR comment** for easy review
 - 🔒 **Minimal permissions** (read-only + PR comments)
-- ⚠️ **Complexity limits**: Skips diagrams with >45 resources for performance
+- ⚠️ **Complexity limits**: Icon rendering skips diagrams with >120 resources for performance
 
 ### Configuration Examples
 
@@ -518,9 +518,24 @@ icons/
 | `direction` | `LR` | `AUTO`, `LR`, `TB`, `RL`, `BT` |
 | `mode` | `static` | `static` or `ai` (requires OPENAI_API_KEY) |
 | `image_formats` | `png,jpg,svg` | Formats to generate or `none` |
+| `iac_globs` | `**/*.tf` etc | Newline-separated IaC glob patterns |
+| `iac_root` | `.` | Root directory for IaC files |
+| `out_dir` | `artifacts` | Output directory for generated files |
+| `out_md` | `<out_dir>/architecture-diagram.md` | Output Markdown path |
+| `out_mmd` | `<out_dir>/architecture-diagram.mmd` | Output Mermaid path |
+| `out_png` | `<out_dir>/architecture-diagram.png` | Output PNG path |
+| `out_jpg` | `<out_dir>/architecture-diagram.jpg` | Output JPG path |
+| `out_svg` | `<out_dir>/architecture-diagram.svg` | Output SVG path |
+| `render_layout` | `lanes` | `lanes` or `providers` |
+| `render_bg` | `transparent` | `transparent` or `white` |
+| `edge_color` | `#4B5563` | Edge color for PNG/SVG |
+| `edge_penwidth` | `1.3` | Edge line width |
+| `edge_arrowsize` | `0.8` | Edge arrow size |
 | `force_full` | `false` | Render full architecture (ignore changes) |
 | `comment_on_pr` | `true` | Post/update sticky PR comment |
 | `create_diagram_pr` | `false` | Create diagram update PR |
+| `tool_repo` | _(auto)_ | Override tool repository (owner/repo) |
+| `tool_ref` | _(auto)_ | Override tool ref (branch/tag/sha) |
 
 ### Default IaC File Patterns
 ```yaml
@@ -610,7 +625,7 @@ render:
   
   # Styling
   background: transparent       # transparent | white
-  fontname: Helvetica
+  fontname: Open Sans Bold
   graph_fontsize: 18
   
   # Node configuration
@@ -620,9 +635,9 @@ render:
     height: 0.85
   
   # Edge configuration
-  edge_color: "#6B7280"
-  edge_penwidth: 0.9
-  edge_arrowsize: 0.65
+  edge_color: "#4B5563"
+  edge_penwidth: 1.3
+  edge_arrowsize: 0.8
 ```
 
 ## 🎨 Architecture Features

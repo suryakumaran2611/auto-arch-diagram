@@ -401,9 +401,9 @@ class RenderConfig:
     node_fontsize: int = 9
     node_width: float = 0.7
     node_height: float = 0.7
-    edge_color: str = "#8D96A77B"
-    edge_penwidth: float = 0.9
-    edge_arrowsize: float = 0.65
+    edge_color: str = "#4B5563"
+    edge_penwidth: float = 1.3
+    edge_arrowsize: float = 0.8
 
 
 @dataclass(frozen=True)
@@ -486,6 +486,21 @@ def _load_config(
         except (ValueError, TypeError):
             return default
 
+    def _parse_float_env(name: str, default: float) -> float:
+        raw = os.getenv(name)
+        if raw is None:
+            return default
+        try:
+            return float(raw)
+        except (ValueError, TypeError):
+            return default
+
+    def _parse_str_env(name: str, default: str) -> str:
+        raw = os.getenv(name)
+        if raw is None:
+            return default
+        return str(raw).strip() or default
+
     render = RenderConfig(
         layout=str(render_cfg.get("layout", RenderConfig().layout)).strip().lower(),
         lanes=lanes_tuple,
@@ -519,12 +534,23 @@ def _load_config(
         node_fontsize=int(node_cfg.get("fontsize", RenderConfig().node_fontsize)),
         node_width=float(node_cfg.get("width", RenderConfig().node_width)),
         node_height=float(node_cfg.get("height", RenderConfig().node_height)),
-        edge_color=str(render_cfg.get("edge_color", RenderConfig().edge_color)).strip(),
+        edge_color=_parse_str_env(
+            "AUTO_ARCH_EDGE_COLOR",
+            str(render_cfg.get("edge_color", RenderConfig().edge_color)).strip(),
+        ),
         edge_penwidth=float(
-            render_cfg.get("edge_penwidth", RenderConfig().edge_penwidth)
+            _parse_float_env(
+                "AUTO_ARCH_EDGE_PENWIDTH",
+                float(render_cfg.get("edge_penwidth", RenderConfig().edge_penwidth)),
+            )
         ),
         edge_arrowsize=float(
-            render_cfg.get("edge_arrowsize", RenderConfig().edge_arrowsize)
+            _parse_float_env(
+                "AUTO_ARCH_EDGE_ARROWSIZE",
+                float(
+                    render_cfg.get("edge_arrowsize", RenderConfig().edge_arrowsize)
+                ),
+            )
         ),
     )
 
@@ -998,7 +1024,9 @@ def _extract_tf_resource_refs(value: Any) -> set[str]:
     return refs
 
 
-def _terraform_resources_from_hcl(parsed: dict[str, Any]) -> dict[str, dict[str, Any]]:
+def _terraform_resources_from_hcl(
+    parsed: dict[str, Any], name_prefix: str = ""
+) -> dict[str, dict[str, Any]]:
     resources: dict[str, dict[str, Any]] = {}
     blocks = parsed.get("resource")
     if not blocks:
@@ -1009,11 +1037,13 @@ def _terraform_resources_from_hcl(parsed: dict[str, Any]) -> dict[str, dict[str,
         if not isinstance(block, dict):
             continue
         for r_type, r_body in block.items():
+            if r_type.startswith("null_"):
+                continue
             if isinstance(r_body, dict):
                 # { "aws_vpc": {"main": {...}} }
                 for name, attrs in r_body.items():
                     if isinstance(attrs, dict):
-                        resources[f"{r_type}.{name}"] = attrs
+                        resources[f"{r_type}.{name_prefix}{name}"] = attrs
             elif isinstance(r_body, list):
                 # Sometimes: { "aws_vpc": [ {"main": {...}} ] }
                 for entry in r_body:
@@ -1021,8 +1051,124 @@ def _terraform_resources_from_hcl(parsed: dict[str, Any]) -> dict[str, dict[str,
                         continue
                     for name, attrs in entry.items():
                         if isinstance(attrs, dict):
-                            resources[f"{r_type}.{name}"] = attrs
+                            resources[f"{r_type}.{name_prefix}{name}"] = attrs
     return resources
+
+
+def _terraform_modules_from_hcl(parsed: dict[str, Any]) -> list[tuple[str, str]]:
+    modules: list[tuple[str, str]] = []
+    blocks = parsed.get("module")
+    if not blocks:
+        return modules
+
+    for block in blocks:
+        if not isinstance(block, dict):
+            continue
+        for name, attrs in block.items():
+            module_attrs = attrs
+            if isinstance(attrs, list) and attrs:
+                module_attrs = attrs[0]
+            if not isinstance(module_attrs, dict):
+                continue
+            source = module_attrs.get("source")
+            if isinstance(source, list) and source:
+                source = source[0]
+            if isinstance(source, str) and source.strip():
+                modules.append((name, source.strip()))
+    return modules
+
+
+def _resolve_local_module_dir(
+    source: str, base_dir: Path, repo_root: Path
+) -> Path | None:
+    if not source:
+        return None
+    if source.startswith("git::") or "://" in source:
+        return None
+
+    candidate: Path
+    if source.startswith("/"):
+        candidate = Path(source).resolve()
+    elif source.startswith("./") or source.startswith("../"):
+        candidate = (base_dir / source).resolve()
+    else:
+        return None
+
+    try:
+        candidate.relative_to(repo_root)
+    except ValueError:
+        return None
+    if not candidate.is_dir():
+        return None
+    return candidate
+
+
+def _module_prefix_for_resource(res_name: str) -> str | None:
+    try:
+        _rtype, rname = res_name.split(".", 1)
+    except ValueError:
+        return None
+    if rname.startswith("module_") and "__" in rname:
+        return rname.split("__", 1)[0] + "__"
+    return None
+
+
+def _fallback_chain_edges(resources: dict[str, dict[str, Any]]) -> set[tuple[str, str]]:
+    """Create simple chain edges when no explicit refs are found."""
+    groups: dict[str, list[str]] = {}
+    for res in resources.keys():
+        prefix = _module_prefix_for_resource(res) or ""
+        groups.setdefault(prefix, []).append(res)
+
+    edges: set[tuple[str, str]] = set()
+    for res_list in groups.values():
+        ordered = sorted(res_list)
+        for src, dst in zip(ordered, ordered[1:]):
+            edges.add((src, dst))
+    return edges
+
+
+def _terraform_resources_from_files(
+    files: list[Path], limits: Limits, repo_root: Path
+) -> tuple[dict[str, dict[str, Any]], dict[str, dict[str, str]]]:
+    resources: dict[str, dict[str, Any]] = {}
+    module_ref_maps: dict[str, dict[str, str]] = {}
+    for f in files:
+        if f.suffix not in {".tf", ".hcl"}:
+            continue
+        try:
+            text = _read_file_limited(f, max_bytes=limits.max_bytes_per_file)
+            parsed = hcl2.loads(text)
+        except Exception:  # nosec B112
+            continue
+        resources.update(_terraform_resources_from_hcl(parsed))
+
+        for module_name, source in _terraform_modules_from_hcl(parsed):
+            module_dir = _resolve_local_module_dir(source, f.parent, repo_root)
+            if module_dir is None:
+                continue
+            module_prefix = f"module_{module_name}__"
+            module_files = sorted(module_dir.glob("*.tf")) + sorted(
+                module_dir.glob("*.hcl")
+            )
+            for module_file in module_files:
+                try:
+                    text = _read_file_limited(
+                        module_file, max_bytes=limits.max_bytes_per_file
+                    )
+                    parsed_module = hcl2.loads(text)
+                except Exception:  # nosec B112
+                    continue
+                base_resources = _terraform_resources_from_hcl(parsed_module)
+                module_resources = _terraform_resources_from_hcl(
+                    parsed_module, name_prefix=module_prefix
+                )
+                ref_map = module_ref_maps.setdefault(module_prefix, {})
+                for ref in base_resources.keys():
+                    r_type, r_name = ref.split(".", 1)
+                    ref_map[ref] = f"{r_type}.{module_prefix}{r_name}"
+                resources.update(module_resources)
+    return resources, module_ref_maps
 
 
 def _guess_provider(resource_type: str) -> str:
@@ -2349,7 +2495,7 @@ def _render_icon_diagram_from_terraform(
     complexity = _analyze_diagram_complexity(all_resources, edges, grouped_data)
 
     # Skip extremely complex diagrams that may cause performance issues
-    max_allowed_nodes = 60  # Allow complex diagrams up to 60 nodes (uses providers layout automatically)
+    max_allowed_nodes = 120  # Allow larger diagrams before skipping render
     if complexity.node_count > max_allowed_nodes:
         print(
             f"⚠️  Skipping diagram generation: Too many resources ({complexity.node_count} > {max_allowed_nodes})"
@@ -2892,17 +3038,10 @@ def _static_terraform_mermaid(
             "Missing dependency python-hcl2. Install it to enable Terraform static diagrams."
         )
 
-    all_resources: dict[str, dict[str, Any]] = {}
-    for f in files:
-        if f.suffix not in {".tf", ".hcl"}:
-            continue
-        try:
-            text = _read_file_limited(f, max_bytes=limits.max_bytes_per_file)
-            parsed = hcl2.loads(text)
-        except Exception:  # nosec B112
-            # Skip unparseable files to keep the workflow resilient.
-            continue
-        all_resources.update(_terraform_resources_from_hcl(parsed))
+    repo_root = Path.cwd()
+    all_resources, module_ref_maps = _terraform_resources_from_files(
+        files, limits, repo_root
+    )
 
     if not all_resources:
         raise RuntimeError("No Terraform resources parsed from the changed files.")
@@ -2923,12 +3062,24 @@ def _static_terraform_mermaid(
         depends_on = attrs.get("depends_on")
         if depends_on is not None:
             refs |= _extract_tf_resource_refs(depends_on)
+        module_prefix = _module_prefix_for_resource(res)
+        if module_prefix and module_prefix in module_ref_maps:
+            ref_map = module_ref_maps[module_prefix]
+            refs = {ref_map.get(r, r) for r in refs}
 
         for ref in sorted(refs):
             if ref == res:
                 continue
             if ref in all_resources:
                 edges.add((node_id_by_res[ref], node_id_by_res[res]))
+
+    if not edges:
+        fallback_edges = _fallback_chain_edges(all_resources)
+        if fallback_edges:
+            print("[WARN] No explicit Terraform references found; using heuristic edges.")
+        for src, dst in sorted(fallback_edges):
+            if src in node_id_by_res and dst in node_id_by_res:
+                edges.add((node_id_by_res[src], node_id_by_res[dst]))
 
     lines: list[str] = [f"flowchart {direction}"]
 
@@ -2947,6 +3098,8 @@ def _static_terraform_mermaid(
         "Generated a dependency-oriented Terraform diagram from changed resources."
     )
     assumptions = "Connections represent inferred references (including depends_on and attribute references)."
+    if not edges:
+        assumptions = "No explicit references found; connections are heuristic to show grouping."
     return mermaid, summary, assumptions
 
 
@@ -2958,16 +3111,10 @@ def _static_terraform_graph(
             "Missing dependency python-hcl2. Install it to enable Terraform static diagrams."
         )
 
-    all_resources: dict[str, dict[str, Any]] = {}
-    for f in files:
-        if f.suffix not in {".tf", ".hcl"}:
-            continue
-        try:
-            text = _read_file_limited(f, max_bytes=limits.max_bytes_per_file)
-            parsed = hcl2.loads(text)
-        except Exception:  # nosec B112
-            continue
-        all_resources.update(_terraform_resources_from_hcl(parsed))
+    repo_root = Path.cwd()
+    all_resources, module_ref_maps = _terraform_resources_from_files(
+        files, limits, repo_root
+    )
 
     if not all_resources:
         raise RuntimeError("No Terraform resources parsed from the changed files.")
@@ -2979,9 +3126,17 @@ def _static_terraform_graph(
         depends_on = attrs.get("depends_on")
         if depends_on is not None:
             refs |= _extract_tf_resource_refs(depends_on)
+        module_prefix = _module_prefix_for_resource(res)
+        if module_prefix and module_prefix in module_ref_maps:
+            ref_map = module_ref_maps[module_prefix]
+            refs = {ref_map.get(r, r) for r in refs}
         for ref in sorted(refs):
             if ref in all_resources and ref != res:
                 edges.add((ref, res))
+    if not edges:
+        edges = _fallback_chain_edges(all_resources)
+        if edges:
+            print("[WARN] No explicit Terraform references found; using heuristic edges.")
     return all_resources, edges
 
 
