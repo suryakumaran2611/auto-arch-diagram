@@ -407,6 +407,30 @@ jobs:
           OUT_JPG='${{ inputs.out_jpg }}'
           OUT_SVG='${{ inputs.out_svg }}'
 
+          IAC_ROOT='${{ inputs.iac_root }}'
+          if [ -z "${IAC_ROOT}" ]; then IAC_ROOT="."; fi
+          export IAC_ROOT
+
+          export CHANGED_IAC_FILES
+          if [ "${IAC_ROOT}" != "." ]; then
+            CHANGED_IAC_FILES=$(python - <<'PY'
+          import os
+
+          raw = os.environ.get("CHANGED_IAC_FILES", "")
+          iac_root = os.environ.get("IAC_ROOT", ".").strip()
+
+          files = []
+          for token in raw.replace("\n", " ").split():
+            t = token.lstrip("./")
+            if iac_root != "." and t.startswith(iac_root.rstrip("/") + "/"):
+              t = t[len(iac_root.rstrip("/")) + 1 :]
+            files.append(t)
+
+          print(" ".join(files))
+          PY
+          )
+          fi
+
           if [ -z "${OUT_MD}" ]; then OUT_MD="${OUT_DIR}/architecture-diagram.md"; fi
           if [ -z "${OUT_MMD}" ]; then OUT_MMD="${OUT_DIR}/architecture-diagram.mmd"; fi
 
@@ -461,6 +485,8 @@ jobs:
 
       - name: Validate generated files
         shell: bash
+        env:
+          CHANGED_IAC_FILES: ${{ inputs.changed_files != '' && steps.changed_direct.outputs.all_changed_files || (inputs.force_full && steps.all_iac.outputs.all_changed_files || steps.changed.outputs.all_changed_files) }}
         run: |
           set -e
           echo "=== Validating generated diagram files ==="
@@ -486,15 +512,19 @@ jobs:
             exit 1
           fi
           
-          # Check that files are not empty
-          if [ ! -s "${MD_PATH}" ]; then
-            echo "ERROR: Markdown file is empty: ${MD_PATH}"
-            exit 1
-          fi
-          
-          if [ ! -s "${MMD_PATH}" ]; then
-            echo "ERROR: Mermaid file is empty: ${MMD_PATH}"
-            exit 1
+          if [ -z "${CHANGED_IAC_FILES}" ]; then
+            echo "No IaC changes detected; allowing empty outputs."
+          else
+            # Check that files are not empty
+            if [ ! -s "${MD_PATH}" ]; then
+              echo "ERROR: Markdown file is empty: ${MD_PATH}"
+              exit 1
+            fi
+            
+            if [ ! -s "${MMD_PATH}" ]; then
+              echo "ERROR: Mermaid file is empty: ${MMD_PATH}"
+              exit 1
+            fi
           fi
           
           echo "✓ Markdown file: ${MD_PATH} ($(stat -c%s "${MD_PATH}") bytes)"
@@ -839,7 +869,27 @@ jobs:
           OUT_MMD='${{ inputs.out_mmd }}'
           OUT_PNG='${{ inputs.out_png }}'
           OUT_JPG='${{ inputs.out_jpg }}'
-          OUT_SVG='${{ inputs.out_svg }}'
+            OUT_SVG='${{ inputs.out_svg }}'
+
+            export CHANGED_IAC_FILES
+            if [ "${IAC_ROOT}" != "." ]; then
+              CHANGED_IAC_FILES=$(python - <<'PY'
+            import os
+
+            raw = os.environ.get("CHANGED_IAC_FILES", "")
+            iac_root = os.environ.get("IAC_ROOT", ".").strip()
+
+            files = []
+            for token in raw.replace("\n", " ").split():
+              t = token.lstrip("./")
+              if iac_root != "." and t.startswith(iac_root.rstrip("/") + "/"):
+                t = t[len(iac_root.rstrip("/")) + 1 :]
+              files.append(t)
+
+            print(" ".join(files))
+            PY
+            )
+            fi
 
           if [ -z "${OUT_MD}" ]; then OUT_MD="${OUT_DIR}/architecture-diagram.md"; fi
           if [ -z "${OUT_MMD}" ]; then OUT_MMD="${OUT_DIR}/architecture-diagram.mmd"; fi
@@ -892,9 +942,13 @@ jobs:
             exit 1
           fi
           
-          if [ ! -s "${OUT_MD}" ] || [ ! -s "${OUT_MMD}" ]; then
-            echo "ERROR: Generated files are empty"
-            exit 1
+          if [ -z "${CHANGED_IAC_FILES}" ]; then
+            echo "No IaC changes detected; allowing empty outputs."
+          else
+            if [ ! -s "${OUT_MD}" ] || [ ! -s "${OUT_MMD}" ]; then
+              echo "ERROR: Generated files are empty"
+              exit 1
+            fi
           fi
           
           echo "✓ Files validated successfully"
