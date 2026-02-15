@@ -401,9 +401,9 @@ class RenderConfig:
     node_fontsize: int = 9
     node_width: float = 0.7
     node_height: float = 0.7
-    edge_color: str = "#8D96A77B"
-    edge_penwidth: float = 0.9
-    edge_arrowsize: float = 0.65
+    edge_color: str = "#4B5563"
+    edge_penwidth: float = 1.3
+    edge_arrowsize: float = 0.8
 
 
 @dataclass(frozen=True)
@@ -486,6 +486,21 @@ def _load_config(
         except (ValueError, TypeError):
             return default
 
+    def _parse_float_env(name: str, default: float) -> float:
+        raw = os.getenv(name)
+        if raw is None:
+            return default
+        try:
+            return float(raw)
+        except (ValueError, TypeError):
+            return default
+
+    def _parse_str_env(name: str, default: str) -> str:
+        raw = os.getenv(name)
+        if raw is None:
+            return default
+        return str(raw).strip() or default
+
     render = RenderConfig(
         layout=str(render_cfg.get("layout", RenderConfig().layout)).strip().lower(),
         lanes=lanes_tuple,
@@ -519,12 +534,23 @@ def _load_config(
         node_fontsize=int(node_cfg.get("fontsize", RenderConfig().node_fontsize)),
         node_width=float(node_cfg.get("width", RenderConfig().node_width)),
         node_height=float(node_cfg.get("height", RenderConfig().node_height)),
-        edge_color=str(render_cfg.get("edge_color", RenderConfig().edge_color)).strip(),
+        edge_color=_parse_str_env(
+            "AUTO_ARCH_EDGE_COLOR",
+            str(render_cfg.get("edge_color", RenderConfig().edge_color)).strip(),
+        ),
         edge_penwidth=float(
-            render_cfg.get("edge_penwidth", RenderConfig().edge_penwidth)
+            _parse_float_env(
+                "AUTO_ARCH_EDGE_PENWIDTH",
+                float(render_cfg.get("edge_penwidth", RenderConfig().edge_penwidth)),
+            )
         ),
         edge_arrowsize=float(
-            render_cfg.get("edge_arrowsize", RenderConfig().edge_arrowsize)
+            _parse_float_env(
+                "AUTO_ARCH_EDGE_ARROWSIZE",
+                float(
+                    render_cfg.get("edge_arrowsize", RenderConfig().edge_arrowsize)
+                ),
+            )
         ),
     )
 
@@ -1075,10 +1101,36 @@ def _resolve_local_module_dir(
     return candidate
 
 
+def _module_prefix_for_resource(res_name: str) -> str | None:
+    try:
+        _rtype, rname = res_name.split(".", 1)
+    except ValueError:
+        return None
+    if rname.startswith("module_") and "__" in rname:
+        return rname.split("__", 1)[0] + "__"
+    return None
+
+
+def _fallback_chain_edges(resources: dict[str, dict[str, Any]]) -> set[tuple[str, str]]:
+    """Create simple chain edges when no explicit refs are found."""
+    groups: dict[str, list[str]] = {}
+    for res in resources.keys():
+        prefix = _module_prefix_for_resource(res) or ""
+        groups.setdefault(prefix, []).append(res)
+
+    edges: set[tuple[str, str]] = set()
+    for res_list in groups.values():
+        ordered = sorted(res_list)
+        for src, dst in zip(ordered, ordered[1:]):
+            edges.add((src, dst))
+    return edges
+
+
 def _terraform_resources_from_files(
     files: list[Path], limits: Limits, repo_root: Path
-) -> dict[str, dict[str, Any]]:
+) -> tuple[dict[str, dict[str, Any]], dict[str, dict[str, str]]]:
     resources: dict[str, dict[str, Any]] = {}
+    module_ref_maps: dict[str, dict[str, str]] = {}
     for f in files:
         if f.suffix not in {".tf", ".hcl"}:
             continue
@@ -1105,12 +1157,16 @@ def _terraform_resources_from_files(
                     parsed_module = hcl2.loads(text)
                 except Exception:  # nosec B112
                     continue
-                resources.update(
-                    _terraform_resources_from_hcl(
-                        parsed_module, name_prefix=module_prefix
-                    )
+                base_resources = _terraform_resources_from_hcl(parsed_module)
+                module_resources = _terraform_resources_from_hcl(
+                    parsed_module, name_prefix=module_prefix
                 )
-    return resources
+                ref_map = module_ref_maps.setdefault(module_prefix, {})
+                for ref in base_resources.keys():
+                    r_type, r_name = ref.split(".", 1)
+                    ref_map[ref] = f"{r_type}.{module_prefix}{r_name}"
+                resources.update(module_resources)
+    return resources, module_ref_maps
 
 
 def _guess_provider(resource_type: str) -> str:
@@ -2981,7 +3037,9 @@ def _static_terraform_mermaid(
         )
 
     repo_root = Path.cwd()
-    all_resources = _terraform_resources_from_files(files, limits, repo_root)
+    all_resources, module_ref_maps = _terraform_resources_from_files(
+        files, limits, repo_root
+    )
 
     if not all_resources:
         raise RuntimeError("No Terraform resources parsed from the changed files.")
@@ -3002,12 +3060,24 @@ def _static_terraform_mermaid(
         depends_on = attrs.get("depends_on")
         if depends_on is not None:
             refs |= _extract_tf_resource_refs(depends_on)
+        module_prefix = _module_prefix_for_resource(res)
+        if module_prefix and module_prefix in module_ref_maps:
+            ref_map = module_ref_maps[module_prefix]
+            refs = {ref_map.get(r, r) for r in refs}
 
         for ref in sorted(refs):
             if ref == res:
                 continue
             if ref in all_resources:
                 edges.add((node_id_by_res[ref], node_id_by_res[res]))
+
+    if not edges:
+        fallback_edges = _fallback_chain_edges(all_resources)
+        if fallback_edges:
+            print("[WARN] No explicit Terraform references found; using heuristic edges.")
+        for src, dst in sorted(fallback_edges):
+            if src in node_id_by_res and dst in node_id_by_res:
+                edges.add((node_id_by_res[src], node_id_by_res[dst]))
 
     lines: list[str] = [f"flowchart {direction}"]
 
@@ -3026,6 +3096,8 @@ def _static_terraform_mermaid(
         "Generated a dependency-oriented Terraform diagram from changed resources."
     )
     assumptions = "Connections represent inferred references (including depends_on and attribute references)."
+    if not edges:
+        assumptions = "No explicit references found; connections are heuristic to show grouping."
     return mermaid, summary, assumptions
 
 
@@ -3038,7 +3110,9 @@ def _static_terraform_graph(
         )
 
     repo_root = Path.cwd()
-    all_resources = _terraform_resources_from_files(files, limits, repo_root)
+    all_resources, module_ref_maps = _terraform_resources_from_files(
+        files, limits, repo_root
+    )
 
     if not all_resources:
         raise RuntimeError("No Terraform resources parsed from the changed files.")
@@ -3050,9 +3124,17 @@ def _static_terraform_graph(
         depends_on = attrs.get("depends_on")
         if depends_on is not None:
             refs |= _extract_tf_resource_refs(depends_on)
+        module_prefix = _module_prefix_for_resource(res)
+        if module_prefix and module_prefix in module_ref_maps:
+            ref_map = module_ref_maps[module_prefix]
+            refs = {ref_map.get(r, r) for r in refs}
         for ref in sorted(refs):
             if ref in all_resources and ref != res:
                 edges.add((ref, res))
+    if not edges:
+        edges = _fallback_chain_edges(all_resources)
+        if edges:
+            print("[WARN] No explicit Terraform references found; using heuristic edges.")
     return all_resources, edges
 
 

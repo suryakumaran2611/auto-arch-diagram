@@ -56,6 +56,21 @@ on:
         required: false
         type: string
         default: transparent
+      edge_color:
+        description: "Edge color for PNG/SVG diagrams (Graphviz color)."
+        required: false
+        type: string
+        default: "#4B5563"
+      edge_penwidth:
+        description: "Edge line width for PNG/SVG diagrams."
+        required: false
+        type: string
+        default: "1.3"
+      edge_arrowsize:
+        description: "Edge arrow size for PNG/SVG diagrams."
+        required: false
+        type: string
+        default: "0.8"
       image_formats:
         description: "Comma-separated image formats to generate: png,jpg,svg. Use 'none' to skip image rendering."
         required: false
@@ -390,6 +405,9 @@ jobs:
           AUTO_ARCH_DIRECTION: ${{ inputs.direction }}
           AUTO_ARCH_RENDER_LAYOUT: ${{ inputs.render_layout }}
           AUTO_ARCH_RENDER_BG: ${{ inputs.render_bg }}
+          AUTO_ARCH_EDGE_COLOR: ${{ inputs.edge_color }}
+          AUTO_ARCH_EDGE_PENWIDTH: ${{ inputs.edge_penwidth }}
+          AUTO_ARCH_EDGE_ARROWSIZE: ${{ inputs.edge_arrowsize }}
           AUTO_ARCH_PUBLISH_ENABLED: ${{ inputs.publish_enabled && 'true' || 'false' }}
         shell: bash
         run: |
@@ -854,6 +872,9 @@ jobs:
           AUTO_ARCH_DIRECTION: ${{ inputs.direction }}
           AUTO_ARCH_RENDER_LAYOUT: ${{ inputs.render_layout }}
           AUTO_ARCH_RENDER_BG: ${{ inputs.render_bg }}
+          AUTO_ARCH_EDGE_COLOR: ${{ inputs.edge_color }}
+          AUTO_ARCH_EDGE_PENWIDTH: ${{ inputs.edge_penwidth }}
+          AUTO_ARCH_EDGE_ARROWSIZE: ${{ inputs.edge_arrowsize }}
           AUTO_ARCH_PUBLISH_ENABLED: 'true'
         shell: bash
         run: |
