@@ -4459,6 +4459,13 @@ def _split_changed_files(changed_files_raw: str) -> list[str]:
     return [p.replace("\\", "/") for p in parts]
 
 
+def _normalize_mermaid_direction(direction: str) -> str:
+    d = (direction or "").strip().upper()
+    if d == "AUTO" or d not in {"LR", "RL", "TB", "BT"}:
+        return "LR"
+    return d
+
+
 _SECRET_ASSIGNMENT_RE = re.compile(
     r"(?ix)"
     r"(password|passwd|secret|token|access[_-]?key|secret[_-]?key|private[_-]?key)"
@@ -4692,10 +4699,12 @@ def main() -> int:
             out_svg.write_text("", encoding="utf-8")
         return 0
 
+    mermaid_direction = _normalize_mermaid_direction(direction)
+
     if mode != "ai":
         md, mermaid = _static_markdown(
             changed_paths,
-            direction,
+            mermaid_direction,
             limits,
             out_png=out_png,
             out_jpg=out_jpg,
@@ -4733,7 +4742,7 @@ def main() -> int:
         return 0
 
     client = OpenAI(api_key=api_key)
-    messages = _build_prompt(changed_paths, direction, file_snippets)
+    messages = _build_prompt(changed_paths, mermaid_direction, file_snippets)
 
     try:
         resp = client.chat.completions.create(
