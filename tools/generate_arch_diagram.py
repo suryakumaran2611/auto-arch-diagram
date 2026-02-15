@@ -998,7 +998,9 @@ def _extract_tf_resource_refs(value: Any) -> set[str]:
     return refs
 
 
-def _terraform_resources_from_hcl(parsed: dict[str, Any]) -> dict[str, dict[str, Any]]:
+def _terraform_resources_from_hcl(
+    parsed: dict[str, Any], name_prefix: str = ""
+) -> dict[str, dict[str, Any]]:
     resources: dict[str, dict[str, Any]] = {}
     blocks = parsed.get("resource")
     if not blocks:
@@ -1013,7 +1015,7 @@ def _terraform_resources_from_hcl(parsed: dict[str, Any]) -> dict[str, dict[str,
                 # { "aws_vpc": {"main": {...}} }
                 for name, attrs in r_body.items():
                     if isinstance(attrs, dict):
-                        resources[f"{r_type}.{name}"] = attrs
+                        resources[f"{r_type}.{name_prefix}{name}"] = attrs
             elif isinstance(r_body, list):
                 # Sometimes: { "aws_vpc": [ {"main": {...}} ] }
                 for entry in r_body:
@@ -1021,7 +1023,93 @@ def _terraform_resources_from_hcl(parsed: dict[str, Any]) -> dict[str, dict[str,
                         continue
                     for name, attrs in entry.items():
                         if isinstance(attrs, dict):
-                            resources[f"{r_type}.{name}"] = attrs
+                            resources[f"{r_type}.{name_prefix}{name}"] = attrs
+    return resources
+
+
+def _terraform_modules_from_hcl(parsed: dict[str, Any]) -> list[tuple[str, str]]:
+    modules: list[tuple[str, str]] = []
+    blocks = parsed.get("module")
+    if not blocks:
+        return modules
+
+    for block in blocks:
+        if not isinstance(block, dict):
+            continue
+        for name, attrs in block.items():
+            module_attrs = attrs
+            if isinstance(attrs, list) and attrs:
+                module_attrs = attrs[0]
+            if not isinstance(module_attrs, dict):
+                continue
+            source = module_attrs.get("source")
+            if isinstance(source, list) and source:
+                source = source[0]
+            if isinstance(source, str) and source.strip():
+                modules.append((name, source.strip()))
+    return modules
+
+
+def _resolve_local_module_dir(
+    source: str, base_dir: Path, repo_root: Path
+) -> Path | None:
+    if not source:
+        return None
+    if source.startswith("git::") or "://" in source:
+        return None
+
+    candidate: Path
+    if source.startswith("/"):
+        candidate = Path(source).resolve()
+    elif source.startswith("./") or source.startswith("../"):
+        candidate = (base_dir / source).resolve()
+    else:
+        return None
+
+    try:
+        candidate.relative_to(repo_root)
+    except ValueError:
+        return None
+    if not candidate.is_dir():
+        return None
+    return candidate
+
+
+def _terraform_resources_from_files(
+    files: list[Path], limits: Limits, repo_root: Path
+) -> dict[str, dict[str, Any]]:
+    resources: dict[str, dict[str, Any]] = {}
+    for f in files:
+        if f.suffix not in {".tf", ".hcl"}:
+            continue
+        try:
+            text = _read_file_limited(f, max_bytes=limits.max_bytes_per_file)
+            parsed = hcl2.loads(text)
+        except Exception:  # nosec B112
+            continue
+        resources.update(_terraform_resources_from_hcl(parsed))
+
+        for module_name, source in _terraform_modules_from_hcl(parsed):
+            module_dir = _resolve_local_module_dir(source, f.parent, repo_root)
+            if module_dir is None:
+                continue
+            module_prefix = f"module_{module_name}__"
+            module_files = sorted(module_dir.glob("*.tf")) + sorted(
+                module_dir.glob("*.hcl")
+            )
+            for module_file in module_files:
+                try:
+                    text = _read_file_limited(
+                        module_file, max_bytes=limits.max_bytes_per_file
+                    )
+                    parsed_module = hcl2.loads(text)
+                except Exception:  # nosec B112
+                    continue
+                resources.update(
+                    _terraform_resources_from_hcl(
+                        parsed_module, name_prefix=module_prefix
+                    )
+                )
     return resources
 
 
@@ -2349,7 +2437,7 @@ def _render_icon_diagram_from_terraform(
     complexity = _analyze_diagram_complexity(all_resources, edges, grouped_data)
 
     # Skip extremely complex diagrams that may cause performance issues
-    max_allowed_nodes = 60  # Allow complex diagrams up to 60 nodes (uses providers layout automatically)
+    max_allowed_nodes = 120  # Allow larger diagrams before skipping render
     if complexity.node_count > max_allowed_nodes:
         print(
             f"⚠️  Skipping diagram generation: Too many resources ({complexity.node_count} > {max_allowed_nodes})"
@@ -2892,17 +2980,8 @@ def _static_terraform_mermaid(
             "Missing dependency python-hcl2. Install it to enable Terraform static diagrams."
         )
 
-    all_resources: dict[str, dict[str, Any]] = {}
-    for f in files:
-        if f.suffix not in {".tf", ".hcl"}:
-            continue
-        try:
-            text = _read_file_limited(f, max_bytes=limits.max_bytes_per_file)
-            parsed = hcl2.loads(text)
-        except Exception:  # nosec B112
-            # Skip unparseable files to keep the workflow resilient.
-            continue
-        all_resources.update(_terraform_resources_from_hcl(parsed))
+    repo_root = Path.cwd()
+    all_resources = _terraform_resources_from_files(files, limits, repo_root)
 
     if not all_resources:
         raise RuntimeError("No Terraform resources parsed from the changed files.")
@@ -2958,16 +3037,8 @@ def _static_terraform_graph(
             "Missing dependency python-hcl2. Install it to enable Terraform static diagrams."
         )
 
-    all_resources: dict[str, dict[str, Any]] = {}
-    for f in files:
-        if f.suffix not in {".tf", ".hcl"}:
-            continue
-        try:
-            text = _read_file_limited(f, max_bytes=limits.max_bytes_per_file)
-            parsed = hcl2.loads(text)
-        except Exception:  # nosec B112
-            continue
-        all_resources.update(_terraform_resources_from_hcl(parsed))
+    repo_root = Path.cwd()
+    all_resources = _terraform_resources_from_files(files, limits, repo_root)
 
     if not all_resources:
         raise RuntimeError("No Terraform resources parsed from the changed files.")
