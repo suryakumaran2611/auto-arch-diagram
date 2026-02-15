@@ -31,6 +31,11 @@ on:
           **/Pulumi.*.py
           **/*.cdk.ts
           **/*.cdk.py
+      artifact_name:
+        description: "Artifact name override (use to avoid conflicts in matrix runs)."
+        required: false
+        type: string
+        default: ''
       direction:
         description: "Diagram direction: LR (horizontal left-to-right), TB (vertical top-to-bottom), RL, BT, or AUTO (intelligent selection based on architecture)."
         required: false
@@ -571,8 +576,9 @@ jobs:
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: auto-arch-diagram-${{ github.job }}-${{ github.run_attempt }}
+          name: ${{ inputs.artifact_name != '' && inputs.artifact_name || format('auto-arch-diagram-{0}-{1}', github.run_id, github.job) }}
           path: ${{ inputs.out_dir }}/
+          overwrite: true
 
       - name: Find existing comment
         if: ${{ inputs.comment_on_pr && github.event_name == 'pull_request' }}
