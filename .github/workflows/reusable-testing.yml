@@ -48,7 +48,7 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
           cache: 'pip'
-          cache-dependency-path: ${{ inputs.requirements-files }}
+          cache-dependency-path: ${{ replace(replace(inputs.requirements-files, ' ', ''), ',', '\n') }}
 
       - name: Install Graphviz
         run: |
@@ -118,7 +118,7 @@ jobs:
         with:
           python-version: ${{ inputs.python-version }}
           cache: 'pip'
-          cache-dependency-path: ${{ inputs.requirements-files }}
+          cache-dependency-path: ${{ replace(replace(inputs.requirements-files, ' ', ''), ',', '\n') }}
 
       - name: Install dependencies
         run: |
