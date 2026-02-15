@@ -2659,6 +2659,36 @@ def _render_icon_diagram_from_terraform(
     # Skip extremely complex diagrams that may cause performance issues
     max_allowed_nodes = 120  # Allow larger diagrams before skipping render
     if complexity.node_count > max_allowed_nodes:
+        env_groups = _group_resources_by_env(all_resources)
+        if len(env_groups) > 1:
+            print(
+                f"⚠️  Diagram too large ({complexity.node_count} > {max_allowed_nodes}). Splitting by environment."
+            )
+            for env_key, res_list in sorted(env_groups.items()):
+                res_set = set(res_list)
+                if not res_set:
+                    continue
+                sub_resources, sub_edges = _filter_resources_and_edges(
+                    all_resources, edges, res_set
+                )
+                if not sub_resources:
+                    continue
+                env_suffix = env_key or "shared"
+                sub_out_path = out_path.with_name(
+                    f"{out_path.stem}-{env_suffix}{out_path.suffix}"
+                )
+                env_label = _format_env_label(env_suffix)
+                sub_title = f"{title} - {env_label}"
+                _render_icon_diagram_from_terraform(
+                    sub_resources,
+                    sub_edges,
+                    out_path=sub_out_path,
+                    title=sub_title,
+                    direction=direction,
+                    render=render,
+                )
+            return
+
         print(
             f"⚠️  Skipping diagram generation: Too many resources ({complexity.node_count} > {max_allowed_nodes})"
         )
