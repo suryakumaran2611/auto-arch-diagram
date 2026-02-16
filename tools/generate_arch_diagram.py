@@ -252,14 +252,15 @@ def _publish_to_confluence(
     replace: bool = True,
     image_marker: str | None = None,
     debug: bool = False,
+    unique_filename: bool = False,
 ) -> bool:
     """Publish or robustly replace a specific image in a Confluence page via REST API."""
     def _log(msg: str) -> None:
         if debug:
-            print(msg)
+            print(msg, flush=True)
 
     def _info(msg: str) -> None:
-        print(msg)
+        print(msg, flush=True)
 
     if not diagram_path.exists():
         print(f"Confluence publish: diagram file not found: {diagram_path}")
@@ -288,10 +289,23 @@ def _publish_to_confluence(
         if ext == ".svg"
         else "image/jpeg"
     )
-    filename = diagram_path.name
+    base_filename = diagram_path.name
+    filename = base_filename
+    if unique_filename:
+        import hashlib
+        from datetime import datetime, timezone
+
+        diagram_bytes = diagram_path.read_bytes()
+        digest = hashlib.sha256(diagram_bytes).hexdigest()[:8]
+        timestamp = datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S")
+        filename = f"{diagram_path.stem}-{timestamp}-{digest}{ext}"
+        _info(
+            "Confluence publish: using unique filename "
+            f"base={base_filename} unique={filename}"
+        )
     # Add marker as comment for robust replacement
     marker_comment = (
-        f"<!-- auto-arch-diagram:{filename} -->"
+        f"<!-- auto-arch-diagram:{base_filename} -->"
         if image_marker is None
         else image_marker
     )
@@ -4840,6 +4854,13 @@ if __name__ == "__main__":
         "on",
     }
     confluence_image_marker = os.getenv("CONFLUENCE_IMAGE_MARKER")
+    confluence_unique_filename = os.getenv("CONFLUENCE_UNIQUE_FILENAME", "").lower() in {
+        "1",
+        "true",
+        "yes",
+        "y",
+        "on",
+    }
     confluence_debug = os.getenv("AUTO_ARCH_DEBUG", "").lower() in {
         "1",
         "true",
@@ -4868,6 +4889,7 @@ if __name__ == "__main__":
                     replace=confluence_replace,
                     image_marker=confluence_image_marker,
                     debug=confluence_debug,
+                    unique_filename=confluence_unique_filename,
                 )
                 if published:
                     break

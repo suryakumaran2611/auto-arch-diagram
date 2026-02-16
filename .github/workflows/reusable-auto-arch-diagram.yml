@@ -146,6 +146,11 @@ on:
         required: false
         type: string
         default: ''
+      confluence_unique_filename:
+        description: "Upload Confluence images with a unique filename (timestamp+hash)."
+        required: false
+        type: boolean
+        default: false
       comment_on_pr:
         description: "Post/Update a sticky PR comment (only on pull_request events)."
         required: false
@@ -452,6 +457,7 @@ jobs:
           CONFLUENCE_PAGE_ID: ${{ inputs.publish_confluence && inputs.confluence_page_id || '' }}
           CONFLUENCE_REPLACE: ${{ inputs.publish_confluence && (inputs.confluence_replace && 'true' || 'false') || '' }}
           CONFLUENCE_IMAGE_MARKER: ${{ inputs.publish_confluence && inputs.confluence_image_marker || '' }}
+          CONFLUENCE_UNIQUE_FILENAME: ${{ inputs.publish_confluence && (inputs.confluence_unique_filename && 'true' || 'false') || '' }}
         shell: bash
         run: |
           set -e  # Exit on any error
@@ -955,6 +961,7 @@ jobs:
           CONFLUENCE_PAGE_ID: ${{ inputs.publish_confluence && inputs.confluence_page_id || '' }}
           CONFLUENCE_REPLACE: ${{ inputs.publish_confluence && (inputs.confluence_replace && 'true' || 'false') || '' }}
           CONFLUENCE_IMAGE_MARKER: ${{ inputs.publish_confluence && inputs.confluence_image_marker || '' }}
+          CONFLUENCE_UNIQUE_FILENAME: ${{ inputs.publish_confluence && (inputs.confluence_unique_filename && 'true' || 'false') || '' }}
         shell: bash
         run: |
           set -e  # Exit on any error
