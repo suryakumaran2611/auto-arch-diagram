@@ -445,6 +445,7 @@ jobs:
           AUTO_ARCH_EDGE_PENWIDTH: ${{ inputs.edge_penwidth }}
           AUTO_ARCH_EDGE_ARROWSIZE: ${{ inputs.edge_arrowsize }}
           AUTO_ARCH_PUBLISH_ENABLED: ${{ inputs.publish_enabled && 'true' || 'false' }}
+          AUTO_ARCH_DEBUG: ${{ inputs.publish_confluence && '1' || '' }}
           CONFLUENCE_URL: ${{ inputs.publish_confluence && secrets.CONFLUENCE_URL || '' }}
           CONFLUENCE_USER: ${{ inputs.publish_confluence && secrets.CONFLUENCE_USER || '' }}
           CONFLUENCE_TOKEN: ${{ inputs.publish_confluence && secrets.CONFLUENCE_TOKEN || '' }}
@@ -947,6 +948,7 @@ jobs:
           AUTO_ARCH_EDGE_PENWIDTH: ${{ inputs.edge_penwidth }}
           AUTO_ARCH_EDGE_ARROWSIZE: ${{ inputs.edge_arrowsize }}
           AUTO_ARCH_PUBLISH_ENABLED: 'true'
+          AUTO_ARCH_DEBUG: ${{ inputs.publish_confluence && '1' || '' }}
           CONFLUENCE_URL: ${{ inputs.publish_confluence && secrets.CONFLUENCE_URL || '' }}
           CONFLUENCE_USER: ${{ inputs.publish_confluence && secrets.CONFLUENCE_USER || '' }}
           CONFLUENCE_TOKEN: ${{ inputs.publish_confluence && secrets.CONFLUENCE_TOKEN || '' }}
