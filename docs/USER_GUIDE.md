@@ -127,6 +127,28 @@ To automatically create PRs that update diagram files:
       publish_enabled: true
 ```
 
+### 2b. Auto-Commit Diagrams (Optional)
+
+To commit generated diagrams directly to the repository (no PR):
+
+```yaml
+  diagram_commit:
+    if: github.event_name == 'push'
+    permissions:
+      contents: write
+      pull-requests: write
+    uses: suryakumaran2611/auto-arch-diagram/.github/workflows/reusable-auto-arch-diagram.yml@main
+    with:
+      mode: static
+      direction: LR
+      edge_color: "#4B5563"
+      edge_penwidth: "1.3"
+      edge_arrowsize: "0.8"
+      comment_on_pr: false
+      create_diagram_pr: false
+      auto_commit_artifacts: true
+```
+
 ### 3. Configure Output Paths
 
 Create `.auto-arch-diagram.yml`:
@@ -179,6 +201,7 @@ You can configure the action using GitHub repository variables:
 | `out_png` | `<out_dir>/architecture-diagram.png` | Output PNG path |
 | `out_jpg` | `<out_dir>/architecture-diagram.jpg` | Output JPG path |
 | `out_svg` | `<out_dir>/architecture-diagram.svg` | Output SVG path |
+| `artifact_name` | _(auto)_ | Artifact name override (use for matrix jobs) |
 | `render_layout` | `lanes` | `lanes` or `providers` |
 | `render_bg` | `transparent` | `transparent` or `white` |
 | `edge_color` | `#4B5563` | Edge color for PNG/SVG |
@@ -186,6 +209,7 @@ You can configure the action using GitHub repository variables:
 | `edge_arrowsize` | `0.8` | Edge arrow size |
 | `comment_on_pr` | `true` | Post/update sticky PR comment |
 | `create_diagram_pr` | `false` | Create diagram update PR |
+| `auto_commit_artifacts` | `false` | Commit generated artifacts directly to the repo |
 | `tool_repo` | _(auto)_ | Override tool repository (owner/repo) |
 | `tool_ref` | _(auto)_ | Override tool ref (branch/tag/sha) |
 

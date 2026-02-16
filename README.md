@@ -162,11 +162,12 @@ with:
   image_formats: png,svg
   publish_enabled: true
   publish_confluence: true
-  confluence_url: ${{ secrets.CONFLUENCE_URL }}
-  confluence_user: ${{ secrets.CONFLUENCE_USER }}
-  confluence_token: ${{ secrets.CONFLUENCE_TOKEN }}
   confluence_page_id: '123456789'  # Target Confluence page ID
   confluence_replace: true         # Replace existing diagram on the page
+secrets:
+  CONFLUENCE_URL: ${{ secrets.CONFLUENCE_URL }}
+  CONFLUENCE_USER: ${{ secrets.CONFLUENCE_USER }}
+  CONFLUENCE_TOKEN: ${{ secrets.CONFLUENCE_TOKEN }}
 ```
 
 **How it works:**
@@ -1067,12 +1068,13 @@ with:
   image_formats: png,svg
   publish_enabled: true
   publish_confluence: true
-  confluence_url: ${{ secrets.CONFLUENCE_URL }}
-  confluence_user: ${{ secrets.CONFLUENCE_USER }}
-  confluence_token: ${{ secrets.CONFLUENCE_TOKEN }}
   confluence_page_id: '123456789'  # Target Confluence page ID
   confluence_replace: true         # Replace existing diagram on the page
   confluence_image_marker: '<!-- auto-arch-diagram:architecture-diagram.png -->' # Unique marker for image replacement
+secrets:
+  CONFLUENCE_URL: ${{ secrets.CONFLUENCE_URL }}
+  CONFLUENCE_USER: ${{ secrets.CONFLUENCE_USER }}
+  CONFLUENCE_TOKEN: ${{ secrets.CONFLUENCE_TOKEN }}
 ```
 
 **How it works:**
@@ -1089,6 +1091,10 @@ with:
 - If the image is not replaced, check that the marker matches exactly in the page source.
 - Ensure the page ID and credentials are correct.
 - Review workflow logs for error messages from the Confluence API.
+
+**How to confirm the marker in page source:**
+- Use Confluence page source/storage view (or the REST API `GET /rest/api/content/{pageId}?expand=body.storage`) and verify the marker comment exists before the image.
+- If you do not want to use markers, ensure the diagram filename is stable so filename replacement works.
 
 **Required Secrets:**
 - `CONFLUENCE_URL`: Base URL of your Confluence instance (e.g., `https://your-domain.atlassian.net/wiki`)

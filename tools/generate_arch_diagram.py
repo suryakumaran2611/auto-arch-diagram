@@ -251,16 +251,26 @@ def _publish_to_confluence(
     diagram_path: Path,
     replace: bool = True,
     image_marker: str | None = None,
+    debug: bool = False,
+    unique_filename: bool = False,
 ) -> bool:
     """Publish or robustly replace a specific image in a Confluence page via REST API."""
+    def _log(msg: str) -> None:
+        if debug:
+            print(msg, flush=True)
+
+    def _info(msg: str) -> None:
+        print(msg, flush=True)
+
     if not diagram_path.exists():
         print(f"Confluence publish: diagram file not found: {diagram_path}")
         return False
-    with diagram_path.open("rb") as f:
-        diagram_data = f.read()
+    _info("Confluence publish: starting")
+    _info(f"Confluence publish: url={confluence_url} page_id={page_id}")
     # Get current page content
     api_url = f"{confluence_url}/rest/api/content/{page_id}?expand=body.storage,version"
     auth = (confluence_user, confluence_token)
+    _info("Confluence publish: fetching page content")
     resp = requests.get(api_url, auth=auth)
     if resp.status_code != 200:
         print(f"Confluence publish: failed to fetch page: {resp.text}")
@@ -269,9 +279,8 @@ def _publish_to_confluence(
     version = page["version"]["number"]
     title = page["title"]
     body = page["body"]["storage"]["value"]
+    _info(f"Confluence publish: page found title={title!r} version={version}")
     # Prepare new image tag
-    import base64
-
     ext = diagram_path.suffix.lower()
     mime = (
         "image/png"
@@ -280,45 +289,85 @@ def _publish_to_confluence(
         if ext == ".svg"
         else "image/jpeg"
     )
-    b64 = base64.b64encode(diagram_data).decode("ascii")
-    filename = diagram_path.name
+    base_filename = diagram_path.name
+    filename = base_filename
+    if unique_filename:
+        import hashlib
+        from datetime import datetime, timezone
+
+        diagram_bytes = diagram_path.read_bytes()
+        digest = hashlib.sha256(diagram_bytes).hexdigest()[:8]
+        timestamp = datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S")
+        filename = f"{diagram_path.stem}-{timestamp}-{digest}{ext}"
+        _info(
+            "Confluence publish: using unique filename "
+            f"base={base_filename} unique={filename}"
+        )
     # Add marker as comment for robust replacement
     marker_comment = (
-        f"<!-- auto-arch-diagram:{filename} -->"
+        f"<!-- auto-arch-diagram:{base_filename} -->"
         if image_marker is None
         else image_marker
     )
-    img_tag = f'{marker_comment}<ac:image><ri:attachment ri:filename="{filename}" /><img src="data:{mime};base64,{b64}" /></ac:image>'
+    _log(f"Confluence publish: marker={marker_comment!r}")
+    img_tag = f'{marker_comment}<ac:image><ri:attachment ri:filename="{filename}" /></ac:image>'
     import re
+
+    def _upload_attachment() -> bool:
+        upload_url = f"{confluence_url}/rest/api/content/{page_id}/child/attachment"
+        headers = {"X-Atlassian-Token": "no-check"}
+        params = {"minorEdit": "true"}
+        _info("Confluence publish: uploading attachment")
+        with diagram_path.open("rb") as f:
+            files = {"file": (filename, f, mime)}
+            resp = requests.post(
+                upload_url, auth=auth, headers=headers, params=params, files=files
+            )
+        if resp.status_code not in (200, 201):
+            print(f"Confluence publish: failed to upload attachment: {resp.text}")
+            return False
+        _info("Confluence publish: attachment uploaded")
+        return True
+
+    if not _upload_attachment():
+        return False
 
     new_body = body
     replaced = False
     if replace:
-        # Try to replace by marker comment first
-        marker_pat = re.escape(marker_comment) + r"<ac:image>[\s\S]*?</ac:image>"
-        new_body, count = re.subn(marker_pat, img_tag, body)
+        # Try to replace the first image after the marker comment.
+        marker_pat = re.escape(marker_comment) + r"[\s\S]*?<ac:image[\s\S]*?</ac:image>"
+        new_body, count = re.subn(marker_pat, img_tag, body, count=1)
+        _info(f"Confluence publish: marker replace count={count}")
         if count > 0:
             replaced = True
         # If not found, try by filename in <ri:attachment>
         if not replaced:
-            filename_pat = rf'<ac:image><ri:attachment ri:filename="{re.escape(filename)}"[\s\S]*?</ac:image>'
+            filename_pat = (
+                rf'<ac:image[\s\S]*?<ri:attachment[^>]*ri:filename="{re.escape(filename)}"'
+                r"[\s\S]*?</ac:image>"
+            )
             new_body, count = re.subn(filename_pat, img_tag, new_body)
+            _info(f"Confluence publish: filename replace count={count}")
             if count > 0:
                 replaced = True
         # If still not found, replace first image
         if not replaced:
             new_body, count = re.subn(
-                r"<ac:image>[\s\S]*?</ac:image>", img_tag, new_body, count=1
+                r"<ac:image[\s\S]*?</ac:image>", img_tag, new_body, count=1
             )
+            _info(f"Confluence publish: first-image replace count={count}")
             if count > 0:
                 replaced = True
         # If nothing replaced, prepend image
         if not replaced:
+            _info("Confluence publish: no match found; prepending image")
             new_body = img_tag + new_body
     else:
         new_body = body + "\n" + img_tag
     # Update page
     update_url = f"{confluence_url}/rest/api/content/{page_id}"
+    _info("Confluence publish: updating page")
     payload = {
         "id": page_id,
         "type": "page",
@@ -333,6 +382,7 @@ def _publish_to_confluence(
     print(
         f"Confluence publish: diagram uploaded to page {page_id} (filename: {filename})"
     )
+    _log("Confluence publish: done")
     return True
 
 
@@ -4459,6 +4509,13 @@ def _split_changed_files(changed_files_raw: str) -> list[str]:
     return [p.replace("\\", "/") for p in parts]
 
 
+def _normalize_mermaid_direction(direction: str) -> str:
+    d = (direction or "").strip().upper()
+    if d == "AUTO" or d not in {"LR", "RL", "TB", "BT"}:
+        return "LR"
+    return d
+
+
 _SECRET_ASSIGNMENT_RE = re.compile(
     r"(?ix)"
     r"(password|passwd|secret|token|access[_-]?key|secret[_-]?key|private[_-]?key)"
@@ -4692,10 +4749,12 @@ def main() -> int:
             out_svg.write_text("", encoding="utf-8")
         return 0
 
+    mermaid_direction = _normalize_mermaid_direction(direction)
+
     if mode != "ai":
         md, mermaid = _static_markdown(
             changed_paths,
-            direction,
+            mermaid_direction,
             limits,
             out_png=out_png,
             out_jpg=out_jpg,
@@ -4733,7 +4792,7 @@ def main() -> int:
         return 0
 
     client = OpenAI(api_key=api_key)
-    messages = _build_prompt(changed_paths, direction, file_snippets)
+    messages = _build_prompt(changed_paths, mermaid_direction, file_snippets)
 
     try:
         resp = client.chat.completions.create(
@@ -4795,17 +4854,30 @@ if __name__ == "__main__":
         "on",
     }
     confluence_image_marker = os.getenv("CONFLUENCE_IMAGE_MARKER")
+    confluence_unique_filename = os.getenv("CONFLUENCE_UNIQUE_FILENAME", "").lower() in {
+        "1",
+        "true",
+        "yes",
+        "y",
+        "on",
+    }
+    confluence_debug = os.getenv("AUTO_ARCH_DEBUG", "").lower() in {
+        "1",
+        "true",
+        "yes",
+        "y",
+        "on",
+    }
     # Run main diagram generation
     exit_code = main()
     # If Confluence config is set, publish diagram
     if confluence_url and confluence_user and confluence_token and confluence_page_id:
-        # Try to publish PNG, SVG, or Markdown (prefer PNG)
+        # Try to publish PNG or SVG only (prefer PNG)
         repo_root = Path.cwd()
         png_path = repo_root / "artifacts/architecture-diagram.png"
         svg_path = repo_root / "artifacts/architecture-diagram.svg"
-        md_path = repo_root / "artifacts/architecture-diagram.md"
         published = False
-        for path in [png_path, svg_path, md_path]:
+        for path in [png_path, svg_path]:
             if path.exists():
                 published = _publish_to_confluence(
                     confluence_url,
@@ -4815,6 +4887,8 @@ if __name__ == "__main__":
                     path,
                     replace=confluence_replace,
                     image_marker=confluence_image_marker,
+                    debug=confluence_debug,
+                    unique_filename=confluence_unique_filename,
                 )
                 if published:
                     break
