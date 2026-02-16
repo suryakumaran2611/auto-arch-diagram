@@ -58,6 +58,26 @@
 
 </td>
 </tr>
+<tr>
+<td width="50%">
+
+**AWS AI/ML + Blockchain Services**
+
+![AWS AI/ML + Blockchain](examples/test-ai-ml-blockchain/aws/terraform/architecture-diagram.jpg)
+
+*SageMaker, Bedrock, QLDB, and related services*
+
+</td>
+<td width="50%">
+
+**More Examples**
+
+[View the full gallery →](examples/README.md)
+
+*Browse all example diagrams in the repo and on GitHub Pages.*
+
+</td>
+</tr>
 </table>
 
 ---
@@ -165,15 +185,6 @@ secrets:
 - The workflow will upload the generated diagram (PNG/SVG/Markdown) to the specified Confluence page after each run.
 - For more details, see the [User Guide](docs/USER_GUIDE.md#confluence-integration).
 
-**Finding the Confluence page ID:**
-- Open the page and copy the numeric ID from the URL. It appears either as `/pages/<id>/...` or as a query parameter `?pageId=<id>`.
-- You can also click **••• → Page information** and read the `pageId` from the URL shown in the browser address bar.
-
-**Finding or adding the image marker:**
-- The generator replaces the image that follows a marker comment like `<!-- auto-arch-diagram:architecture-diagram.png -->`.
-- If the marker is not present, it falls back to replacing the first matching filename or the first image on the page.
-- To add a marker, edit the page and insert a small HTML comment in storage/source view, or add the marker once via the Confluence REST API.
-
 📖 **For complete documentation, see the [User Guide](docs/USER_GUIDE.md)**
 
 **What this does:**
@@ -253,13 +264,17 @@ with:
 **AI Mode (Experimental)** ⚠️
 > **Not for Production Use** - See [Security Considerations](docs/USER_GUIDE.md#security-considerations)
 
+Note: Draw.io MCP is for interactive chat clients (Claude Desktop, VS Code MCP, etc.). GitHub Actions uses the Draw.io CLI to import CSV and export PNG/SVG/JPG.
+
 ```yaml
 with:
   mode: ai
-  model: gpt-4o-mini
   direction: AUTO
 env:
-  OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}  # Transmits IaC code to external services
+  AZURE_OPENAI_API_KEY: ${{ secrets.AZURE_OPENAI_API_KEY }}
+  AZURE_OPENAI_ENDPOINT: ${{ secrets.AZURE_OPENAI_ENDPOINT }}
+  DEPLOYMENT_NAME: ${{ secrets.DEPLOYMENT_NAME }}  # Azure OpenAI deployment name
+  # Transmits IaC code to external services
 ```
 
 **Diagram Update PR (Create PR)**
@@ -467,7 +482,9 @@ jobs:
           edge_penwidth: "1.3"
           edge_arrowsize: "0.8"
         env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          AZURE_OPENAI_API_KEY: ${{ secrets.AZURE_OPENAI_API_KEY }}
+          AZURE_OPENAI_ENDPOINT: ${{ secrets.AZURE_OPENAI_ENDPOINT }}
+          DEPLOYMENT_NAME: ${{ secrets.DEPLOYMENT_NAME }}
 ```
 
 **Multi-Environment Pipeline**
@@ -582,7 +599,7 @@ icons/
 | Parameter | Default | Description |
 |-----------|---------|-------------|
 | `direction` | `LR` | `AUTO`, `LR`, `TB`, `RL`, `BT` |
-| `mode` | `static` | `static` or `ai` (requires OPENAI_API_KEY) |
+| `mode` | `static` | `static` or `ai` (requires Azure OpenAI env vars) |
 | `image_formats` | `png,jpg,svg` | Formats to generate or `none` |
 | `iac_globs` | `**/*.tf` etc | Newline-separated IaC glob patterns |
 | `iac_root` | `.` | Root directory for IaC files |
@@ -820,8 +837,10 @@ pip install -r requirements-dev.txt
 # Generate from example directory
 python tools/generate_arch_diagram.py --iac-root examples --out-md diagram.md --out-png diagram.png
 
-# Test with AI mode (requires OPENAI_API_KEY)
-$env:OPENAI_API_KEY = "your-api-key"
+# Test with AI mode (Azure OpenAI)
+$env:AZURE_OPENAI_API_KEY = "your-key-here"
+$env:AZURE_OPENAI_ENDPOINT = "https://your-resource.openai.azure.com"
+$env:DEPLOYMENT_NAME = "gpt-4o"
 python tools/generate_arch_diagram.py --mode ai --iac-root examples/test-ai-ml-blockchain --out-md ai-diagram.md
 
 # Generate all formats
@@ -854,7 +873,9 @@ python tools/generate_arch_diagram.py \
 
 # AI mode
 export AUTO_ARCH_MODE=ai
-export OPENAI_API_KEY=sk-...
+export AZURE_OPENAI_API_KEY=your-key-here
+export AZURE_OPENAI_ENDPOINT=https://your-resource.openai.azure.com
+export DEPLOYMENT_NAME=gpt-4o
 python tools/generate_arch_diagram.py \
   --changed-files "cdk/app.ts" \
   --direction AUTO \
@@ -1124,6 +1145,8 @@ env:
 
 ### 🧠 AI Mode (Experimental)
 > **Not for Production Use** - See [User Guide](docs/USER_GUIDE.md#ai-mode-experimental) for details
+
+Note: Draw.io MCP is a chat-client integration. The workflow uses the Draw.io CLI for CSV imports and image exports.
 
 - **Status**: Experimental - May contain inaccuracies
 - **Security**: Transmits IaC code to external AI services  

@@ -6,11 +6,11 @@ Summary: Generated a dependency-oriented Terraform diagram from changed resource
 
 ```mermaid
 flowchart LR
-subgraph OCI[OCI]
-  tf_oci_objectstorage_bucket_site["oci_objectstorage_bucket.site"]
-end
+  subgraph all_OCI[OCI]
+    tf_oci_objectstorage_bucket_site["oci_objectstorage_bucket.site"]
+  end
 ```
 
-Assumptions: Connections represent inferred references (including depends_on and attribute references).
+Assumptions: No explicit references found; connections are heuristic to show grouping.
 
 Rendered diagram: available as workflow artifact
