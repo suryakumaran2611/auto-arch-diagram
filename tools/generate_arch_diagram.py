@@ -335,9 +335,9 @@ def _publish_to_confluence(
     new_body = body
     replaced = False
     if replace:
-        # Try to replace by marker comment first
-        marker_pat = re.escape(marker_comment) + r"\s*<ac:image[\s\S]*?</ac:image>"
-        new_body, count = re.subn(marker_pat, img_tag, body)
+        # Try to replace the first image after the marker comment.
+        marker_pat = re.escape(marker_comment) + r"[\s\S]*?<ac:image[\s\S]*?</ac:image>"
+        new_body, count = re.subn(marker_pat, img_tag, body, count=1)
         _info(f"Confluence publish: marker replace count={count}")
         if count > 0:
             replaced = True
@@ -354,7 +354,7 @@ def _publish_to_confluence(
         # If still not found, replace first image
         if not replaced:
             new_body, count = re.subn(
-                r"<ac:image>[\s\S]*?</ac:image>", img_tag, new_body, count=1
+                r"<ac:image[\s\S]*?</ac:image>", img_tag, new_body, count=1
             )
             _info(f"Confluence publish: first-image replace count={count}")
             if count > 0:
@@ -4872,13 +4872,12 @@ if __name__ == "__main__":
     exit_code = main()
     # If Confluence config is set, publish diagram
     if confluence_url and confluence_user and confluence_token and confluence_page_id:
-        # Try to publish PNG, SVG, or Markdown (prefer PNG)
+        # Try to publish PNG or SVG only (prefer PNG)
         repo_root = Path.cwd()
         png_path = repo_root / "artifacts/architecture-diagram.png"
         svg_path = repo_root / "artifacts/architecture-diagram.svg"
-        md_path = repo_root / "artifacts/architecture-diagram.md"
         published = False
-        for path in [png_path, svg_path, md_path]:
+        for path in [png_path, svg_path]:
             if path.exists():
                 published = _publish_to_confluence(
                     confluence_url,
