@@ -258,15 +258,18 @@ def _publish_to_confluence(
         if debug:
             print(msg)
 
+    def _info(msg: str) -> None:
+        print(msg)
+
     if not diagram_path.exists():
         print(f"Confluence publish: diagram file not found: {diagram_path}")
         return False
-    _log("Confluence publish: starting")
-    _log(f"Confluence publish: url={confluence_url} page_id={page_id}")
+    _info("Confluence publish: starting")
+    _info(f"Confluence publish: url={confluence_url} page_id={page_id}")
     # Get current page content
     api_url = f"{confluence_url}/rest/api/content/{page_id}?expand=body.storage,version"
     auth = (confluence_user, confluence_token)
-    _log("Confluence publish: fetching page content")
+    _info("Confluence publish: fetching page content")
     resp = requests.get(api_url, auth=auth)
     if resp.status_code != 200:
         print(f"Confluence publish: failed to fetch page: {resp.text}")
@@ -275,7 +278,7 @@ def _publish_to_confluence(
     version = page["version"]["number"]
     title = page["title"]
     body = page["body"]["storage"]["value"]
-    _log(f"Confluence publish: page found title={title!r} version={version}")
+    _info(f"Confluence publish: page found title={title!r} version={version}")
     # Prepare new image tag
     ext = diagram_path.suffix.lower()
     mime = (
@@ -300,7 +303,7 @@ def _publish_to_confluence(
         upload_url = f"{confluence_url}/rest/api/content/{page_id}/child/attachment"
         headers = {"X-Atlassian-Token": "no-check"}
         params = {"minorEdit": "true"}
-        _log("Confluence publish: uploading attachment")
+        _info("Confluence publish: uploading attachment")
         with diagram_path.open("rb") as f:
             files = {"file": (filename, f, mime)}
             resp = requests.post(
@@ -309,7 +312,7 @@ def _publish_to_confluence(
         if resp.status_code not in (200, 201):
             print(f"Confluence publish: failed to upload attachment: {resp.text}")
             return False
-        _log("Confluence publish: attachment uploaded")
+        _info("Confluence publish: attachment uploaded")
         return True
 
     if not _upload_attachment():
@@ -319,16 +322,19 @@ def _publish_to_confluence(
     replaced = False
     if replace:
         # Try to replace by marker comment first
-        marker_pat = re.escape(marker_comment) + r"<ac:image>[\s\S]*?</ac:image>"
+        marker_pat = re.escape(marker_comment) + r"\s*<ac:image[\s\S]*?</ac:image>"
         new_body, count = re.subn(marker_pat, img_tag, body)
-        _log(f"Confluence publish: marker replace count={count}")
+        _info(f"Confluence publish: marker replace count={count}")
         if count > 0:
             replaced = True
         # If not found, try by filename in <ri:attachment>
         if not replaced:
-            filename_pat = rf'<ac:image><ri:attachment ri:filename="{re.escape(filename)}"[\s\S]*?</ac:image>'
+            filename_pat = (
+                rf'<ac:image[\s\S]*?<ri:attachment[^>]*ri:filename="{re.escape(filename)}"'
+                r"[\s\S]*?</ac:image>"
+            )
             new_body, count = re.subn(filename_pat, img_tag, new_body)
-            _log(f"Confluence publish: filename replace count={count}")
+            _info(f"Confluence publish: filename replace count={count}")
             if count > 0:
                 replaced = True
         # If still not found, replace first image
@@ -336,18 +342,18 @@ def _publish_to_confluence(
             new_body, count = re.subn(
                 r"<ac:image>[\s\S]*?</ac:image>", img_tag, new_body, count=1
             )
-            _log(f"Confluence publish: first-image replace count={count}")
+            _info(f"Confluence publish: first-image replace count={count}")
             if count > 0:
                 replaced = True
         # If nothing replaced, prepend image
         if not replaced:
-            _log("Confluence publish: no match found; prepending image")
+            _info("Confluence publish: no match found; prepending image")
             new_body = img_tag + new_body
     else:
         new_body = body + "\n" + img_tag
     # Update page
     update_url = f"{confluence_url}/rest/api/content/{page_id}"
-    _log("Confluence publish: updating page")
+    _info("Confluence publish: updating page")
     payload = {
         "id": page_id,
         "type": "page",
