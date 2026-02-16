@@ -126,6 +126,26 @@ on:
         required: false
         type: boolean
         default: false
+      publish_confluence:
+        description: "Publish or replace a diagram in Confluence."
+        required: false
+        type: boolean
+        default: false
+      confluence_page_id:
+        description: "Confluence page ID to update when publishing."
+        required: false
+        type: string
+        default: ''
+      confluence_replace:
+        description: "Replace an existing diagram on the Confluence page."
+        required: false
+        type: boolean
+        default: true
+      confluence_image_marker:
+        description: "Optional marker comment for robust Confluence image replacement."
+        required: false
+        type: string
+        default: ''
       comment_on_pr:
         description: "Post/Update a sticky PR comment (only on pull_request events)."
         required: false
@@ -158,6 +178,12 @@ on:
         default: true
     secrets:
       OPENAI_API_KEY:
+        required: false
+      CONFLUENCE_URL:
+        required: false
+      CONFLUENCE_USER:
+        required: false
+      CONFLUENCE_TOKEN:
         required: false
 
 permissions:
@@ -419,6 +445,12 @@ jobs:
           AUTO_ARCH_EDGE_PENWIDTH: ${{ inputs.edge_penwidth }}
           AUTO_ARCH_EDGE_ARROWSIZE: ${{ inputs.edge_arrowsize }}
           AUTO_ARCH_PUBLISH_ENABLED: ${{ inputs.publish_enabled && 'true' || 'false' }}
+          CONFLUENCE_URL: ${{ inputs.publish_confluence && secrets.CONFLUENCE_URL || '' }}
+          CONFLUENCE_USER: ${{ inputs.publish_confluence && secrets.CONFLUENCE_USER || '' }}
+          CONFLUENCE_TOKEN: ${{ inputs.publish_confluence && secrets.CONFLUENCE_TOKEN || '' }}
+          CONFLUENCE_PAGE_ID: ${{ inputs.publish_confluence && inputs.confluence_page_id || '' }}
+          CONFLUENCE_REPLACE: ${{ inputs.publish_confluence && (inputs.confluence_replace && 'true' || 'false') || '' }}
+          CONFLUENCE_IMAGE_MARKER: ${{ inputs.publish_confluence && inputs.confluence_image_marker || '' }}
         shell: bash
         run: |
           set -e  # Exit on any error
@@ -915,6 +947,12 @@ jobs:
           AUTO_ARCH_EDGE_PENWIDTH: ${{ inputs.edge_penwidth }}
           AUTO_ARCH_EDGE_ARROWSIZE: ${{ inputs.edge_arrowsize }}
           AUTO_ARCH_PUBLISH_ENABLED: 'true'
+          CONFLUENCE_URL: ${{ inputs.publish_confluence && secrets.CONFLUENCE_URL || '' }}
+          CONFLUENCE_USER: ${{ inputs.publish_confluence && secrets.CONFLUENCE_USER || '' }}
+          CONFLUENCE_TOKEN: ${{ inputs.publish_confluence && secrets.CONFLUENCE_TOKEN || '' }}
+          CONFLUENCE_PAGE_ID: ${{ inputs.publish_confluence && inputs.confluence_page_id || '' }}
+          CONFLUENCE_REPLACE: ${{ inputs.publish_confluence && (inputs.confluence_replace && 'true' || 'false') || '' }}
+          CONFLUENCE_IMAGE_MARKER: ${{ inputs.publish_confluence && inputs.confluence_image_marker || '' }}
         shell: bash
         run: |
           set -e  # Exit on any error

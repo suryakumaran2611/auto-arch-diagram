@@ -142,11 +142,12 @@ with:
   image_formats: png,svg
   publish_enabled: true
   publish_confluence: true
-  confluence_url: ${{ secrets.CONFLUENCE_URL }}
-  confluence_user: ${{ secrets.CONFLUENCE_USER }}
-  confluence_token: ${{ secrets.CONFLUENCE_TOKEN }}
   confluence_page_id: '123456789'  # Target Confluence page ID
   confluence_replace: true         # Replace existing diagram on the page
+secrets:
+  CONFLUENCE_URL: ${{ secrets.CONFLUENCE_URL }}
+  CONFLUENCE_USER: ${{ secrets.CONFLUENCE_USER }}
+  CONFLUENCE_TOKEN: ${{ secrets.CONFLUENCE_TOKEN }}
 ```
 
 **How it works:**
@@ -163,6 +164,15 @@ with:
 **Notes:**
 - The workflow will upload the generated diagram (PNG/SVG/Markdown) to the specified Confluence page after each run.
 - For more details, see the [User Guide](docs/USER_GUIDE.md#confluence-integration).
+
+**Finding the Confluence page ID:**
+- Open the page and copy the numeric ID from the URL. It appears either as `/pages/<id>/...` or as a query parameter `?pageId=<id>`.
+- You can also click **••• → Page information** and read the `pageId` from the URL shown in the browser address bar.
+
+**Finding or adding the image marker:**
+- The generator replaces the image that follows a marker comment like `<!-- auto-arch-diagram:architecture-diagram.png -->`.
+- If the marker is not present, it falls back to replacing the first matching filename or the first image on the page.
+- To add a marker, edit the page and insert a small HTML comment in storage/source view, or add the marker once via the Confluence REST API.
 
 📖 **For complete documentation, see the [User Guide](docs/USER_GUIDE.md)**
 
@@ -1037,12 +1047,13 @@ with:
   image_formats: png,svg
   publish_enabled: true
   publish_confluence: true
-  confluence_url: ${{ secrets.CONFLUENCE_URL }}
-  confluence_user: ${{ secrets.CONFLUENCE_USER }}
-  confluence_token: ${{ secrets.CONFLUENCE_TOKEN }}
   confluence_page_id: '123456789'  # Target Confluence page ID
   confluence_replace: true         # Replace existing diagram on the page
   confluence_image_marker: '<!-- auto-arch-diagram:architecture-diagram.png -->' # Unique marker for image replacement
+secrets:
+  CONFLUENCE_URL: ${{ secrets.CONFLUENCE_URL }}
+  CONFLUENCE_USER: ${{ secrets.CONFLUENCE_USER }}
+  CONFLUENCE_TOKEN: ${{ secrets.CONFLUENCE_TOKEN }}
 ```
 
 **How it works:**
@@ -1059,6 +1070,10 @@ with:
 - If the image is not replaced, check that the marker matches exactly in the page source.
 - Ensure the page ID and credentials are correct.
 - Review workflow logs for error messages from the Confluence API.
+
+**How to confirm the marker in page source:**
+- Use Confluence page source/storage view (or the REST API `GET /rest/api/content/{pageId}?expand=body.storage`) and verify the marker comment exists before the image.
+- If you do not want to use markers, ensure the diagram filename is stable so filename replacement works.
 
 **Required Secrets:**
 - `CONFLUENCE_URL`: Base URL of your Confluence instance (e.g., `https://your-domain.atlassian.net/wiki`)
