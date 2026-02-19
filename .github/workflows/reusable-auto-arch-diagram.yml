@@ -1087,7 +1087,7 @@ jobs:
           ref: ${{ github.head_ref || github.ref_name }}
 
       - name: Download artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           pattern: auto-arch-diagram-*
           path: ${{ inputs.out_dir }}
