@@ -732,6 +732,7 @@ Resources automatically organized within VPC/VNet/VCN containers:
 - **VPC Clusters** - Auto-detect and group VPC resources
 - **Subnet Grouping** - Public (dashed border) vs Private (solid border)
 - **Resource Placement** - EC2, Lambda, RDS placed in correct subnets
+- **Multi-Subnet Placement** - Resources attached to multiple subnets are lifted to VPC-level placement
 - **Color Coding** - Semi-transparent provider colors
 
 ### Intelligent Edge Styling
@@ -855,6 +856,13 @@ python tools/generate_arch_diagram.py --iac-root examples/test-ai-ml-blockchain 
 
 # Verify all services are recognized
 python tools/generate_arch_diagram.py --mode ai --iac-root examples/test-ai-ml-blockchain --direction AUTO --out-md ai-test.md
+```
+
+### Regenerate All Example Diagrams
+
+```powershell
+# Regenerate all examples recursively (Terraform, CloudFormation, Bicep, Pulumi)
+python tools/regenerate_examples.py
 ```
 
 ### Traditional Linux/macOS Setup
