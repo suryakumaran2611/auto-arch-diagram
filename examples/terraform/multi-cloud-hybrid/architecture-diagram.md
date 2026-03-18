@@ -1,0 +1,92 @@
+<!-- auto-arch-diagram -->
+
+## Architecture Diagram (Auto)
+
+Summary: Generated a dependency-oriented Terraform diagram from changed resources.
+
+```mermaid
+flowchart LR
+subgraph all_AWS[AWS]
+  subgraph vpc_aws_vpc_main[VPC
+main]
+    tf_aws_vpc_main["aws_vpc.main"]
+    subgraph subnet_aws_subnet_private_1[Subnet
+private 1 (Private)]
+      tf_aws_subnet_private_1["aws_subnet.private_1"]
+      tf_aws_db_instance_postgres["aws_db_instance.postgres"]
+    end
+    subgraph subnet_aws_subnet_private_2[Subnet
+private 2 (Private)]
+      tf_aws_subnet_private_2["aws_subnet.private_2"]
+    end
+    tf_aws_db_subnet_group_main["aws_db_subnet_group.main"]
+    tf_aws_security_group_rds["aws_security_group.rds"]
+  end
+  tf_aws_iam_role_lambda_role["aws_iam_role.lambda_role"]
+  tf_aws_iam_role_policy_lambda_s3["aws_iam_role_policy.lambda_s3"]
+  tf_aws_iam_role_policy_attachment_lambda_basic["aws_iam_role_policy_attachment.lambda_basic"]
+  tf_aws_lambda_function_data_processor["aws_lambda_function.data_processor"]
+  tf_aws_s3_bucket_data_lake["aws_s3_bucket.data_lake"]
+  tf_aws_s3_bucket_versioning_data_lake["aws_s3_bucket_versioning.data_lake"]
+  tf_aws_sns_topic_data_events["aws_sns_topic.data_events"]
+end
+subgraph all_Azure[Azure]
+  tf_azurerm_cosmosdb_account_main["azurerm_cosmosdb_account.main"]
+  tf_azurerm_cosmosdb_sql_database_app_db["azurerm_cosmosdb_sql_database.app_db"]
+  tf_azurerm_eventgrid_event_subscription_data_processor["azurerm_eventgrid_event_subscription.data_processor"]
+  tf_azurerm_eventgrid_topic_events["azurerm_eventgrid_topic.events"]
+  tf_azurerm_linux_function_app_data_processor["azurerm_linux_function_app.data_processor"]
+  tf_azurerm_mssql_database_app_db["azurerm_mssql_database.app_db"]
+  tf_azurerm_mssql_server_main["azurerm_mssql_server.main"]
+  tf_azurerm_resource_group_main["azurerm_resource_group.main"]
+  tf_azurerm_service_plan_main["azurerm_service_plan.main"]
+  tf_azurerm_storage_account_datalake["azurerm_storage_account.datalake"]
+  tf_azurerm_storage_container_processed["azurerm_storage_container.processed"]
+end
+subgraph all_GCP[GCP]
+  tf_google_bigquery_dataset_analytics["google_bigquery_dataset.analytics"]
+  tf_google_cloudfunctions_function_analytics_processor["google_cloudfunctions_function.analytics_processor"]
+  tf_google_pubsub_subscription_events_sub["google_pubsub_subscription.events_sub"]
+  tf_google_pubsub_topic_events["google_pubsub_topic.events"]
+  tf_google_sql_database_app_db["google_sql_database.app_db"]
+  tf_google_sql_database_instance_postgres["google_sql_database_instance.postgres"]
+  tf_google_storage_bucket_data_warehouse["google_storage_bucket.data_warehouse"]
+  tf_google_storage_bucket_functions["google_storage_bucket.functions"]
+end
+tf_aws_db_subnet_group_main --> tf_aws_db_instance_postgres
+tf_aws_iam_role_lambda_role --> tf_aws_iam_role_policy_attachment_lambda_basic
+tf_aws_iam_role_lambda_role --> tf_aws_iam_role_policy_lambda_s3
+tf_aws_iam_role_lambda_role --> tf_aws_lambda_function_data_processor
+tf_aws_s3_bucket_data_lake --> tf_aws_iam_role_policy_lambda_s3
+tf_aws_s3_bucket_data_lake --> tf_aws_lambda_function_data_processor
+tf_aws_s3_bucket_data_lake --> tf_aws_s3_bucket_versioning_data_lake
+tf_aws_security_group_rds --> tf_aws_db_instance_postgres
+tf_aws_subnet_private_1 --> tf_aws_db_subnet_group_main
+tf_aws_subnet_private_2 --> tf_aws_db_subnet_group_main
+tf_aws_vpc_main --> tf_aws_security_group_rds
+tf_aws_vpc_main --> tf_aws_subnet_private_1
+tf_aws_vpc_main --> tf_aws_subnet_private_2
+tf_azurerm_cosmosdb_account_main --> tf_azurerm_cosmosdb_sql_database_app_db
+tf_azurerm_eventgrid_topic_events --> tf_azurerm_eventgrid_event_subscription_data_processor
+tf_azurerm_linux_function_app_data_processor --> tf_azurerm_eventgrid_event_subscription_data_processor
+tf_azurerm_mssql_server_main --> tf_azurerm_mssql_database_app_db
+tf_azurerm_resource_group_main --> tf_azurerm_cosmosdb_account_main
+tf_azurerm_resource_group_main --> tf_azurerm_cosmosdb_sql_database_app_db
+tf_azurerm_resource_group_main --> tf_azurerm_eventgrid_topic_events
+tf_azurerm_resource_group_main --> tf_azurerm_linux_function_app_data_processor
+tf_azurerm_resource_group_main --> tf_azurerm_mssql_server_main
+tf_azurerm_resource_group_main --> tf_azurerm_service_plan_main
+tf_azurerm_resource_group_main --> tf_azurerm_storage_account_datalake
+tf_azurerm_service_plan_main --> tf_azurerm_linux_function_app_data_processor
+tf_azurerm_storage_account_datalake --> tf_azurerm_linux_function_app_data_processor
+tf_azurerm_storage_account_datalake --> tf_azurerm_storage_container_processed
+tf_google_cloudfunctions_function_analytics_processor --> tf_google_pubsub_subscription_events_sub
+tf_google_pubsub_topic_events --> tf_google_pubsub_subscription_events_sub
+tf_google_sql_database_instance_postgres --> tf_google_sql_database_app_db
+tf_google_storage_bucket_data_warehouse --> tf_google_cloudfunctions_function_analytics_processor
+tf_google_storage_bucket_functions --> tf_google_cloudfunctions_function_analytics_processor
+```
+
+Assumptions: Connections represent inferred references (including depends_on and attribute references).
+
+Rendered diagram: available as workflow artifact
