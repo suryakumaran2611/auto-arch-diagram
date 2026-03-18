@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from tools.generate_arch_diagram import _filter_architectural_edges
 from tools.generate_arch_diagram import _build_vpc_hierarchy
 from tools.generate_arch_diagram import _is_subnet
 from tools.generate_arch_diagram import _is_vpc_or_network
@@ -8,6 +9,8 @@ from tools.generate_arch_diagram import _is_vpc_or_network
 def test_network_type_detection_handles_gcp_and_exclusions() -> None:
     assert _is_vpc_or_network("google_compute_network") is True
     assert _is_subnet("google_compute_subnetwork") is True
+    assert _is_subnet("aws_db_subnet_group") is False
+    assert _is_subnet("aws_elasticache_subnet_group") is False
 
     # Non-container networking resources must not be treated as VPC containers.
     assert _is_vpc_or_network("aws_network_interface") is False
@@ -109,3 +112,72 @@ def test_cross_vpc_connector_is_not_duplicated_inside_vpc_clusters() -> None:
     assert "aws_vpc_peering_connection.link" not in hierarchy["aws_vpc.peer"].get(
         "other", []
     )
+
+
+def test_subnet_group_backed_services_stay_inside_vpc_hierarchy() -> None:
+    all_resources = {
+        "aws_vpc.main": {},
+        "aws_subnet.private_a": {"vpc_id": "${aws_vpc.main.id}"},
+        "aws_subnet.private_b": {"vpc_id": "${aws_vpc.main.id}"},
+        "aws_db_subnet_group.app": {
+            "subnet_ids": [
+                "${aws_subnet.private_a.id}",
+                "${aws_subnet.private_b.id}",
+            ]
+        },
+        "aws_db_instance.app": {"db_subnet_group_name": "${aws_db_subnet_group.app.name}"},
+        "aws_elasticache_subnet_group.app": {
+            "subnet_ids": [
+                "${aws_subnet.private_a.id}",
+                "${aws_subnet.private_b.id}",
+            ]
+        },
+        "aws_elasticache_cluster.app": {
+            "subnet_group_name": "${aws_elasticache_subnet_group.app.name}"
+        },
+    }
+
+    edges = {
+        ("aws_vpc.main", "aws_subnet.private_a"),
+        ("aws_vpc.main", "aws_subnet.private_b"),
+        ("aws_subnet.private_a", "aws_db_subnet_group.app"),
+        ("aws_subnet.private_b", "aws_db_subnet_group.app"),
+        ("aws_subnet.private_a", "aws_elasticache_subnet_group.app"),
+        ("aws_subnet.private_b", "aws_elasticache_subnet_group.app"),
+        ("aws_db_subnet_group.app", "aws_db_instance.app"),
+        ("aws_elasticache_subnet_group.app", "aws_elasticache_cluster.app"),
+    }
+
+    hierarchy = _build_vpc_hierarchy(all_resources, edges)
+
+    private_a_resources = set(hierarchy["aws_vpc.main"].get("aws_subnet.private_a", []))
+    private_b_resources = set(hierarchy["aws_vpc.main"].get("aws_subnet.private_b", []))
+    placed_resources = private_a_resources | private_b_resources
+
+    # Subnet-group-backed resources should be placed inside the VPC subnets,
+    # not left outside the VPC hierarchy.
+    assert "aws_db_instance.app" in placed_resources
+    assert "aws_elasticache_cluster.app" in placed_resources
+
+
+def test_multi_subnet_control_plane_edges_drop_public_subnet_links() -> None:
+    all_resources = {
+        "aws_subnet.public": {"map_public_ip_on_launch": True},
+        "aws_subnet.private": {},
+        "aws_eks_cluster.main": {
+            "subnet_ids": [
+                "${aws_subnet.public.id}",
+                "${aws_subnet.private.id}",
+            ]
+        },
+    }
+
+    edges = {
+        ("aws_subnet.public", "aws_eks_cluster.main"),
+        ("aws_subnet.private", "aws_eks_cluster.main"),
+    }
+
+    filtered = _filter_architectural_edges(all_resources, edges)
+
+    assert ("aws_subnet.public", "aws_eks_cluster.main") not in filtered
+    assert ("aws_subnet.private", "aws_eks_cluster.main") in filtered

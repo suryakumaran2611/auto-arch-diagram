@@ -75,6 +75,11 @@ This directory contains comprehensive examples demonstrating the full capabiliti
 | [custom-icons-demo](terraform/custom-icons-demo/) ⭐ | ![](terraform/custom-icons-demo/architecture-diagram.jpg) | 40+ | Custom icons, VPC, event-driven |
 | [mlops-multi-cloud](terraform/mlops-multi-cloud/) | ![](terraform/mlops-multi-cloud/architecture-diagram.jpg) | 47 | AWS + Azure + GCP |
 | [mlops-multi-region-aws](terraform/mlops-multi-region-aws/) | ![](terraform/mlops-multi-region-aws/architecture-diagram.jpg) | 46 | Multi-region DR |
+| [multi-tier-web-app](terraform/multi-tier-web-app/) | - | 20+ | ALB + ASG + RDS + Redis + CloudFront |
+| [serverless-events](terraform/serverless-events/) | - | 35+ | API Gateway + Lambda + SNS/SQS + DynamoDB |
+| [data-pipeline-etl](terraform/data-pipeline-etl/) | - | 30+ | Event-driven ETL with Glue and Athena |
+| [microservices-k8s](terraform/microservices-k8s/) | - | 25+ | EKS microservices with VPC and NAT |
+| [multi-cloud-hybrid](terraform/multi-cloud-hybrid/) | - | 25+ | AWS + GCP hybrid data platform |
 | [vpc-peering-multi-subnet](terraform/vpc-peering-multi-subnet/) | ![](terraform/vpc-peering-multi-subnet/architecture-diagram.jpg) | 16 | Dual VPC + peering |
 | [aws/terraform](serverless-website/aws/terraform/) | ![](serverless-website/aws/terraform/architecture-diagram.jpg) | 8 | S3 + CloudFront |
 | [azure/terraform](serverless-website/azure/terraform/) | ![](serverless-website/azure/terraform/architecture-diagram.jpg) | 7 | Storage + CDN |
@@ -125,6 +130,11 @@ python tools/generate_arch_diagram.py \
 | Example | Resources | VPCs | Subnets | Custom Icons | Edges | Lines |
 |---------|-----------|------|---------|--------------|-------|-------|
 | custom-icons-demo | 40 | 1 | 2 | 11 | 35+ | 530 |
+| multi-tier-web-app | 20+ | 1 | 4 | 0 | 20+ | ~350 |
+| serverless-events | 35+ | 0 | 0 | 0 | 30+ | ~500 |
+| data-pipeline-etl | 30+ | 0 | 0 | 0 | 28+ | ~450 |
+| microservices-k8s | 25+ | 1 | 2 | 0 | 24+ | ~420 |
+| multi-cloud-hybrid | 25+ | 1 | 2 | 0 | 22+ | ~400 |
 | vpc-peering-multi-subnet | 16 | 2 | 4 | 0 | 16+ | ~220 |
 | serverless/aws/tf | 8 | 0 | 0 | 0 | 5 | 120 |
 | serverless/azure/tf | 7 | 0 | 0 | 0 | 4 | 110 |

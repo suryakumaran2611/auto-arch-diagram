@@ -1,0 +1,80 @@
+flowchart LR
+subgraph all_AWS[AWS]
+  subgraph vpc_aws_vpc_main[VPC
+main]
+    tf_aws_vpc_main["aws_vpc.main"]
+    subgraph subnet_aws_subnet_private_1[Subnet
+private 1 (Private)]
+      tf_aws_subnet_private_1["aws_subnet.private_1"]
+      tf_aws_db_instance_main["aws_db_instance.main"]
+      tf_aws_elasticache_cluster_main["aws_elasticache_cluster.main"]
+    end
+    subgraph subnet_aws_subnet_private_2[Subnet
+private 2 (Private)]
+      tf_aws_subnet_private_2["aws_subnet.private_2"]
+    end
+    subgraph subnet_aws_subnet_public_1[Subnet
+public 1 (Public)]
+      tf_aws_subnet_public_1["aws_subnet.public_1"]
+      tf_aws_route_table_association_public_1["aws_route_table_association.public_1"]
+    end
+    subgraph subnet_aws_subnet_public_2[Subnet
+public 2 (Public)]
+      tf_aws_subnet_public_2["aws_subnet.public_2"]
+      tf_aws_route_table_association_public_2["aws_route_table_association.public_2"]
+    end
+    tf_aws_autoscaling_group_app["aws_autoscaling_group.app"]
+    tf_aws_db_subnet_group_main["aws_db_subnet_group.main"]
+    tf_aws_elasticache_subnet_group_main["aws_elasticache_subnet_group.main"]
+    tf_aws_internet_gateway_main["aws_internet_gateway.main"]
+    tf_aws_lb_main["aws_lb.main"]
+    tf_aws_lb_target_group_app["aws_lb_target_group.app"]
+    tf_aws_route_table_public["aws_route_table.public"]
+    tf_aws_security_group_alb["aws_security_group.alb"]
+    tf_aws_security_group_app["aws_security_group.app"]
+    tf_aws_security_group_database["aws_security_group.database"]
+  end
+  tf_aws_cloudfront_distribution_main["aws_cloudfront_distribution.main"]
+  tf_aws_launch_template_app["aws_launch_template.app"]
+  tf_aws_lb_listener_http["aws_lb_listener.http"]
+  tf_aws_s3_bucket_static_assets["aws_s3_bucket.static_assets"]
+  tf_aws_s3_bucket_public_access_block_static_assets["aws_s3_bucket_public_access_block.static_assets"]
+  tf_aws_s3_bucket_versioning_static_assets["aws_s3_bucket_versioning.static_assets"]
+end
+tf_aws_db_subnet_group_main --> tf_aws_db_instance_main
+tf_aws_elasticache_subnet_group_main --> tf_aws_elasticache_cluster_main
+tf_aws_internet_gateway_main --> tf_aws_route_table_public
+tf_aws_launch_template_app --> tf_aws_autoscaling_group_app
+tf_aws_lb_main --> tf_aws_cloudfront_distribution_main
+tf_aws_lb_main --> tf_aws_lb_listener_http
+tf_aws_lb_target_group_app --> tf_aws_autoscaling_group_app
+tf_aws_lb_target_group_app --> tf_aws_lb_listener_http
+tf_aws_route_table_public --> tf_aws_route_table_association_public_1
+tf_aws_route_table_public --> tf_aws_route_table_association_public_2
+tf_aws_s3_bucket_static_assets --> tf_aws_s3_bucket_public_access_block_static_assets
+tf_aws_s3_bucket_static_assets --> tf_aws_s3_bucket_versioning_static_assets
+tf_aws_security_group_alb --> tf_aws_lb_main
+tf_aws_security_group_alb --> tf_aws_security_group_app
+tf_aws_security_group_app --> tf_aws_elasticache_cluster_main
+tf_aws_security_group_app --> tf_aws_security_group_database
+tf_aws_security_group_database --> tf_aws_db_instance_main
+tf_aws_subnet_private_1 --> tf_aws_autoscaling_group_app
+tf_aws_subnet_private_1 --> tf_aws_db_subnet_group_main
+tf_aws_subnet_private_1 --> tf_aws_elasticache_subnet_group_main
+tf_aws_subnet_private_2 --> tf_aws_autoscaling_group_app
+tf_aws_subnet_private_2 --> tf_aws_db_subnet_group_main
+tf_aws_subnet_private_2 --> tf_aws_elasticache_subnet_group_main
+tf_aws_subnet_public_1 --> tf_aws_lb_main
+tf_aws_subnet_public_1 --> tf_aws_route_table_association_public_1
+tf_aws_subnet_public_2 --> tf_aws_lb_main
+tf_aws_subnet_public_2 --> tf_aws_route_table_association_public_2
+tf_aws_vpc_main --> tf_aws_internet_gateway_main
+tf_aws_vpc_main --> tf_aws_lb_target_group_app
+tf_aws_vpc_main --> tf_aws_route_table_public
+tf_aws_vpc_main --> tf_aws_security_group_alb
+tf_aws_vpc_main --> tf_aws_security_group_app
+tf_aws_vpc_main --> tf_aws_security_group_database
+tf_aws_vpc_main --> tf_aws_subnet_private_1
+tf_aws_vpc_main --> tf_aws_subnet_private_2
+tf_aws_vpc_main --> tf_aws_subnet_public_1
+tf_aws_vpc_main --> tf_aws_subnet_public_2
