@@ -12,6 +12,8 @@ def test_network_type_detection_handles_gcp_and_exclusions() -> None:
     # Non-container networking resources must not be treated as VPC containers.
     assert _is_vpc_or_network("aws_network_interface") is False
     assert _is_vpc_or_network("aws_network_acl") is False
+    assert _is_vpc_or_network("aws_vpc_peering_connection") is False
+    assert _is_vpc_or_network("aws_vpc_endpoint") is False
 
 
 def test_vpc_hierarchy_is_deterministic_and_deduplicates_other_resources() -> None:
@@ -70,3 +72,40 @@ def test_multi_subnet_resource_is_lifted_to_vpc_level() -> None:
     assert "aws_instance.shared" in hierarchy["aws_vpc.main"]["other"]
     assert "aws_instance.shared" not in hierarchy["aws_vpc.main"].get("aws_subnet.a", [])
     assert "aws_instance.shared" not in hierarchy["aws_vpc.main"].get("aws_subnet.b", [])
+
+
+def test_cross_vpc_connector_is_not_duplicated_inside_vpc_clusters() -> None:
+    all_resources = {
+        "aws_vpc.primary": {},
+        "aws_vpc.peer": {},
+        "aws_subnet.primary_private": {"vpc_id": "${aws_vpc.primary.id}"},
+        "aws_subnet.peer_private": {"vpc_id": "${aws_vpc.peer.id}"},
+        "aws_instance.primary_app": {"subnet_id": "${aws_subnet.primary_private.id}"},
+        "aws_instance.peer_app": {"subnet_id": "${aws_subnet.peer_private.id}"},
+        "aws_vpc_peering_connection.link": {
+            "vpc_id": "${aws_vpc.primary.id}",
+            "peer_vpc_id": "${aws_vpc.peer.id}",
+        },
+    }
+
+    edges = {
+        ("aws_vpc.primary", "aws_subnet.primary_private"),
+        ("aws_vpc.peer", "aws_subnet.peer_private"),
+        ("aws_subnet.primary_private", "aws_instance.primary_app"),
+        ("aws_subnet.peer_private", "aws_instance.peer_app"),
+        ("aws_vpc.primary", "aws_vpc_peering_connection.link"),
+        ("aws_vpc.peer", "aws_vpc_peering_connection.link"),
+    }
+
+    hierarchy = _build_vpc_hierarchy(all_resources, edges)
+
+    assert "aws_vpc.primary" in hierarchy
+    assert "aws_vpc.peer" in hierarchy
+
+    # The peering connector spans multiple VPCs and should stay outside VPC clusters.
+    assert "aws_vpc_peering_connection.link" not in hierarchy["aws_vpc.primary"].get(
+        "other", []
+    )
+    assert "aws_vpc_peering_connection.link" not in hierarchy["aws_vpc.peer"].get(
+        "other", []
+    )
