@@ -1,1213 +1,2330 @@
 {
   "aws": {
-    "ec2": {
+    "acm": {
+      "category": "security",
+      "class": "ACM",
+      "description": "Acm"
+    },
+    "acm_certificate": {
+      "category": "security",
+      "class": "CertificateManager",
+      "description": "Acm Certificate"
+    },
+    "acmpca_certificate_authority": {
+      "category": "security",
+      "class": "CertificateAuthority",
+      "description": "Acmpca Certificate Authority"
+    },
+    "alb": {
+      "category": "network",
+      "class": "ALB",
+      "description": "Alb"
+    },
+    "alb_listener": {
+      "category": "network",
+      "class": "ALB",
+      "description": "Alb Listener"
+    },
+    "alb_target_group": {
+      "category": "network",
+      "class": "ALB",
+      "description": "Alb Target Group"
+    },
+    "api_gateway": {
+      "category": "network",
+      "class": "APIGateway",
+      "description": "Api Gateway"
+    },
+    "api_gateway_rest_api": {
+      "category": "network",
+      "class": "APIGateway",
+      "description": "Api Gateway Rest Api"
+    },
+    "api_gateway_stage": {
+      "category": "network",
+      "class": "APIGateway",
+      "description": "Api Gateway Stage"
+    },
+    "api_gateway_v2_api": {
+      "category": "network",
+      "class": "APIGateway",
+      "description": "Api Gateway V2 Api"
+    },
+    "apigateway": {
+      "category": "network",
+      "class": "APIGateway",
+      "description": "Apigateway"
+    },
+    "apigatewayv2": {
+      "category": "network",
+      "class": "APIGateway",
+      "description": "Apigatewayv2"
+    },
+    "app_runner_service": {
       "category": "compute",
-      "class": "EC2",
-      "description": "Elastic Compute Cloud"
+      "class": "AppRunner",
+      "description": "App Runner Service"
     },
-    "lambda": {
-      "category": "compute",
-      "class": "Lambda",
-      "description": "Lambda Functions"
+    "appmesh": {
+      "category": "network",
+      "class": "AppMesh",
+      "description": "Appmesh"
     },
-    "ecs": {
-      "category": "compute",
-      "class": "ECS",
-      "description": "Elastic Container Service"
+    "appmesh_mesh": {
+      "category": "network",
+      "class": "AppMesh",
+      "description": "Appmesh Mesh"
     },
-    "eks": {
-      "category": "compute",
-      "class": "EKS",
-      "description": "Elastic Kubernetes Service"
+    "appsync": {
+      "category": "integration",
+      "class": "Appsync",
+      "description": "Appsync"
     },
-    "batch": {
-      "category": "compute",
-      "class": "Batch",
-      "description": "AWS Batch"
+    "appsync_graphql_api": {
+      "category": "integration",
+      "class": "Appsync",
+      "description": "Appsync Graphql Api"
     },
-    "elasticbeanstalk": {
-      "category": "compute",
-      "class": "ElasticBeanstalk",
-      "description": "Elastic Beanstalk"
+    "athena": {
+      "category": "analytics",
+      "class": "Athena",
+      "description": "Athena"
     },
-    "lightsail": {
-      "category": "compute",
-      "class": "Lightsail",
-      "description": "Amazon Lightsail"
+    "athena_database": {
+      "category": "analytics",
+      "class": "Athena",
+      "description": "Athena Database"
     },
-    "s3": {
-      "category": "storage",
-      "class": "SimpleStorageServiceS3",
-      "description": "Simple Storage Service"
-    },
-    "ebs": {
-      "category": "storage",
-      "class": "ElasticBlockStore",
-      "description": "Elastic Block Store"
-    },
-    "efs": {
-      "category": "storage",
-      "class": "EFS",
-      "description": "Elastic File System"
-    },
-    "fsx": {
-      "category": "storage",
-      "class": "FSx",
-      "description": "FSx File Systems"
-    },
-    "storagegateway": {
-      "category": "storage",
-      "class": "StorageGateway",
-      "description": "Storage Gateway"
-    },
-    "backup": {
-      "category": "storage",
-      "class": "Backup",
-      "description": "AWS Backup"
-    },
-    "rds": {
-      "category": "database",
-      "class": "RDS",
-      "description": "Relational Database Service"
-    },
-    "dynamodb": {
-      "category": "database",
-      "class": "DynamoDB",
-      "description": "DynamoDB"
+    "athena_workgroup": {
+      "category": "analytics",
+      "class": "Athena",
+      "description": "Athena Workgroup"
     },
     "aurora": {
       "category": "database",
       "class": "Aurora",
       "description": "Aurora"
     },
-    "neptune": {
-      "category": "database",
-      "class": "Neptune",
-      "description": "Neptune"
-    },
-    "redshift": {
-      "category": "database",
-      "class": "Redshift",
-      "description": "Redshift"
-    },
-    "elasticache": {
-      "category": "database",
-      "class": "ElastiCache",
-      "description": "ElastiCache"
-    },
-    "documentdb": {
-      "category": "database",
-      "class": "DocumentDB",
-      "description": "DocumentDB"
-    },
-    "timestream": {
-      "category": "database",
-      "class": "Timestream",
-      "description": "Timestream"
-    },
-    "keyspaces": {
-      "category": "database",
-      "class": "Keyspaces",
-      "description": "Keyspaces"
-    },
-    "glue": {
-      "category": "analytics",
-      "class": "Glue",
-      "description": "AWS Glue"
-    },
-    "athena": {
-      "category": "analytics",
-      "class": "Athena",
-      "description": "Amazon Athena"
-    },
-    "emr": {
-      "category": "analytics",
-      "class": "EMR",
-      "description": "Elastic MapReduce"
-    },
-    "kinesis": {
-      "category": "analytics",
-      "class": "Kinesis",
-      "description": "Kinesis"
-    },
-    "kinesisanalytics": {
-      "category": "analytics",
-      "class": "KinesisAnalytics",
-      "description": "Kinesis Analytics"
-    },
-    "quicksight": {
-      "category": "analytics",
-      "class": "QuickSight",
-      "description": "QuickSight"
-    },
-    "datapipeline": {
-      "category": "analytics",
-      "class": "DataPipeline",
-      "description": "Data Pipeline"
-    },
-    "dataexchange": {
-      "category": "analytics",
-      "class": "DataExchange",
-      "description": "Data Exchange"
-    },
-    "lakeformation": {
-      "category": "analytics",
-      "class": "LakeFormation",
-      "description": "Lake Formation"
-    },
-    "sagemaker": {
-      "category": "ml",
-      "class": "SageMaker",
-      "description": "SageMaker"
-    },
-    "comprehend": {
-      "category": "ml",
-      "class": "Comprehend",
-      "description": "Comprehend"
-    },
-    "rekognition": {
-      "category": "ml",
-      "class": "Rekognition",
-      "description": "Rekognition"
-    },
-    "textract": {
-      "category": "ml",
-      "class": "Textract",
-      "description": "Textract"
-    },
-    "translate": {
-      "category": "ml",
-      "class": "Translate",
-      "description": "Translate"
-    },
-    "transcribe": {
-      "category": "ml",
-      "class": "Transcribe",
-      "description": "Transcribe"
-    },
-    "polly": {
-      "category": "ml",
-      "class": "Polly",
-      "description": "Polly"
-    },
-    "forecast": {
-      "category": "ml",
-      "class": "Forecast",
-      "description": "Forecast"
-    },
-    "personalize": {
-      "category": "ml",
-      "class": "Personalize",
-      "description": "Personalize"
-    },
-    "lex": {
-      "category": "ml",
-      "class": "Lex",
-      "description": "Lex"
-    },
-    "bedrock": {
-      "category": "ml",
-      "class": "Bedrock",
-      "description": "Bedrock"
-    },
-    "vpc": {
-      "category": "network",
-      "class": "VPC",
-      "description": "Virtual Private Cloud"
-    },
-    "subnet": {
-      "category": "network",
-      "class": "VPC",
-      "description": "Subnet"
-    },
-    "route": {
-      "category": "network",
-      "class": "VPC",
-      "description": "Route Table"
-    },
-    "gateway": {
-      "category": "network",
-      "class": "VPC",
-      "description": "Internet Gateway"
-    },
-    "nat": {
-      "category": "network",
-      "class": "VPC",
-      "description": "NAT Gateway"
-    },
-    "elb": {
-      "category": "network",
-      "class": "ELB",
-      "description": "Elastic Load Balancer"
-    },
-    "alb": {
-      "category": "network",
-      "class": "ELB",
-      "description": "Application Load Balancer"
-    },
-    "nlb": {
-      "category": "network",
-      "class": "ELB",
-      "description": "Network Load Balancer"
-    },
-    "cloudfront": {
-      "category": "network",
-      "class": "CloudFront",
-      "description": "CloudFront"
-    },
-    "route53": {
-      "category": "network",
-      "class": "Route53",
-      "description": "Route 53"
-    },
-    "apigateway": {
-      "category": "network",
-      "class": "APIGateway",
-      "description": "API Gateway"
-    },
-    "cloudmap": {
-      "category": "network",
-      "class": "CloudMap",
-      "description": "CloudMap"
-    },
-    "appmesh": {
-      "category": "network",
-      "class": "AppMesh",
-      "description": "App Mesh"
-    },
-    "globalaccelerator": {
-      "category": "network",
-      "class": "GlobalAccelerator",
-      "description": "Global Accelerator"
-    },
-    "iam": {
-      "category": "security",
-      "class": "IAM",
-      "description": "Identity & Access Management"
-    },
-    "kms": {
-      "category": "security",
-      "class": "KMS",
-      "description": "Key Management Service"
-    },
-    "secretsmanager": {
-      "category": "security",
-      "class": "SecretsManager",
-      "description": "Secrets Manager"
-    },
-    "cloudtrail": {
-      "category": "security",
-      "class": "CloudTrail",
-      "description": "CloudTrail"
-    },
-    "guardduty": {
-      "category": "security",
-      "class": "GuardDuty",
-      "description": "GuardDuty"
-    },
-    "waf": {
-      "category": "security",
-      "class": "WAF",
-      "description": "Web Application Firewall"
-    },
-    "shield": {
-      "category": "security",
-      "class": "Shield",
-      "description": "Shield"
-    },
-    "inspector": {
-      "category": "security",
-      "class": "Inspector",
-      "description": "Inspector"
-    },
-    "macie": {
-      "category": "security",
-      "class": "Macie",
-      "description": "Macie"
-    },
-    "config": {
-      "category": "security",
-      "class": "Config",
-      "description": "Config"
-    },
-    "organizations": {
-      "category": "security",
-      "class": "Organizations",
-      "description": "Organizations"
-    },
-    "ram": {
-      "category": "security",
-      "class": "RAM",
-      "description": "Resource Access Manager"
-    },
-    "sso": {
-      "category": "security",
-      "class": "SSO",
-      "description": "Single Sign-On"
-    },
-    "identitystore": {
-      "category": "security",
-      "class": "IdentityStore",
-      "description": "Identity Store"
-    },
-    "cloudwatch": {
-      "category": "management",
-      "class": "CloudWatch",
-      "description": "CloudWatch"
-    },
-    "xray": {
-      "category": "devtools",
-      "class": "XRay",
-      "description": "X-Ray"
-    },
-    "trustedadvisor": {
-      "category": "management",
-      "class": "TrustedAdvisor",
-      "description": "Trusted Advisor"
-    },
-    "health": {
-      "category": "management",
-      "class": "Health",
-      "description": "Personal Health Dashboard"
-    },
-    "support": {
-      "category": "management",
-      "class": "Support",
-      "description": "Support"
-    },
-    "costexplorer": {
-      "category": "management",
-      "class": "CostExplorer",
-      "description": "Cost Explorer"
-    },
-    "budgets": {
-      "category": "management",
-      "class": "Budgets",
-      "description": "Budgets"
-    },
-    "resourcegroups": {
-      "category": "management",
-      "class": "ResourceGroups",
-      "description": "Resource Groups"
-    },
-    "tags": {
-      "category": "management",
-      "class": "ResourceGroups",
-      "description": "Tags"
-    },
-    "systemsmanager": {
-      "category": "management",
-      "class": "SystemsManager",
-      "description": "Systems Manager"
-    },
-    "sqs": {
-      "category": "integration",
-      "class": "SQS",
-      "description": "Simple Queue Service"
-    },
-    "sns": {
-      "category": "integration",
-      "class": "SNS",
-      "description": "Simple Notification Service"
-    },
-    "eventbridge": {
-      "category": "integration",
-      "class": "EventBridge",
-      "description": "EventBridge"
-    },
-    "stepfunctions": {
-      "category": "integration",
-      "class": "StepFunctions",
-      "description": "Step Functions"
-    },
-    "mq": {
-      "category": "integration",
-      "class": "MQ",
-      "description": "Amazon MQ"
-    },
-    "appsync": {
-      "category": "integration",
-      "class": "AppSync",
-      "description": "AppSync"
-    },
-    "connect": {
-      "category": "integration",
-      "class": "Connect",
-      "description": "Connect"
-    },
-    "elasticsearch": {
-      "category": "search",
-      "class": "OpenSearch",
-      "description": "Elasticsearch Service"
-    },
-    "opensearch": {
-      "category": "search",
-      "class": "OpenSearch",
-      "description": "OpenSearch Service"
-    },
-    "kendra": {
-      "category": "search",
-      "class": "Kendra",
-      "description": "Kendra"
-    },
-    "workdocs": {
-      "category": "search",
-      "class": "WorkDocs",
-      "description": "WorkDocs"
-    },
-    "workmail": {
-      "category": "search",
-      "class": "WorkMail",
-      "description": "WorkMail"
-    },
-    "iot": {
-      "category": "iot",
-      "class": "IoT",
-      "description": "IoT Core"
-    },
-    "iotanalytics": {
-      "category": "iot",
-      "class": "IoTAnalytics",
-      "description": "IoT Analytics"
-    },
-    "iotevents": {
-      "category": "iot",
-      "class": "IoTEvents",
-      "description": "IoT Events"
-    },
-    "iotgreengrass": {
-      "category": "iot",
-      "class": "IoTGreengrass",
-      "description": "IoT Greengrass"
-    },
-    "iotsitewise": {
-      "category": "iot",
-      "class": "IoTSiteWise",
-      "description": "IoT SiteWise"
-    },
-    "mediastore": {
-      "category": "media",
-      "class": "MediaStore",
-      "description": "MediaStore"
-    },
-    "mediapackage": {
-      "category": "media",
-      "class": "MediaPackage",
-      "description": "MediaPackage"
-    },
-    "mediaconnect": {
-      "category": "media",
-      "class": "MediaConnect",
-      "description": "MediaConnect"
-    },
-    "medialive": {
-      "category": "media",
-      "class": "MediaLive",
-      "description": "MediaLive"
-    },
-    "mediatailor": {
-      "category": "media",
-      "class": "MediaTailor",
-      "description": "MediaTailor"
-    },
-    "mediaconvert": {
-      "category": "media",
-      "class": "MediaConvert",
-      "description": "MediaConvert"
-    },
-    "gamelift": {
-      "category": "game",
-      "class": "GameLift",
-      "description": "GameLift"
-    },
-    "managedblockchain": {
-      "category": "blockchain",
-      "class": "ManagedBlockchain",
-      "description": "Managed Blockchain"
-    },
-    "groundstation": {
-      "category": "satellite",
-      "class": "GroundStation",
-      "description": "Ground Station"
-    },
-    "workspaces": {
-      "category": "enduser",
-      "class": "WorkSpaces",
-      "description": "WorkSpaces"
-    },
-    "appstream": {
-      "category": "enduser",
-      "class": "AppStream",
-      "description": "AppStream"
-    },
-    "chime": {
-      "category": "enduser",
-      "class": "Chime",
-      "description": "Chime"
-    },
-    "mobilehub": {
-      "category": "mobile",
-      "class": "MobileHub",
-      "description": "Mobile Hub"
-    },
-    "pinpoint": {
-      "category": "mobile",
-      "class": "Pinpoint",
-      "description": "Pinpoint"
-    },
-    "devicefarm": {
-      "category": "mobile",
-      "class": "DeviceFarm",
-      "description": "Device Farm"
-    },
-    "amplify": {
-      "category": "mobile",
-      "class": "Amplify",
-      "description": "Amplify"
-    },
-    "codebuild": {
-      "category": "devtools",
-      "class": "CodeBuild",
-      "description": "CodeBuild"
-    },
-    "codecommit": {
-      "category": "devtools",
-      "class": "CodeCommit",
-      "description": "CodeCommit"
-    },
-    "codepipeline": {
-      "category": "devtools",
-      "class": "CodePipeline",
-      "description": "CodePipeline"
-    },
-    "codedeploy": {
-      "category": "devtools",
-      "class": "CodeDeploy",
-      "description": "CodeDeploy"
-    },
-    "codeartifact": {
-      "category": "devtools",
-      "class": "CodeArtifact",
-      "description": "CodeArtifact"
-    },
-    "braket": {
-      "category": "quantum",
-      "class": "Braket",
-      "description": "Braket"
-    },
-    "securitygroup": {
-      "category": "network",
-      "class": "SecurityGroup",
-      "description": "Security Group"
-    },
-    "security_group": {
-      "category": "network",
-      "class": "SecurityGroup",
-      "description": "Security Group"
-    },
-    "apigatewaymethod": {
-      "category": "network",
-      "class": "APIGateway",
-      "description": "API Gateway Method"
-    },
-    "apigatewayresource": {
-      "category": "network",
-      "class": "APIGateway",
-      "description": "API Gateway Resource"
-    },
-    "apigatewayrestapi": {
-      "category": "network",
-      "class": "APIGateway",
-      "description": "API Gateway REST API"
-    },
-    "cloudwatcheventrule": {
-      "category": "management",
-      "class": "CloudWatch",
-      "description": "CloudWatch Event Rule"
-    },
-    "cloudwatcheventtarget": {
-      "category": "management",
-      "class": "CloudWatch",
-      "description": "CloudWatch Event Target"
-    },
-    "cloudwatchloggroup": {
-      "category": "management",
-      "class": "CloudWatch",
-      "description": "CloudWatch Log Group"
-    },
-    "cloudwatchmetricalarm": {
-      "category": "management",
-      "class": "CloudWatch",
-      "description": "CloudWatch Metric Alarm"
-    },
-    "elasticsearch_domain": {
-      "category": "search",
-      "class": "OpenSearch",
-      "description": "Elasticsearch Domain"
-    },
-    "api_gateway": {
-      "category": "network",
-      "class": "APIGateway",
-      "description": "API Gateway"
-    },
-    "api_gateway_method": {
-      "category": "network",
-      "class": "APIGateway",
-      "description": "API Gateway Method"
-    },
-    "api_gateway_resource": {
-      "category": "network",
-      "class": "APIGateway",
-      "description": "API Gateway Resource"
-    },
-    "api_gateway_rest_api": {
-      "category": "network",
-      "class": "APIGateway",
-      "description": "API Gateway REST API"
-    },
-    "cloudwatch_event_rule": {
-      "category": "management",
-      "class": "CloudWatch",
-      "description": "CloudWatch Event Rule"
-    },
-    "cloudwatch_event_target": {
-      "category": "management",
-      "class": "CloudWatch",
-      "description": "CloudWatch Event Target"
-    },
-    "cloudwatch_log_group": {
-      "category": "management",
-      "class": "CloudWatch",
-      "description": "CloudWatch Log Group"
-    },
-    "cloudwatch_metric_alarm": {
-      "category": "management",
-      "class": "CloudWatch",
-      "description": "CloudWatch Metric Alarm"
-    },
-    "dynamodb_table": {
-      "category": "database",
-      "class": "DynamoDB",
-      "description": "DynamoDB Table"
-    }
-  },
-  "azure": {
-    "virtual_machine": {
+    "autoscaling_group": {
       "category": "compute",
-      "class": "VirtualMachine",
-      "description": "Virtual Machine"
+      "class": "EC2AutoScaling",
+      "description": "Autoscaling Group"
     },
-    "function_app": {
-      "category": "compute",
-      "class": "FunctionApp",
-      "description": "Function App"
+    "backup": {
+      "category": "storage",
+      "class": "Backup",
+      "description": "Backup"
     },
-    "app_service": {
-      "category": "compute",
-      "class": "AppService",
-      "description": "App Service"
+    "backup_plan": {
+      "category": "storage",
+      "class": "Backup",
+      "description": "Backup Plan"
     },
-    "container_instances": {
-      "category": "compute",
-      "class": "ContainerInstances",
-      "description": "Container Instances"
-    },
-    "kubernetes_service": {
-      "category": "compute",
-      "class": "AKS",
-      "description": "Azure Kubernetes Service"
+    "backup_vault": {
+      "category": "storage",
+      "class": "Backup",
+      "description": "Backup Vault"
     },
     "batch": {
       "category": "compute",
       "class": "Batch",
       "description": "Batch"
     },
-    "storage_account": {
-      "category": "storage",
-      "class": "StorageAccount",
-      "description": "Storage Account"
+    "batch_compute_environment": {
+      "category": "compute",
+      "class": "Batch",
+      "description": "Batch Compute Environment"
     },
-    "blob": {
-      "category": "storage",
-      "class": "BlobStorage",
-      "description": "Blob Storage"
+    "batch_job_definition": {
+      "category": "compute",
+      "class": "Batch",
+      "description": "Batch Job Definition"
     },
-    "file": {
-      "category": "storage",
-      "class": "FileStorage",
-      "description": "File Storage"
+    "bedrock": {
+      "category": "ml",
+      "class": "Bedrock",
+      "description": "Bedrock"
     },
-    "disk": {
-      "category": "storage",
-      "class": "ManagedDisks",
-      "description": "Managed Disks"
+    "budgets": {
+      "category": "management",
+      "class": "ManagementConsole",
+      "description": "Budgets"
     },
-    "sql_database": {
-      "category": "database",
-      "class": "SQLDatabase",
-      "description": "SQL Database"
+    "client_vpn_endpoint": {
+      "category": "network",
+      "class": "ClientVpn",
+      "description": "Client Vpn Endpoint"
     },
-    "cosmos_db": {
-      "category": "database",
-      "class": "CosmosDB",
-      "description": "Cosmos DB"
+    "cloudformation": {
+      "category": "management",
+      "class": "Cloudformation",
+      "description": "Cloudformation"
     },
-    "database_for_postgresql": {
-      "category": "database",
-      "class": "DatabasePostgreSQL",
-      "description": "PostgreSQL"
+    "cloudformation_stack": {
+      "category": "management",
+      "class": "CloudformationStack",
+      "description": "Cloudformation Stack"
     },
-    "database_for_mysql": {
-      "category": "database",
-      "class": "DatabaseMySQL",
-      "description": "MySQL"
+    "cloudfront": {
+      "category": "network",
+      "class": "CloudFront",
+      "description": "Cloudfront"
     },
-    "cache": {
-      "category": "database",
-      "class": "Cache",
-      "description": "Cache for Redis"
+    "cloudfront_distribution": {
+      "category": "network",
+      "class": "CloudFront",
+      "description": "Cloudfront Distribution"
     },
-    "service_bus": {
+    "cloudhsm": {
+      "category": "security",
+      "class": "Cloudhsm",
+      "description": "Cloudhsm"
+    },
+    "cloudmap": {
+      "category": "network",
+      "class": "CloudMap",
+      "description": "Cloudmap"
+    },
+    "cloudtrail": {
+      "category": "management",
+      "class": "Cloudtrail",
+      "description": "Cloudtrail"
+    },
+    "cloudtrail_trail": {
+      "category": "management",
+      "class": "Cloudtrail",
+      "description": "Cloudtrail Trail"
+    },
+    "cloudwatch": {
+      "category": "management",
+      "class": "Cloudwatch",
+      "description": "Cloudwatch"
+    },
+    "cloudwatch_dashboard": {
+      "category": "management",
+      "class": "Cloudwatch",
+      "description": "Cloudwatch Dashboard"
+    },
+    "cloudwatch_event_rule": {
+      "category": "management",
+      "class": "Cloudwatch",
+      "description": "Cloudwatch Event Rule"
+    },
+    "cloudwatch_event_target": {
       "category": "integration",
-      "class": "ServiceBus",
-      "description": "Service Bus"
+      "class": "Eventbridge",
+      "description": "Cloudwatch Event Target"
     },
-    "event_grid": {
-      "category": "integration",
-      "class": "EventGrid",
-      "description": "Event Grid"
+    "cloudwatch_log_group": {
+      "category": "management",
+      "class": "CloudwatchLogs",
+      "description": "Cloudwatch Log Group"
     },
-    "event_hubs": {
+    "cloudwatch_log_metric_filter": {
+      "category": "management",
+      "class": "CloudwatchLogs",
+      "description": "Cloudwatch Log Metric Filter"
+    },
+    "cloudwatch_metric_alarm": {
+      "category": "management",
+      "class": "CloudwatchAlarm",
+      "description": "Cloudwatch Metric Alarm"
+    },
+    "cloudwatchlogs": {
+      "category": "management",
+      "class": "CloudwatchLogs",
+      "description": "Cloudwatchlogs"
+    },
+    "codeartifact": {
+      "category": "devtools",
+      "class": "Codeartifact",
+      "description": "Codeartifact"
+    },
+    "codeartifact_domain": {
+      "category": "devtools",
+      "class": "Codeartifact",
+      "description": "Codeartifact Domain"
+    },
+    "codebuild": {
+      "category": "devtools",
+      "class": "Codebuild",
+      "description": "Codebuild"
+    },
+    "codebuild_project": {
+      "category": "devtools",
+      "class": "Codebuild",
+      "description": "Codebuild Project"
+    },
+    "codecommit": {
+      "category": "devtools",
+      "class": "Codecommit",
+      "description": "Codecommit"
+    },
+    "codecommit_repository": {
+      "category": "devtools",
+      "class": "Codecommit",
+      "description": "Codecommit Repository"
+    },
+    "codedeploy": {
+      "category": "devtools",
+      "class": "Codedeploy",
+      "description": "Codedeploy"
+    },
+    "codedeploy_app": {
+      "category": "devtools",
+      "class": "Codedeploy",
+      "description": "Codedeploy App"
+    },
+    "codepipeline": {
+      "category": "devtools",
+      "class": "Codepipeline",
+      "description": "Codepipeline"
+    },
+    "cognito": {
+      "category": "security",
+      "class": "Cognito",
+      "description": "Cognito"
+    },
+    "cognito_identity_pool": {
+      "category": "security",
+      "class": "Cognito",
+      "description": "Cognito Identity Pool"
+    },
+    "cognito_user_pool": {
+      "category": "security",
+      "class": "Cognito",
+      "description": "Cognito User Pool"
+    },
+    "comprehend": {
+      "category": "ml",
+      "class": "Comprehend",
+      "description": "Comprehend"
+    },
+    "config": {
+      "category": "management",
+      "class": "Config",
+      "description": "Config"
+    },
+    "config_rule": {
+      "category": "management",
+      "class": "Config",
+      "description": "Config Rule"
+    },
+    "controltower": {
+      "category": "management",
+      "class": "ControlTower",
+      "description": "Controltower"
+    },
+    "cost_explorer": {
+      "category": "management",
+      "class": "ManagementConsole",
+      "description": "Cost Explorer"
+    },
+    "data_pipeline": {
+      "category": "analytics",
+      "class": "DataPipeline",
+      "description": "Data Pipeline"
+    },
+    "datapipeline": {
+      "category": "analytics",
+      "class": "DataPipeline",
+      "description": "Datapipeline"
+    },
+    "dax": {
+      "category": "database",
+      "class": "DynamodbDax",
+      "description": "Dax"
+    },
+    "dax_cluster": {
+      "category": "database",
+      "class": "DynamodbDax",
+      "description": "Dax Cluster"
+    },
+    "db_cluster": {
+      "category": "database",
+      "class": "Aurora",
+      "description": "Db Cluster"
+    },
+    "db_instance": {
+      "category": "database",
+      "class": "RDS",
+      "description": "Db Instance"
+    },
+    "detective": {
+      "category": "security",
+      "class": "Detective",
+      "description": "Detective"
+    },
+    "direct_connect": {
+      "category": "network",
+      "class": "DirectConnect",
+      "description": "Direct Connect"
+    },
+    "documentdb": {
+      "category": "database",
+      "class": "DocumentDB",
+      "description": "Documentdb"
+    },
+    "documentdb_cluster": {
+      "category": "database",
+      "class": "DocumentDB",
+      "description": "Documentdb Cluster"
+    },
+    "dx_connection": {
+      "category": "network",
+      "class": "DirectConnect",
+      "description": "Dx Connection"
+    },
+    "dynamodb": {
+      "category": "database",
+      "class": "Dynamodb",
+      "description": "Dynamodb"
+    },
+    "dynamodb_global_table": {
+      "category": "database",
+      "class": "Dynamodb",
+      "description": "Dynamodb Global Table"
+    },
+    "dynamodb_table": {
+      "category": "database",
+      "class": "DynamodbTable",
+      "description": "Dynamodb Table"
+    },
+    "ebs": {
+      "category": "storage",
+      "class": "ElasticBlockStoreEBS",
+      "description": "Ebs"
+    },
+    "ebs_snapshot": {
+      "category": "storage",
+      "class": "ElasticBlockStoreEBSSnapshot",
+      "description": "Ebs Snapshot"
+    },
+    "ebs_volume": {
+      "category": "storage",
+      "class": "ElasticBlockStoreEBSVolume",
+      "description": "Ebs Volume"
+    },
+    "ec2": {
+      "category": "compute",
+      "class": "EC2",
+      "description": "Ec2"
+    },
+    "ec2_instance": {
+      "category": "compute",
+      "class": "EC2",
+      "description": "Ec2 Instance"
+    },
+    "ecr": {
+      "category": "compute",
+      "class": "ECR",
+      "description": "Ecr"
+    },
+    "ecr_repository": {
+      "category": "compute",
+      "class": "EC2ContainerRegistry",
+      "description": "Ecr Repository"
+    },
+    "ecs": {
+      "category": "compute",
+      "class": "ECS",
+      "description": "Ecs"
+    },
+    "ecs_cluster": {
+      "category": "compute",
+      "class": "ElasticContainerService",
+      "description": "Ecs Cluster"
+    },
+    "ecs_service": {
+      "category": "compute",
+      "class": "ElasticContainerServiceService",
+      "description": "Ecs Service"
+    },
+    "ecs_task_definition": {
+      "category": "compute",
+      "class": "ElasticContainerServiceTask",
+      "description": "Ecs Task Definition"
+    },
+    "efs": {
+      "category": "storage",
+      "class": "EFS",
+      "description": "Efs"
+    },
+    "efs_file_system": {
+      "category": "storage",
+      "class": "ElasticFileSystemEFS",
+      "description": "Efs File System"
+    },
+    "efs_mount_target": {
+      "category": "storage",
+      "class": "ElasticFileSystemEFS",
+      "description": "Efs Mount Target"
+    },
+    "eip": {
+      "category": "compute",
+      "class": "EC2ElasticIpAddress",
+      "description": "Eip"
+    },
+    "eks": {
+      "category": "compute",
+      "class": "EKS",
+      "description": "Eks"
+    },
+    "eks_cluster": {
+      "category": "compute",
+      "class": "ElasticKubernetesService",
+      "description": "Eks Cluster"
+    },
+    "elastic_beanstalk_application": {
+      "category": "compute",
+      "class": "ElasticBeanstalkApplication",
+      "description": "Elastic Beanstalk Application"
+    },
+    "elastic_ip": {
+      "category": "compute",
+      "class": "EC2ElasticIpAddress",
+      "description": "Elastic Ip"
+    },
+    "elasticache": {
+      "category": "database",
+      "class": "Elasticache",
+      "description": "Elasticache"
+    },
+    "elasticache_cluster": {
+      "category": "database",
+      "class": "Elasticache",
+      "description": "Elasticache Cluster"
+    },
+    "elasticache_replication_group": {
+      "category": "database",
+      "class": "ElasticacheForRedis",
+      "description": "Elasticache Replication Group"
+    },
+    "elasticache_subnet_group": {
+      "category": "database",
+      "class": "Elasticache",
+      "description": "Elasticache Subnet Group"
+    },
+    "elasticbeanstalk": {
+      "category": "compute",
+      "class": "ElasticBeanstalk",
+      "description": "Elasticbeanstalk"
+    },
+    "elasticsearch": {
+      "category": "analytics",
+      "class": "ElasticsearchService",
+      "description": "Elasticsearch"
+    },
+    "elasticsearch_domain": {
+      "category": "analytics",
+      "class": "ElasticsearchService",
+      "description": "Elasticsearch Domain"
+    },
+    "elb": {
+      "category": "network",
+      "class": "ELB",
+      "description": "Elb"
+    },
+    "emr": {
+      "category": "analytics",
+      "class": "EMR",
+      "description": "Emr"
+    },
+    "emr_cluster": {
+      "category": "analytics",
+      "class": "EMRCluster",
+      "description": "Emr Cluster"
+    },
+    "eventbridge": {
       "category": "integration",
-      "class": "EventHubs",
-      "description": "Event Hubs"
+      "class": "Eventbridge",
+      "description": "Eventbridge"
+    },
+    "eventbridge_event_bus": {
+      "category": "integration",
+      "class": "EventbridgeCustomEventBusResource",
+      "description": "Eventbridge Event Bus"
+    },
+    "eventbridge_rule": {
+      "category": "integration",
+      "class": "EventbridgeRule",
+      "description": "Eventbridge Rule"
+    },
+    "fargate": {
+      "category": "compute",
+      "class": "Fargate",
+      "description": "Fargate"
+    },
+    "firewallmanager": {
+      "category": "security",
+      "class": "FirewallManager",
+      "description": "Firewallmanager"
+    },
+    "forecast": {
+      "category": "ml",
+      "class": "Forecast",
+      "description": "Forecast"
+    },
+    "fsx": {
+      "category": "storage",
+      "class": "FSx",
+      "description": "Fsx"
+    },
+    "fsx_lustre_file_system": {
+      "category": "storage",
+      "class": "FsxForLustre",
+      "description": "Fsx Lustre File System"
+    },
+    "fsx_windows_file_system": {
+      "category": "storage",
+      "class": "FsxForWindowsFileServer",
+      "description": "Fsx Windows File System"
+    },
+    "gateway": {
+      "category": "network",
+      "class": "InternetGateway",
+      "description": "Gateway"
+    },
+    "glacier": {
+      "category": "storage",
+      "class": "S3Glacier",
+      "description": "Glacier"
+    },
+    "glacier_vault": {
+      "category": "storage",
+      "class": "S3GlacierVault",
+      "description": "Glacier Vault"
+    },
+    "global_accelerator": {
+      "category": "network",
+      "class": "GlobalAccelerator",
+      "description": "Global Accelerator"
+    },
+    "globalaccelerator": {
+      "category": "network",
+      "class": "GlobalAccelerator",
+      "description": "Globalaccelerator"
+    },
+    "glue": {
+      "category": "analytics",
+      "class": "Glue",
+      "description": "Glue"
+    },
+    "glue_catalog_database": {
+      "category": "analytics",
+      "class": "GlueDataCatalog",
+      "description": "Glue Catalog Database"
+    },
+    "glue_catalog_table": {
+      "category": "analytics",
+      "class": "GlueDataCatalog",
+      "description": "Glue Catalog Table"
+    },
+    "glue_crawler": {
+      "category": "analytics",
+      "class": "GlueCrawlers",
+      "description": "Glue Crawler"
+    },
+    "glue_job": {
+      "category": "analytics",
+      "class": "Glue",
+      "description": "Glue Job"
+    },
+    "guardduty": {
+      "category": "security",
+      "class": "Guardduty",
+      "description": "Guardduty"
+    },
+    "guardduty_detector": {
+      "category": "security",
+      "class": "Guardduty",
+      "description": "Guardduty Detector"
+    },
+    "iam": {
+      "category": "security",
+      "class": "IAM",
+      "description": "Iam"
+    },
+    "iam_access_analyzer": {
+      "category": "security",
+      "class": "IAMAccessAnalyzer",
+      "description": "Iam Access Analyzer"
+    },
+    "iam_group": {
+      "category": "security",
+      "class": "IAM",
+      "description": "Iam Group"
+    },
+    "iam_instance_profile": {
+      "category": "security",
+      "class": "IAM",
+      "description": "Iam Instance Profile"
+    },
+    "iam_policy": {
+      "category": "security",
+      "class": "IAMPermissions",
+      "description": "Iam Policy"
+    },
+    "iam_role": {
+      "category": "security",
+      "class": "IAMRole",
+      "description": "Iam Role"
+    },
+    "iam_user": {
+      "category": "security",
+      "class": "IAM",
+      "description": "Iam User"
+    },
+    "inspector": {
+      "category": "security",
+      "class": "Inspector",
+      "description": "Inspector"
+    },
+    "inspector2_enabler": {
+      "category": "security",
+      "class": "Inspector",
+      "description": "Inspector2 Enabler"
+    },
+    "instance": {
+      "category": "compute",
+      "class": "EC2",
+      "description": "Instance"
+    },
+    "internet_gateway": {
+      "category": "network",
+      "class": "InternetGateway",
+      "description": "Internet Gateway"
+    },
+    "kendra": {
+      "category": "ml",
+      "class": "Kendra",
+      "description": "Kendra"
+    },
+    "kendra_index": {
+      "category": "ml",
+      "class": "Kendra",
+      "description": "Kendra Index"
+    },
+    "keyspaces": {
+      "category": "database",
+      "class": "KeyspacesManagedApacheCassandraService",
+      "description": "Keyspaces"
+    },
+    "kinesis": {
+      "category": "analytics",
+      "class": "Kinesis",
+      "description": "Kinesis"
+    },
+    "kinesis_analytics_application": {
+      "category": "analytics",
+      "class": "KinesisDataAnalytics",
+      "description": "Kinesis Analytics Application"
+    },
+    "kinesis_firehose_delivery_stream": {
+      "category": "analytics",
+      "class": "KinesisDataFirehose",
+      "description": "Kinesis Firehose Delivery Stream"
+    },
+    "kinesis_stream": {
+      "category": "analytics",
+      "class": "KinesisDataStreams",
+      "description": "Kinesis Stream"
+    },
+    "kinesis_video_stream": {
+      "category": "analytics",
+      "class": "KinesisVideoStreams",
+      "description": "Kinesis Video Stream"
+    },
+    "kms": {
+      "category": "security",
+      "class": "KMS",
+      "description": "Kms"
+    },
+    "kms_alias": {
+      "category": "security",
+      "class": "KeyManagementService",
+      "description": "Kms Alias"
+    },
+    "kms_key": {
+      "category": "security",
+      "class": "KeyManagementService",
+      "description": "Kms Key"
+    },
+    "lake_formation_data_lake_settings": {
+      "category": "analytics",
+      "class": "LakeFormation",
+      "description": "Lake Formation Data Lake Settings"
+    },
+    "lakeformation": {
+      "category": "analytics",
+      "class": "LakeFormation",
+      "description": "Lakeformation"
+    },
+    "lambda": {
+      "category": "compute",
+      "class": "Lambda",
+      "description": "Lambda"
+    },
+    "lambda_function": {
+      "category": "compute",
+      "class": "Lambda",
+      "description": "Lambda Function"
+    },
+    "launch_configuration": {
+      "category": "compute",
+      "class": "EC2",
+      "description": "Launch Configuration"
+    },
+    "launch_template": {
+      "category": "compute",
+      "class": "EC2",
+      "description": "Launch Template"
+    },
+    "lb": {
+      "category": "network",
+      "class": "ElasticLoadBalancing",
+      "description": "Lb"
+    },
+    "lb_listener": {
+      "category": "network",
+      "class": "ElasticLoadBalancing",
+      "description": "Lb Listener"
+    },
+    "lb_target_group": {
+      "category": "network",
+      "class": "ElasticLoadBalancing",
+      "description": "Lb Target Group"
+    },
+    "lex": {
+      "category": "ml",
+      "class": "Lex",
+      "description": "Lex"
+    },
+    "lex_bot": {
+      "category": "ml",
+      "class": "Lex",
+      "description": "Lex Bot"
+    },
+    "lightsail": {
+      "category": "compute",
+      "class": "Lightsail",
+      "description": "Lightsail"
+    },
+    "macie": {
+      "category": "security",
+      "class": "Macie",
+      "description": "Macie"
+    },
+    "macie2_account": {
+      "category": "security",
+      "class": "Macie",
+      "description": "Macie2 Account"
+    },
+    "mq": {
+      "category": "integration",
+      "class": "MQ",
+      "description": "Mq"
+    },
+    "mq_broker": {
+      "category": "integration",
+      "class": "MQ",
+      "description": "Mq Broker"
+    },
+    "msk": {
+      "category": "analytics",
+      "class": "ManagedStreamingForKafka",
+      "description": "Msk"
+    },
+    "msk_cluster": {
+      "category": "analytics",
+      "class": "ManagedStreamingForKafka",
+      "description": "Msk Cluster"
+    },
+    "nacl": {
+      "category": "network",
+      "class": "Nacl",
+      "description": "Nacl"
+    },
+    "nat_gateway": {
+      "category": "network",
+      "class": "NATGateway",
+      "description": "Nat Gateway"
+    },
+    "neptune": {
+      "category": "database",
+      "class": "Neptune",
+      "description": "Neptune"
+    },
+    "neptune_cluster": {
+      "category": "database",
+      "class": "Neptune",
+      "description": "Neptune Cluster"
+    },
+    "neptune_instance": {
+      "category": "database",
+      "class": "Neptune",
+      "description": "Neptune Instance"
+    },
+    "network_acl": {
+      "category": "network",
+      "class": "Nacl",
+      "description": "Network Acl"
+    },
+    "network_firewall": {
+      "category": "network",
+      "class": "NetworkFirewall",
+      "description": "Network Firewall"
+    },
+    "networkfirewall": {
+      "category": "network",
+      "class": "NetworkFirewall",
+      "description": "Networkfirewall"
+    },
+    "nlb": {
+      "category": "network",
+      "class": "NLB",
+      "description": "Nlb"
+    },
+    "opensearch": {
+      "category": "analytics",
+      "class": "AmazonOpensearchService",
+      "description": "Opensearch"
+    },
+    "opensearch_domain": {
+      "category": "analytics",
+      "class": "AmazonOpensearchService",
+      "description": "Opensearch Domain"
+    },
+    "organizations": {
+      "category": "management",
+      "class": "Organizations",
+      "description": "Organizations"
+    },
+    "organizations_account": {
+      "category": "management",
+      "class": "Organizations",
+      "description": "Organizations Account"
+    },
+    "organizations_policy": {
+      "category": "management",
+      "class": "Organizations",
+      "description": "Organizations Policy"
+    },
+    "personalize": {
+      "category": "ml",
+      "class": "Personalize",
+      "description": "Personalize"
+    },
+    "polly": {
+      "category": "ml",
+      "class": "Polly",
+      "description": "Polly"
+    },
+    "proton": {
+      "category": "management",
+      "class": "Proton",
+      "description": "Proton"
+    },
+    "qldb": {
+      "category": "database",
+      "class": "QLDB",
+      "description": "Qldb"
+    },
+    "qldb_ledger": {
+      "category": "database",
+      "class": "QuantumLedgerDatabaseQldb",
+      "description": "Qldb Ledger"
+    },
+    "quicksight": {
+      "category": "analytics",
+      "class": "Quicksight",
+      "description": "Quicksight"
+    },
+    "ram": {
+      "category": "security",
+      "class": "RAM",
+      "description": "Ram"
+    },
+    "ram_resource_share": {
+      "category": "security",
+      "class": "ResourceAccessManager",
+      "description": "Ram Resource Share"
+    },
+    "rds": {
+      "category": "database",
+      "class": "RDS",
+      "description": "Rds"
+    },
+    "rds_cluster": {
+      "category": "database",
+      "class": "Aurora",
+      "description": "Rds Cluster"
+    },
+    "rds_instance": {
+      "category": "database",
+      "class": "RDS",
+      "description": "Rds Instance"
+    },
+    "redshift": {
+      "category": "database",
+      "class": "Redshift",
+      "description": "Redshift"
+    },
+    "redshift_cluster": {
+      "category": "database",
+      "class": "Redshift",
+      "description": "Redshift Cluster"
+    },
+    "rekognition": {
+      "category": "ml",
+      "class": "Rekognition",
+      "description": "Rekognition"
+    },
+    "route": {
+      "category": "network",
+      "class": "RouteTable",
+      "description": "Route"
+    },
+    "route53": {
+      "category": "network",
+      "class": "Route53",
+      "description": "Route53"
+    },
+    "route53_health_check": {
+      "category": "network",
+      "class": "Route53",
+      "description": "Route53 Health Check"
+    },
+    "route53_record": {
+      "category": "network",
+      "class": "Route53",
+      "description": "Route53 Record"
+    },
+    "route53_zone": {
+      "category": "network",
+      "class": "Route53HostedZone",
+      "description": "Route53 Zone"
+    },
+    "route_table": {
+      "category": "network",
+      "class": "RouteTable",
+      "description": "Route Table"
+    },
+    "route_table_association": {
+      "category": "network",
+      "class": "RouteTable",
+      "description": "Route Table Association"
+    },
+    "s3": {
+      "category": "storage",
+      "class": "SimpleStorageServiceS3",
+      "description": "S3"
+    },
+    "s3_bucket": {
+      "category": "storage",
+      "class": "SimpleStorageServiceS3",
+      "description": "S3 Bucket"
+    },
+    "s3_bucket_object": {
+      "category": "storage",
+      "class": "SimpleStorageServiceS3Object",
+      "description": "S3 Bucket Object"
+    },
+    "s3_bucket_policy": {
+      "category": "storage",
+      "class": "SimpleStorageServiceS3",
+      "description": "S3 Bucket Policy"
+    },
+    "s3_object": {
+      "category": "storage",
+      "class": "SimpleStorageServiceS3Object",
+      "description": "S3 Object"
+    },
+    "sagemaker": {
+      "category": "ml",
+      "class": "Sagemaker",
+      "description": "Sagemaker"
+    },
+    "sagemaker_endpoint": {
+      "category": "ml",
+      "class": "Sagemaker",
+      "description": "Sagemaker Endpoint"
+    },
+    "sagemaker_model": {
+      "category": "ml",
+      "class": "SagemakerModel",
+      "description": "Sagemaker Model"
+    },
+    "sagemaker_notebook_instance": {
+      "category": "ml",
+      "class": "SagemakerNotebook",
+      "description": "Sagemaker Notebook Instance"
+    },
+    "sagemaker_training_job": {
+      "category": "ml",
+      "class": "SagemakerTrainingJob",
+      "description": "Sagemaker Training Job"
+    },
+    "secrets_manager_secret": {
+      "category": "security",
+      "class": "SecretsManager",
+      "description": "Secrets Manager Secret"
+    },
+    "secretsmanager": {
+      "category": "security",
+      "class": "SecretsManager",
+      "description": "Secretsmanager"
+    },
+    "secretsmanager_secret": {
+      "category": "security",
+      "class": "SecretsManager",
+      "description": "Secretsmanager Secret"
+    },
+    "security_group": {
+      "category": "network",
+      "class": "Nacl",
+      "description": "Security Group"
+    },
+    "security_group_rule": {
+      "category": "network",
+      "class": "Nacl",
+      "description": "Security Group Rule"
+    },
+    "security_hub": {
+      "category": "security",
+      "class": "SecurityHub",
+      "description": "Security Hub"
+    },
+    "securityhub_account": {
+      "category": "security",
+      "class": "SecurityHub",
+      "description": "Securityhub Account"
+    },
+    "service_discovery_service": {
+      "category": "network",
+      "class": "CloudMap",
+      "description": "Service Discovery Service"
+    },
+    "servicecatalog": {
+      "category": "management",
+      "class": "ServiceCatalog",
+      "description": "Servicecatalog"
+    },
+    "servicecatalog_portfolio": {
+      "category": "management",
+      "class": "ServiceCatalog",
+      "description": "Servicecatalog Portfolio"
+    },
+    "sfn": {
+      "category": "integration",
+      "class": "SF",
+      "description": "Sfn"
+    },
+    "sfn_state_machine": {
+      "category": "integration",
+      "class": "StepFunctions",
+      "description": "Sfn State Machine"
+    },
+    "shield": {
+      "category": "security",
+      "class": "Shield",
+      "description": "Shield"
+    },
+    "shield_protection": {
+      "category": "security",
+      "class": "ShieldAdvanced",
+      "description": "Shield Protection"
+    },
+    "sns": {
+      "category": "integration",
+      "class": "SNS",
+      "description": "Sns"
+    },
+    "sns_topic": {
+      "category": "integration",
+      "class": "SimpleNotificationServiceSns",
+      "description": "Sns Topic"
+    },
+    "spot_instance_request": {
+      "category": "compute",
+      "class": "EC2SpotInstance",
+      "description": "Spot Instance Request"
+    },
+    "sqs": {
+      "category": "integration",
+      "class": "SQS",
+      "description": "Sqs"
+    },
+    "sqs_queue": {
+      "category": "integration",
+      "class": "SimpleQueueServiceSqs",
+      "description": "Sqs Queue"
+    },
+    "ssm": {
+      "category": "management",
+      "class": "SSM",
+      "description": "Ssm"
+    },
+    "ssm_document": {
+      "category": "management",
+      "class": "SystemsManagerDocuments",
+      "description": "Ssm Document"
+    },
+    "ssm_parameter": {
+      "category": "management",
+      "class": "SystemsManagerParameterStore",
+      "description": "Ssm Parameter"
+    },
+    "sso": {
+      "category": "security",
+      "class": "SingleSignOn",
+      "description": "Sso"
+    },
+    "stepfunctions": {
+      "category": "integration",
+      "class": "StepFunctions",
+      "description": "Stepfunctions"
+    },
+    "storage_gateway": {
+      "category": "storage",
+      "class": "StorageGateway",
+      "description": "Storage Gateway"
+    },
+    "storagegateway_gateway": {
+      "category": "storage",
+      "class": "StorageGateway",
+      "description": "Storagegateway Gateway"
+    },
+    "subnet": {
+      "category": "network",
+      "class": "PrivateSubnet",
+      "description": "Subnet"
+    },
+    "textract": {
+      "category": "ml",
+      "class": "Textract",
+      "description": "Textract"
+    },
+    "timestream": {
+      "category": "database",
+      "class": "Timestream",
+      "description": "Timestream"
+    },
+    "timestream_database": {
+      "category": "database",
+      "class": "Timestream",
+      "description": "Timestream Database"
+    },
+    "timestream_table": {
+      "category": "database",
+      "class": "Timestream",
+      "description": "Timestream Table"
+    },
+    "transcribe": {
+      "category": "ml",
+      "class": "Transcribe",
+      "description": "Transcribe"
+    },
+    "transit_gateway": {
+      "category": "network",
+      "class": "TransitGateway",
+      "description": "Transit Gateway"
+    },
+    "transit_gateway_attachment": {
+      "category": "network",
+      "class": "TransitGatewayAttachment",
+      "description": "Transit Gateway Attachment"
+    },
+    "transitgateway": {
+      "category": "network",
+      "class": "TransitGateway",
+      "description": "Transitgateway"
+    },
+    "translate": {
+      "category": "ml",
+      "class": "Translate",
+      "description": "Translate"
+    },
+    "trustedadvisor": {
+      "category": "management",
+      "class": "TrustedAdvisor",
+      "description": "Trustedadvisor"
+    },
+    "vpc": {
+      "category": "network",
+      "class": "VPC",
+      "description": "Vpc"
+    },
+    "vpc_endpoint": {
+      "category": "network",
+      "class": "Privatelink",
+      "description": "Vpc Endpoint"
+    },
+    "vpc_endpoint_service": {
+      "category": "network",
+      "class": "Privatelink",
+      "description": "Vpc Endpoint Service"
+    },
+    "vpc_peering_connection": {
+      "category": "network",
+      "class": "VPCPeering",
+      "description": "Vpc Peering Connection"
+    },
+    "vpn_connection": {
+      "category": "network",
+      "class": "VpnConnection",
+      "description": "Vpn Connection"
+    },
+    "vpn_gateway": {
+      "category": "network",
+      "class": "VpnGateway",
+      "description": "Vpn Gateway"
+    },
+    "waf": {
+      "category": "security",
+      "class": "WAF",
+      "description": "Waf"
+    },
+    "waf_web_acl": {
+      "category": "security",
+      "class": "WAF",
+      "description": "Waf Web Acl"
+    },
+    "wafv2": {
+      "category": "security",
+      "class": "WAF",
+      "description": "Wafv2"
+    },
+    "wafv2_web_acl": {
+      "category": "security",
+      "class": "WAF",
+      "description": "Wafv2 Web Acl"
+    },
+    "xray": {
+      "category": "management",
+      "class": "Cloudwatch",
+      "description": "Xray"
+    }
+  },
+  "azure": {
+    "active_directory_domain_service": {
+      "category": "identity",
+      "class": "AzureADDomainServices",
+      "description": "Active Directory Domain Service"
     },
     "api_management": {
       "category": "integration",
       "class": "APIManagement",
-      "description": "API Management"
+      "description": "Api Management"
     },
-    "logic_apps": {
-      "category": "integration",
-      "class": "LogicApps",
-      "description": "Logic Apps"
+    "app_service": {
+      "category": "compute",
+      "class": "AppServices",
+      "description": "App Service"
     },
-    "virtual_network": {
-      "category": "network",
-      "class": "VirtualNetwork",
-      "description": "Virtual Network"
-    },
-    "subnet": {
-      "category": "network",
-      "class": "Subnet",
-      "description": "Subnet"
-    },
-    "load_balancer": {
-      "category": "network",
-      "class": "LoadBalancer",
-      "description": "Load Balancer"
+    "app_service_plan": {
+      "category": "appservices",
+      "class": "AppServicePlans",
+      "description": "App Service Plan"
     },
     "application_gateway": {
       "category": "network",
       "class": "ApplicationGateway",
       "description": "Application Gateway"
     },
-    "cdn": {
-      "category": "network",
-      "class": "CDN",
-      "description": "Content Delivery Network"
-    },
-    "frontdoor": {
-      "category": "network",
-      "class": "FrontDoor",
-      "description": "Front Door"
-    },
-    "traffic_manager": {
-      "category": "network",
-      "class": "TrafficManager",
-      "description": "Traffic Manager"
-    },
-    "dns": {
-      "category": "network",
-      "class": "DNS",
-      "description": "DNS"
-    },
-    "key_vault": {
-      "category": "security",
-      "class": "KeyVault",
-      "description": "Key Vault"
-    },
-    "active_directory": {
-      "category": "security",
-      "class": "ActiveDirectory",
-      "description": "Active Directory"
-    },
-    "security_center": {
-      "category": "security",
-      "class": "SecurityCenter",
-      "description": "Security Center"
-    },
-    "information_protection": {
-      "category": "security",
-      "class": "InformationProtection",
-      "description": "Information Protection"
-    },
-    "sentinel": {
-      "category": "security",
-      "class": "Sentinel",
-      "description": "Sentinel"
-    },
-    "monitor": {
-      "category": "management",
-      "class": "Monitor",
-      "description": "Monitor"
-    },
     "application_insights": {
-      "category": "management",
-      "class": "ApplicationInsights",
+      "category": "web",
+      "class": "AppServices",
       "description": "Application Insights"
     },
-    "advisor": {
-      "category": "management",
-      "class": "Advisor",
-      "description": "Advisor"
+    "automation_account": {
+      "category": "compute",
+      "class": "AppServices",
+      "description": "Automation Account"
     },
-    "automation": {
-      "category": "management",
-      "class": "Automation",
-      "description": "Automation"
+    "bastion_host": {
+      "category": "network",
+      "class": "VirtualNetworkGateways",
+      "description": "Bastion Host"
     },
-    "backup": {
-      "category": "management",
-      "class": "Backup",
-      "description": "Backup"
+    "batch_account": {
+      "category": "compute",
+      "class": "BatchAccounts",
+      "description": "Batch Account"
     },
-    "policy": {
-      "category": "management",
-      "class": "Policy",
-      "description": "Policy"
+    "cdn_endpoint": {
+      "category": "network",
+      "class": "CDNProfiles",
+      "description": "Cdn Endpoint"
     },
-    "cost_management": {
-      "category": "management",
-      "class": "CostManagement",
-      "description": "Cost Management"
+    "cdn_profile": {
+      "category": "network",
+      "class": "CDNProfiles",
+      "description": "Cdn Profile"
     },
-    "machine_learning": {
-      "category": "ai",
-      "class": "MachineLearning",
-      "description": "Machine Learning"
-    },
-    "cognitive_services": {
-      "category": "ai",
+    "cognitive_account": {
+      "category": "web",
       "class": "CognitiveServices",
-      "description": "Cognitive Services"
+      "description": "Cognitive Account"
     },
-    "bot_services": {
-      "category": "ai",
-      "class": "BotServices",
-      "description": "Bot Services"
+    "container_app": {
+      "category": "compute",
+      "class": "ContainerApps",
+      "description": "Container App"
     },
-    "analysis_services": {
-      "category": "analytics",
-      "class": "AnalysisServices",
-      "description": "Analysis Services"
+    "container_group": {
+      "category": "compute",
+      "class": "ContainerInstances",
+      "description": "Container Group"
+    },
+    "container_registry": {
+      "category": "compute",
+      "class": "ContainerRegistries",
+      "description": "Container Registry"
+    },
+    "cosmosdb_account": {
+      "category": "database",
+      "class": "CosmosDb",
+      "description": "Cosmosdb Account"
+    },
+    "cosmosdb_sql_database": {
+      "category": "database",
+      "class": "CosmosDb",
+      "description": "Cosmosdb Sql Database"
     },
     "data_factory": {
-      "category": "analytics",
+      "category": "database",
       "class": "DataFactory",
       "description": "Data Factory"
     },
-    "databricks": {
-      "category": "analytics",
-      "class": "Databricks",
-      "description": "Databricks"
+    "data_lake_gen2_path": {
+      "category": "storage",
+      "class": "DataLakeStorage",
+      "description": "Data Lake Gen2 Path"
     },
-    "hdinsight": {
-      "category": "analytics",
-      "class": "HDInsight",
-      "description": "HDInsight"
+    "data_lake_store": {
+      "category": "storage",
+      "class": "DataLakeStorage",
+      "description": "Data Lake Store"
     },
-    "stream_analytics": {
-      "category": "analytics",
-      "class": "StreamAnalytics",
-      "description": "Stream Analytics"
+    "databricks_workspace": {
+      "category": "compute",
+      "class": "AppServices",
+      "description": "Databricks Workspace"
     },
-    "synapse_analytics": {
-      "category": "analytics",
+    "dns_a_record": {
+      "category": "network",
+      "class": "DNSZones",
+      "description": "Dns A Record"
+    },
+    "dns_cname_record": {
+      "category": "network",
+      "class": "DNSZones",
+      "description": "Dns Cname Record"
+    },
+    "dns_zone": {
+      "category": "network",
+      "class": "DNSZones",
+      "description": "Dns Zone"
+    },
+    "elasticsearch_cluster": {
+      "category": "database",
+      "class": "ElasticJobAgents",
+      "description": "Elasticsearch Cluster"
+    },
+    "event_grid_domain": {
+      "category": "integration",
+      "class": "EventGridDomains",
+      "description": "Event Grid Domain"
+    },
+    "event_grid_event_subscription": {
+      "category": "integration",
+      "class": "EventGridSubscriptions",
+      "description": "Event Grid Event Subscription"
+    },
+    "event_grid_topic": {
+      "category": "integration",
+      "class": "EventGridTopics",
+      "description": "Event Grid Topic"
+    },
+    "eventhub": {
+      "category": "integration",
+      "class": "PartnerNamespace",
+      "description": "Eventhub"
+    },
+    "eventhub_consumer_group": {
+      "category": "integration",
+      "class": "EventGridSubscriptions",
+      "description": "Eventhub Consumer Group"
+    },
+    "eventhub_namespace": {
+      "category": "integration",
+      "class": "PartnerNamespace",
+      "description": "Eventhub Namespace"
+    },
+    "express_route_circuit": {
+      "category": "network",
+      "class": "ExpressrouteCircuits",
+      "description": "Express Route Circuit"
+    },
+    "firewall": {
+      "category": "network",
+      "class": "Firewall",
+      "description": "Firewall"
+    },
+    "firewall_policy": {
+      "category": "network",
+      "class": "Firewall",
+      "description": "Firewall Policy"
+    },
+    "frontdoor": {
+      "category": "network",
+      "class": "FrontDoors",
+      "description": "Frontdoor"
+    },
+    "frontdoor_firewall_policy": {
+      "category": "network",
+      "class": "FrontDoors",
+      "description": "Frontdoor Firewall Policy"
+    },
+    "function_app": {
+      "category": "compute",
+      "class": "FunctionApps",
+      "description": "Function App"
+    },
+    "hdinsight_hadoop_cluster": {
+      "category": "compute",
+      "class": "AppServices",
+      "description": "Hdinsight Hadoop Cluster"
+    },
+    "iothub": {
+      "category": "integration",
+      "class": "APIConnections",
+      "description": "Iothub"
+    },
+    "key_vault": {
+      "category": "security",
+      "class": "KeyVaults",
+      "description": "Key Vault"
+    },
+    "key_vault_certificate": {
+      "category": "security",
+      "class": "KeyVaults",
+      "description": "Key Vault Certificate"
+    },
+    "key_vault_secret": {
+      "category": "security",
+      "class": "KeyVaults",
+      "description": "Key Vault Secret"
+    },
+    "kubernetes_cluster": {
+      "category": "compute",
+      "class": "KubernetesServices",
+      "description": "Kubernetes Cluster"
+    },
+    "lb": {
+      "category": "network",
+      "class": "LoadBalancers",
+      "description": "Lb"
+    },
+    "lb_backend_address_pool": {
+      "category": "network",
+      "class": "LoadBalancers",
+      "description": "Lb Backend Address Pool"
+    },
+    "lb_probe": {
+      "category": "network",
+      "class": "LoadBalancers",
+      "description": "Lb Probe"
+    },
+    "lb_rule": {
+      "category": "network",
+      "class": "LoadBalancers",
+      "description": "Lb Rule"
+    },
+    "linux_function_app": {
+      "category": "compute",
+      "class": "FunctionApps",
+      "description": "Linux Function App"
+    },
+    "linux_virtual_machine": {
+      "category": "compute",
+      "class": "VirtualMachine",
+      "description": "Linux Virtual Machine"
+    },
+    "linux_web_app": {
+      "category": "compute",
+      "class": "AppServices",
+      "description": "Linux Web App"
+    },
+    "local_network_gateway": {
+      "category": "network",
+      "class": "LocalNetworkGateways",
+      "description": "Local Network Gateway"
+    },
+    "log_analytics_workspace": {
+      "category": "compute",
+      "class": "AppServices",
+      "description": "Log Analytics Workspace"
+    },
+    "logic_app_action_http": {
+      "category": "integration",
+      "class": "LogicApps",
+      "description": "Logic App Action Http"
+    },
+    "logic_app_workflow": {
+      "category": "integration",
+      "class": "LogicApps",
+      "description": "Logic App Workflow"
+    },
+    "machine_learning_workspace": {
+      "category": "compute",
+      "class": "AppServices",
+      "description": "Machine Learning Workspace"
+    },
+    "managed_disk": {
+      "category": "compute",
+      "class": "Disks",
+      "description": "Managed Disk"
+    },
+    "mariadb_server": {
+      "category": "database",
+      "class": "DatabaseForMariadbServers",
+      "description": "Mariadb Server"
+    },
+    "monitor_action_group": {
+      "category": "compute",
+      "class": "AppServices",
+      "description": "Monitor Action Group"
+    },
+    "mssql_database": {
+      "category": "database",
+      "class": "SQLDatabases",
+      "description": "Mssql Database"
+    },
+    "mssql_server": {
+      "category": "database",
+      "class": "SQLServers",
+      "description": "Mssql Server"
+    },
+    "mysql_flexible_server": {
+      "category": "database",
+      "class": "DatabaseForMysqlServers",
+      "description": "Mysql Flexible Server"
+    },
+    "mysql_server": {
+      "category": "database",
+      "class": "DatabaseForMysqlServers",
+      "description": "Mysql Server"
+    },
+    "nat_gateway": {
+      "category": "network",
+      "class": "PublicIpAddresses",
+      "description": "Nat Gateway"
+    },
+    "network_interface": {
+      "category": "network",
+      "class": "NetworkInterfaces",
+      "description": "Network Interface"
+    },
+    "network_security_group": {
+      "category": "network",
+      "class": "NetworkSecurityGroupsClassic",
+      "description": "Network Security Group"
+    },
+    "network_security_rule": {
+      "category": "network",
+      "class": "NetworkSecurityGroupsClassic",
+      "description": "Network Security Rule"
+    },
+    "network_watcher": {
+      "category": "network",
+      "class": "NetworkWatcher",
+      "description": "Network Watcher"
+    },
+    "notification_hub_namespace": {
+      "category": "integration",
+      "class": "PartnerNamespace",
+      "description": "Notification Hub Namespace"
+    },
+    "postgresql_flexible_server": {
+      "category": "database",
+      "class": "DatabaseForPostgresqlServers",
+      "description": "Postgresql Flexible Server"
+    },
+    "postgresql_server": {
+      "category": "database",
+      "class": "DatabaseForPostgresqlServers",
+      "description": "Postgresql Server"
+    },
+    "private_dns_zone": {
+      "category": "network",
+      "class": "DNSPrivateZones",
+      "description": "Private Dns Zone"
+    },
+    "private_endpoint": {
+      "category": "network",
+      "class": "PrivateEndpoint",
+      "description": "Private Endpoint"
+    },
+    "public_ip": {
+      "category": "network",
+      "class": "PublicIpAddresses",
+      "description": "Public Ip"
+    },
+    "public_ip_prefix": {
+      "category": "network",
+      "class": "PublicIpAddresses",
+      "description": "Public Ip Prefix"
+    },
+    "recovery_services_vault": {
+      "category": "storage",
+      "class": "RecoveryServicesVaults",
+      "description": "Recovery Services Vault"
+    },
+    "redis_cache": {
+      "category": "database",
+      "class": "CacheForRedis",
+      "description": "Redis Cache"
+    },
+    "role_assignment": {
+      "category": "identity",
+      "class": "ManagedIdentities",
+      "description": "Role Assignment"
+    },
+    "route": {
+      "category": "network",
+      "class": "RouteTables",
+      "description": "Route"
+    },
+    "route_table": {
+      "category": "network",
+      "class": "RouteTables",
+      "description": "Route Table"
+    },
+    "search_service": {
+      "category": "web",
+      "class": "CognitiveSearch",
+      "description": "Search Service"
+    },
+    "service_bus_namespace": {
+      "category": "integration",
+      "class": "ServiceBus",
+      "description": "Service Bus Namespace"
+    },
+    "service_bus_queue": {
+      "category": "integration",
+      "class": "ServiceBus",
+      "description": "Service Bus Queue"
+    },
+    "service_bus_topic": {
+      "category": "integration",
+      "class": "ServiceBus",
+      "description": "Service Bus Topic"
+    },
+    "spring_cloud_service": {
+      "category": "compute",
+      "class": "AzureSpringApps",
+      "description": "Spring Cloud Service"
+    },
+    "sql_database": {
+      "category": "database",
+      "class": "SQLDatabases",
+      "description": "Sql Database"
+    },
+    "sql_managed_instance": {
+      "category": "database",
+      "class": "SQLManagedInstances",
+      "description": "Sql Managed Instance"
+    },
+    "sql_server": {
+      "category": "database",
+      "class": "SQLServers",
+      "description": "Sql Server"
+    },
+    "storage_account": {
+      "category": "storage",
+      "class": "StorageAccounts",
+      "description": "Storage Account"
+    },
+    "storage_blob": {
+      "category": "storage",
+      "class": "BlobStorage",
+      "description": "Storage Blob"
+    },
+    "storage_container": {
+      "category": "storage",
+      "class": "BlobStorage",
+      "description": "Storage Container"
+    },
+    "storage_queue": {
+      "category": "storage",
+      "class": "QueuesStorage",
+      "description": "Storage Queue"
+    },
+    "storage_share": {
+      "category": "storage",
+      "class": "AzureFileshares",
+      "description": "Storage Share"
+    },
+    "storage_table": {
+      "category": "storage",
+      "class": "TableStorage",
+      "description": "Storage Table"
+    },
+    "stream_analytics_job": {
+      "category": "database",
       "class": "SynapseAnalytics",
-      "description": "Synapse Analytics"
+      "description": "Stream Analytics Job"
     },
-    "notification_hubs": {
-      "category": "mobile",
-      "class": "NotificationHubs",
-      "description": "Notification Hubs"
+    "subnet": {
+      "category": "network",
+      "class": "Subnets",
+      "description": "Subnet"
     },
-    "mobile_engagement": {
-      "category": "mobile",
-      "class": "MobileEngagement",
-      "description": "Mobile Engagement"
+    "synapse_sql_pool": {
+      "category": "database",
+      "class": "SynapseAnalytics",
+      "description": "Synapse Sql Pool"
+    },
+    "synapse_workspace": {
+      "category": "database",
+      "class": "SynapseAnalytics",
+      "description": "Synapse Workspace"
+    },
+    "traffic_manager_endpoint": {
+      "category": "network",
+      "class": "TrafficManagerProfiles",
+      "description": "Traffic Manager Endpoint"
+    },
+    "traffic_manager_profile": {
+      "category": "network",
+      "class": "TrafficManagerProfiles",
+      "description": "Traffic Manager Profile"
+    },
+    "user_assigned_identity": {
+      "category": "identity",
+      "class": "ManagedIdentities",
+      "description": "User Assigned Identity"
+    },
+    "virtual_machine": {
+      "category": "compute",
+      "class": "VirtualMachine",
+      "description": "Virtual Machine"
+    },
+    "virtual_machine_scale_set": {
+      "category": "compute",
+      "class": "VMScaleSet",
+      "description": "Virtual Machine Scale Set"
+    },
+    "virtual_network": {
+      "category": "network",
+      "class": "VirtualNetworks",
+      "description": "Virtual Network"
+    },
+    "virtual_network_gateway": {
+      "category": "network",
+      "class": "VirtualNetworkGateways",
+      "description": "Virtual Network Gateway"
+    },
+    "virtual_network_peering": {
+      "category": "network",
+      "class": "VirtualNetworks",
+      "description": "Virtual Network Peering"
+    },
+    "web_application_firewall_policy": {
+      "category": "network",
+      "class": "ApplicationGateway",
+      "description": "Web Application Firewall Policy"
+    },
+    "windows_function_app": {
+      "category": "compute",
+      "class": "FunctionApps",
+      "description": "Windows Function App"
+    },
+    "windows_virtual_machine": {
+      "category": "compute",
+      "class": "VirtualMachine",
+      "description": "Windows Virtual Machine"
+    },
+    "windows_web_app": {
+      "category": "compute",
+      "class": "AppServices",
+      "description": "Windows Web App"
     }
   },
   "gcp": {
-    "compute_instance": {
-      "category": "compute",
-      "class": "ComputeEngine",
-      "description": "Compute Engine"
+    "alloydb_cluster": {
+      "category": "database",
+      "class": "SQL",
+      "description": "Alloydb Cluster"
     },
-    "container_cluster": {
-      "category": "compute",
-      "class": "GKE",
-      "description": "Google Kubernetes Engine"
+    "alloydb_instance": {
+      "category": "database",
+      "class": "SQL",
+      "description": "Alloydb Instance"
     },
-    "cloud_run_service": {
-      "category": "compute",
-      "class": "CloudRun",
-      "description": "Cloud Run"
-    },
-    "cloud_functions_function": {
-      "category": "compute",
-      "class": "CloudFunctions",
-      "description": "Cloud Functions"
+    "apigee_organization": {
+      "category": "devtools",
+      "class": "SDK",
+      "description": "Apigee Organization"
     },
     "app_engine_application": {
       "category": "compute",
       "class": "AppEngine",
-      "description": "App Engine"
+      "description": "App Engine Application"
     },
-    "storage_bucket": {
-      "category": "storage",
-      "class": "CloudStorage",
-      "description": "Cloud Storage"
+    "app_engine_service": {
+      "category": "compute",
+      "class": "AppEngine",
+      "description": "App Engine Service"
     },
-    "filestore_instance": {
-      "category": "storage",
-      "class": "Filestore",
-      "description": "Filestore"
+    "app_engine_standard_app_version": {
+      "category": "compute",
+      "class": "AppEngine",
+      "description": "App Engine Standard App Version"
     },
-    "persistent_disk": {
-      "category": "storage",
-      "class": "PersistentDisk",
-      "description": "Persistent Disk"
+    "artifact_registry_repository": {
+      "category": "devtools",
+      "class": "ContainerRegistry",
+      "description": "Artifact Registry Repository"
     },
-    "sql_database_instance": {
-      "category": "database",
-      "class": "CloudSQL",
-      "description": "Cloud SQL"
+    "bigquery_data_transfer_config": {
+      "category": "analytics",
+      "class": "Bigquery",
+      "description": "Bigquery Data Transfer Config"
+    },
+    "bigquery_dataset": {
+      "category": "analytics",
+      "class": "Bigquery",
+      "description": "Bigquery Dataset"
+    },
+    "bigquery_job": {
+      "category": "analytics",
+      "class": "Bigquery",
+      "description": "Bigquery Job"
+    },
+    "bigquery_table": {
+      "category": "analytics",
+      "class": "Bigquery",
+      "description": "Bigquery Table"
     },
     "bigtable_instance": {
       "category": "database",
       "class": "Bigtable",
-      "description": "Bigtable"
+      "description": "Bigtable Instance"
     },
-    "spanner_instance": {
+    "bigtable_table": {
       "category": "database",
-      "class": "Spanner",
-      "description": "Spanner"
+      "class": "Bigtable",
+      "description": "Bigtable Table"
     },
-    "firestore_database": {
-      "category": "database",
-      "class": "Firestore",
-      "description": "Firestore"
+    "cloud_run_domain_mapping": {
+      "category": "network",
+      "class": "DNS",
+      "description": "Cloud Run Domain Mapping"
     },
-    "memorystore_instance": {
-      "category": "database",
-      "class": "Memorystore",
-      "description": "Memorystore"
+    "cloud_run_service": {
+      "category": "compute",
+      "class": "Run",
+      "description": "Cloud Run Service"
     },
-    "pubsub_topic": {
-      "category": "integration",
-      "class": "PubSub",
-      "description": "Pub/Sub"
+    "cloud_run_v2_job": {
+      "category": "compute",
+      "class": "Run",
+      "description": "Cloud Run V2 Job"
     },
-    "pubsub_subscription": {
-      "category": "integration",
-      "class": "PubSub",
-      "description": "Pub/Sub"
-    },
-    "cloud_tasks_queue": {
-      "category": "integration",
-      "class": "CloudTasks",
-      "description": "Cloud Tasks"
+    "cloud_run_v2_service": {
+      "category": "compute",
+      "class": "Run",
+      "description": "Cloud Run V2 Service"
     },
     "cloud_scheduler_job": {
-      "category": "integration",
-      "class": "CloudScheduler",
-      "description": "Cloud Scheduler"
+      "category": "devtools",
+      "class": "Scheduler",
+      "description": "Cloud Scheduler Job"
     },
-    "eventarc_trigger": {
-      "category": "integration",
-      "class": "Eventarc",
-      "description": "Eventarc"
+    "cloud_tasks_queue": {
+      "category": "devtools",
+      "class": "Tasks",
+      "description": "Cloud Tasks Queue"
     },
-    "apigee_organization": {
-      "category": "integration",
-      "class": "Apigee",
-      "description": "Apigee"
+    "cloudbuild_trigger": {
+      "category": "devtools",
+      "class": "Build",
+      "description": "Cloudbuild Trigger"
     },
-    "compute_network": {
-      "category": "network",
-      "class": "VPC",
-      "description": "Virtual Private Cloud"
+    "cloudfunctions2_function": {
+      "category": "compute",
+      "class": "Functions",
+      "description": "Cloudfunctions2 Function"
     },
-    "compute_subnetwork": {
-      "category": "network",
-      "class": "VPC",
-      "description": "Subnetwork"
-    },
-    "compute_router": {
-      "category": "network",
-      "class": "CloudRouter",
-      "description": "Cloud Router"
-    },
-    "compute_vpn_gateway": {
-      "category": "network",
-      "class": "CloudVPN",
-      "description": "Cloud VPN"
-    },
-    "cloud_load_balancing": {
-      "category": "network",
-      "class": "CloudLoadBalancing",
-      "description": "Cloud Load Balancing"
-    },
-    "cloud_cdn": {
-      "category": "network",
-      "class": "CloudCDN",
-      "description": "Cloud CDN"
-    },
-    "cloud_armor": {
-      "category": "network",
-      "class": "CloudArmor",
-      "description": "Cloud Armor"
-    },
-    "cloud_dns": {
-      "category": "network",
-      "class": "CloudDNS",
-      "description": "Cloud DNS"
-    },
-    "iam_service_account": {
-      "category": "security",
-      "class": "IAM",
-      "description": "Identity & Access Management"
-    },
-    "kms_key_ring": {
-      "category": "security",
-      "class": "KMS",
-      "description": "Key Management Service"
-    },
-    "secret_manager_secret": {
-      "category": "security",
-      "class": "SecretManager",
-      "description": "Secret Manager"
-    },
-    "security_center_source": {
-      "category": "security",
-      "class": "SecurityCommandCenter",
-      "description": "Security Command Center"
-    },
-    "monitoring_uptime_check_config": {
-      "category": "management",
-      "class": "CloudMonitoring",
-      "description": "Cloud Monitoring"
-    },
-    "logging_project_sink": {
-      "category": "management",
-      "class": "CloudLogging",
-      "description": "Cloud Logging"
-    },
-    "error_reporting_error_group": {
-      "category": "management",
-      "class": "ErrorReporting",
-      "description": "Error Reporting"
-    },
-    "cloud_asset_project_feed": {
-      "category": "management",
-      "class": "CloudAsset",
-      "description": "Cloud Asset Inventory"
-    },
-    "bigquery_dataset": {
-      "category": "analytics",
-      "class": "BigQuery",
-      "description": "BigQuery"
-    },
-    "bigquery_table": {
-      "category": "analytics",
-      "class": "BigQuery",
-      "description": "BigQuery"
-    },
-    "dataflow_job": {
-      "category": "analytics",
-      "class": "Dataflow",
-      "description": "Dataflow"
-    },
-    "dataproc_cluster": {
-      "category": "analytics",
-      "class": "Dataproc",
-      "description": "Dataproc"
+    "cloudfunctions_function": {
+      "category": "compute",
+      "class": "Functions",
+      "description": "Cloudfunctions Function"
     },
     "composer_environment": {
       "category": "analytics",
       "class": "Composer",
-      "description": "Cloud Composer"
+      "description": "Composer Environment"
+    },
+    "compute_address": {
+      "category": "network",
+      "class": "ExternalIpAddresses",
+      "description": "Compute Address"
+    },
+    "compute_autoscaler": {
+      "category": "compute",
+      "class": "ComputeEngine",
+      "description": "Compute Autoscaler"
+    },
+    "compute_backend_bucket": {
+      "category": "storage",
+      "class": "GCS",
+      "description": "Compute Backend Bucket"
+    },
+    "compute_backend_service": {
+      "category": "network",
+      "class": "LoadBalancing",
+      "description": "Compute Backend Service"
+    },
+    "compute_disk": {
+      "category": "storage",
+      "class": "PersistentDisk",
+      "description": "Compute Disk"
+    },
+    "compute_firewall": {
+      "category": "network",
+      "class": "FirewallRules",
+      "description": "Compute Firewall"
+    },
+    "compute_forwarding_rule": {
+      "category": "network",
+      "class": "LoadBalancing",
+      "description": "Compute Forwarding Rule"
+    },
+    "compute_global_address": {
+      "category": "network",
+      "class": "ExternalIpAddresses",
+      "description": "Compute Global Address"
+    },
+    "compute_global_forwarding_rule": {
+      "category": "network",
+      "class": "LoadBalancing",
+      "description": "Compute Global Forwarding Rule"
+    },
+    "compute_http_health_check": {
+      "category": "network",
+      "class": "LoadBalancing",
+      "description": "Compute Http Health Check"
+    },
+    "compute_https_health_check": {
+      "category": "network",
+      "class": "LoadBalancing",
+      "description": "Compute Https Health Check"
+    },
+    "compute_instance": {
+      "category": "compute",
+      "class": "ComputeEngine",
+      "description": "Compute Instance"
+    },
+    "compute_instance_group": {
+      "category": "compute",
+      "class": "ComputeEngine",
+      "description": "Compute Instance Group"
+    },
+    "compute_instance_group_manager": {
+      "category": "compute",
+      "class": "ComputeEngine",
+      "description": "Compute Instance Group Manager"
+    },
+    "compute_instance_template": {
+      "category": "compute",
+      "class": "ComputeEngine",
+      "description": "Compute Instance Template"
+    },
+    "compute_interconnect_attachment": {
+      "category": "network",
+      "class": "DedicatedInterconnect",
+      "description": "Compute Interconnect Attachment"
+    },
+    "compute_nat": {
+      "category": "network",
+      "class": "NAT",
+      "description": "Compute Nat"
+    },
+    "compute_network": {
+      "category": "network",
+      "class": "VirtualPrivateCloud",
+      "description": "Compute Network"
+    },
+    "compute_router": {
+      "category": "network",
+      "class": "Router",
+      "description": "Compute Router"
+    },
+    "compute_security_policy": {
+      "category": "network",
+      "class": "Armor",
+      "description": "Compute Security Policy"
+    },
+    "compute_snapshot": {
+      "category": "storage",
+      "class": "PersistentDisk",
+      "description": "Compute Snapshot"
+    },
+    "compute_ssl_certificate": {
+      "category": "network",
+      "class": "NetworkSecurity",
+      "description": "Compute Ssl Certificate"
+    },
+    "compute_subnetwork": {
+      "category": "network",
+      "class": "VPC",
+      "description": "Compute Subnetwork"
+    },
+    "compute_target_https_proxy": {
+      "category": "network",
+      "class": "LoadBalancing",
+      "description": "Compute Target Https Proxy"
+    },
+    "compute_url_map": {
+      "category": "network",
+      "class": "LoadBalancing",
+      "description": "Compute Url Map"
+    },
+    "compute_vpn_gateway": {
+      "category": "network",
+      "class": "VPN",
+      "description": "Compute Vpn Gateway"
+    },
+    "compute_vpn_tunnel": {
+      "category": "network",
+      "class": "VPN",
+      "description": "Compute Vpn Tunnel"
+    },
+    "container_cluster": {
+      "category": "compute",
+      "class": "GKE",
+      "description": "Container Cluster"
+    },
+    "container_node_pool": {
+      "category": "compute",
+      "class": "GKE",
+      "description": "Container Node Pool"
+    },
+    "container_registry": {
+      "category": "devtools",
+      "class": "ContainerRegistry",
+      "description": "Container Registry"
+    },
+    "data_catalog_entry_group": {
+      "category": "analytics",
+      "class": "DataCatalog",
+      "description": "Data Catalog Entry Group"
+    },
+    "dataflow_flex_template_job": {
+      "category": "analytics",
+      "class": "Dataflow",
+      "description": "Dataflow Flex Template Job"
+    },
+    "dataflow_job": {
+      "category": "analytics",
+      "class": "Dataflow",
+      "description": "Dataflow Job"
+    },
+    "datafusion_instance": {
+      "category": "analytics",
+      "class": "DataFusion",
+      "description": "Datafusion Instance"
+    },
+    "dataproc_cluster": {
+      "category": "analytics",
+      "class": "Dataproc",
+      "description": "Dataproc Cluster"
+    },
+    "dataproc_job": {
+      "category": "analytics",
+      "class": "Dataproc",
+      "description": "Dataproc Job"
+    },
+    "datastore_index": {
+      "category": "database",
+      "class": "Datastore",
+      "description": "Datastore Index"
+    },
+    "dialogflow_agent": {
+      "category": "ml",
+      "class": "AIPlatform",
+      "description": "Dialogflow Agent"
+    },
+    "dialogflow_cx_agent": {
+      "category": "ml",
+      "class": "AIPlatform",
+      "description": "Dialogflow Cx Agent"
+    },
+    "dns_managed_zone": {
+      "category": "network",
+      "class": "DNS",
+      "description": "Dns Managed Zone"
+    },
+    "dns_record_set": {
+      "category": "network",
+      "class": "DNS",
+      "description": "Dns Record Set"
+    },
+    "endpoints_service": {
+      "category": "devtools",
+      "class": "SDK",
+      "description": "Endpoints Service"
+    },
+    "eventarc_trigger": {
+      "category": "devtools",
+      "class": "Build",
+      "description": "Eventarc Trigger"
+    },
+    "filestore_instance": {
+      "category": "storage",
+      "class": "Filestore",
+      "description": "Filestore Instance"
+    },
+    "filestore_snapshot": {
+      "category": "storage",
+      "class": "Filestore",
+      "description": "Filestore Snapshot"
+    },
+    "firestore_database": {
+      "category": "database",
+      "class": "Firestore",
+      "description": "Firestore Database"
+    },
+    "firestore_document": {
+      "category": "database",
+      "class": "Firestore",
+      "description": "Firestore Document"
+    },
+    "iam_member": {
+      "category": "network",
+      "class": "VirtualPrivateCloud",
+      "description": "Iam Member"
+    },
+    "iam_service_account": {
+      "category": "network",
+      "class": "VirtualPrivateCloud",
+      "description": "Iam Service Account"
+    },
+    "kms_crypto_key": {
+      "category": "devtools",
+      "class": "SDK",
+      "description": "Kms Crypto Key"
+    },
+    "kms_key_ring": {
+      "category": "devtools",
+      "class": "SDK",
+      "description": "Kms Key Ring"
     },
     "looker_instance": {
       "category": "analytics",
       "class": "Looker",
-      "description": "Looker"
+      "description": "Looker Instance"
+    },
+    "ml_engine_model": {
+      "category": "ml",
+      "class": "AIPlatform",
+      "description": "Ml Engine Model"
+    },
+    "network_services_edge_cache_service": {
+      "category": "network",
+      "class": "CDN",
+      "description": "Network Services Edge Cache Service"
+    },
+    "project": {
+      "category": "compute",
+      "class": "ComputeEngine",
+      "description": "Project"
+    },
+    "pubsub_schema": {
+      "category": "analytics",
+      "class": "PubSub",
+      "description": "Pubsub Schema"
+    },
+    "pubsub_subscription": {
+      "category": "analytics",
+      "class": "PubSub",
+      "description": "Pubsub Subscription"
+    },
+    "pubsub_topic": {
+      "category": "analytics",
+      "class": "PubSub",
+      "description": "Pubsub Topic"
+    },
+    "redis_instance": {
+      "category": "database",
+      "class": "Memorystore",
+      "description": "Redis Instance"
+    },
+    "secret_manager_secret": {
+      "category": "devtools",
+      "class": "SDK",
+      "description": "Secret Manager Secret"
+    },
+    "sourcerepo_repository": {
+      "category": "devtools",
+      "class": "SourceRepositories",
+      "description": "Sourcerepo Repository"
+    },
+    "spanner_database": {
+      "category": "database",
+      "class": "Spanner",
+      "description": "Spanner Database"
+    },
+    "spanner_instance": {
+      "category": "database",
+      "class": "Spanner",
+      "description": "Spanner Instance"
+    },
+    "sql_database": {
+      "category": "database",
+      "class": "SQL",
+      "description": "Sql Database"
+    },
+    "sql_database_instance": {
+      "category": "database",
+      "class": "SQL",
+      "description": "Sql Database Instance"
+    },
+    "sql_user": {
+      "category": "database",
+      "class": "SQL",
+      "description": "Sql User"
+    },
+    "storage_bucket": {
+      "category": "storage",
+      "class": "GCS",
+      "description": "Storage Bucket"
+    },
+    "storage_bucket_object": {
+      "category": "storage",
+      "class": "GCS",
+      "description": "Storage Bucket Object"
+    },
+    "vertex_ai_dataset": {
+      "category": "ml",
+      "class": "VertexAI",
+      "description": "Vertex Ai Dataset"
     },
     "vertex_ai_endpoint": {
-      "category": "analytics",
+      "category": "ml",
       "class": "VertexAI",
-      "description": "Vertex AI"
+      "description": "Vertex Ai Endpoint"
     },
-    "aihypercomputer_instance": {
-      "category": "ai",
-      "class": "AIHypercomputer",
-      "description": "AI Hypercomputer"
-    },
-    "alloydb_instance": {
-      "category": "database",
-      "class": "AlloyDB",
-      "description": "AlloyDB"
-    },
-    "anthos_cluster": {
-      "category": "compute",
-      "class": "Anthos",
-      "description": "Anthos"
-    },
-    "hyperdisk_instance": {
-      "category": "storage",
-      "class": "Hyperdisk",
-      "description": "Hyperdisk",
-      "compute_security_policy": {
-        "category": "network",
-        "class": "CloudArmor",
-        "description": "Cloud Armor Security Policy"
-      },
-      "compute_backend_bucket": {
-        "category": "storage",
-        "class": "CloudStorage",
-        "description": "Backend Bucket for CDN"
-      },
-      "compute_url_map": {
-        "category": "network",
-        "class": "URLMap",
-        "description": "URL Map for Load Balancing"
-      },
-      "compute_target_https_proxy": {
-        "category": "network",
-        "class": "TargetHttpsProxy",
-        "description": "Target HTTPS Proxy"
-      },
-      "compute_global_forwarding_rule": {
-        "category": "network",
-        "class": "GlobalForwardingRule",
-        "description": "Global Forwarding Rule"
-      },
-      "compute_managed_ssl_certificate": {
-        "category": "security",
-        "class": "SSLCertificate",
-        "description": "Managed SSL Certificate"
-      }
+    "vertex_ai_model": {
+      "category": "ml",
+      "class": "VertexAI",
+      "description": "Vertex Ai Model"
     }
-  }
+  },
+  "ibm": {},
+  "oci": {}
 }
