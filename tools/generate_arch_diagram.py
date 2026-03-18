@@ -1696,15 +1696,47 @@ def _get_edge_style_attrs(edge_type: str, render: RenderConfig) -> dict[str, str
 def _is_vpc_or_network(resource_type: str) -> bool:
     """Check if a resource is a VPC/VNet/Network container."""
     t = resource_type.lower()
-    # Check if it's a VPC/VNet/Network AND not a subnet or interface
-    is_network = any(k in t for k in ["vpc", "vnet", "vcn", "virtual_network"])
-    is_not_subnet = "subnet" not in t and "interface" not in t
-    return is_network and is_not_subnet
+    tokens = set(t.split("_"))
+
+    # Explicit network container patterns across providers.
+    explicit_container_patterns = (
+        "vpc",
+        "vnet",
+        "vcn",
+        "virtual_network",
+        "compute_network",
+    )
+    if any(pattern in t for pattern in explicit_container_patterns):
+        return "subnet" not in t and "subnetwork" not in t
+
+    # Generic "network" token can represent a container, but exclude common non-container resources.
+    if "network" not in tokens:
+        return False
+    if "subnet" in tokens or "subnetwork" in tokens:
+        return False
+
+    non_container_tokens = {
+        "interface",
+        "interfaces",
+        "acl",
+        "firewall",
+        "gateway",
+        "security",
+        "watcher",
+        "rule",
+        "profile",
+        "endpoint",
+        "load",
+        "balancer",
+        "policy",
+    }
+    return not any(token in tokens for token in non_container_tokens)
 
 
 def _is_subnet(resource_type: str) -> bool:
     """Check if a resource is a subnet."""
-    return "subnet" in resource_type.lower()
+    t = resource_type.lower()
+    return "subnet" in t or "subnetwork" in t
 
 
 def _is_public_subnet(resource_name: str, resource_attrs: dict[str, Any]) -> bool:
@@ -1741,9 +1773,9 @@ def _build_vpc_hierarchy(
         elif _is_subnet(r_type):
             subnets[res_name] = res_attrs
 
-    # Build subnet-to-VPC mapping from edges
+    # Build subnet-to-VPC mapping from edges (sorted for deterministic output)
     subnet_to_vpc: dict[str, str] = {}
-    for src, dst in edges:
+    for src, dst in sorted(edges):
         if src in vpcs and dst in subnets:
             subnet_to_vpc[dst] = src
         elif dst in vpcs and src in subnets:
@@ -1756,7 +1788,7 @@ def _build_vpc_hierarchy(
         if isinstance(subnet_attrs, dict):
             # Check for vpc_id reference
             vpc_ref = None
-            for key in ["vpc_id", "virtual_network_name", "vcn_id"]:
+            for key in ["vpc_id", "virtual_network_name", "vcn_id", "network"]:
                 if key in subnet_attrs:
                     ref_val = subnet_attrs[key]
                     if isinstance(ref_val, str):
@@ -1769,31 +1801,44 @@ def _build_vpc_hierarchy(
             if vpc_ref:
                 subnet_to_vpc[subnet_name] = vpc_ref
 
-    # Build resource-to-subnet mapping
-    resource_to_subnet: dict[str, str] = {}
-    for src, dst in edges:
+    # Build resource-to-subnet attachments from graph + attributes.
+    # Resources attached to multiple subnets in the same VPC are lifted to VPC-level.
+    resource_to_subnets: dict[str, set[str]] = {}
+    for src, dst in sorted(edges):
         if src in subnets and dst not in vpcs and dst not in subnets:
-            resource_to_subnet[dst] = src
+            resource_to_subnets.setdefault(dst, set()).add(src)
         elif dst in subnets and src not in vpcs and src not in subnets:
-            resource_to_subnet[src] = dst
+            resource_to_subnets.setdefault(src, set()).add(dst)
 
     # Check resource attributes for subnet references
     for res_name, res_attrs in all_resources.items():
         if res_name in vpcs or res_name in subnets:
             continue
-        if res_name in resource_to_subnet:
-            continue
         if isinstance(res_attrs, dict):
-            subnet_ref = None
-            for key in ["subnet_id", "subnet_ids", "subnet", "subnets"]:
+            for key in ["subnet_id", "subnet_ids", "subnet", "subnets", "subnetwork"]:
                 if key in res_attrs:
                     refs = _extract_tf_resource_refs(res_attrs[key])
                     for ref in refs:
                         if ref in subnets:
-                            subnet_ref = ref
-                            break
-            if subnet_ref:
-                resource_to_subnet[res_name] = subnet_ref
+                            resource_to_subnets.setdefault(res_name, set()).add(ref)
+
+    # Derive final placements.
+    resource_to_subnet: dict[str, str] = {}
+    vpc_multi_subnet_resources: dict[str, set[str]] = {}
+    for res_name, attached_subnets_set in sorted(resource_to_subnets.items()):
+        attached_subnets = sorted(attached_subnets_set)
+        if len(attached_subnets) == 1:
+            resource_to_subnet[res_name] = attached_subnets[0]
+            continue
+        if len(attached_subnets) > 1:
+            parent_vpcs = {
+                subnet_to_vpc[subnet_name]
+                for subnet_name in attached_subnets
+                if subnet_name in subnet_to_vpc
+            }
+            if len(parent_vpcs) == 1:
+                vpc_name = next(iter(parent_vpcs))
+                vpc_multi_subnet_resources.setdefault(vpc_name, set()).add(res_name)
 
     # Build the hierarchy
     for vpc_name in vpcs:
@@ -1803,19 +1848,27 @@ def _build_vpc_hierarchy(
             if parent_vpc == vpc_name:
                 vpc_hierarchy[vpc_name][subnet_name] = []
                 # Find resources in this subnet
-                for res_name, parent_subnet in resource_to_subnet.items():
+                for res_name, parent_subnet in sorted(resource_to_subnet.items()):
                     if parent_subnet == subnet_name:
                         vpc_hierarchy[vpc_name][subnet_name].append(res_name)
 
         # Add "other" category for VPC-level resources not in subnets
-        other_resources = []
-        for src, dst in edges:
+        other_resources: list[str] = []
+        seen_other: set[str] = set()
+
+        for res_name in sorted(vpc_multi_subnet_resources.get(vpc_name, set())):
+            other_resources.append(res_name)
+            seen_other.add(res_name)
+
+        for src, dst in sorted(edges):
             if src == vpc_name and dst not in subnets and dst not in vpcs:
-                if dst not in resource_to_subnet:
+                if dst not in resource_to_subnet and dst not in seen_other:
                     other_resources.append(dst)
+                    seen_other.add(dst)
             elif dst == vpc_name and src not in subnets and src not in vpcs:
-                if src not in resource_to_subnet:
+                if src not in resource_to_subnet and src not in seen_other:
                     other_resources.append(src)
+                    seen_other.add(src)
         if other_resources:
             vpc_hierarchy[vpc_name]["other"] = other_resources
 
