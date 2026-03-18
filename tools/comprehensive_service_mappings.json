@@ -1884,6 +1884,16 @@
       "class": "AppEngine",
       "description": "App Engine Standard App Version"
     },
+    "ai_platform_notebook": {
+      "category": "ml",
+      "class": "AIPlatform",
+      "description": "Ai Platform Notebook"
+    },
+    "automl_model": {
+      "category": "ml",
+      "class": "AutoML",
+      "description": "Automl Model"
+    },
     "artifact_registry_repository": {
       "category": "devtools",
       "class": "ContainerRegistry",
@@ -2023,6 +2033,11 @@
       "category": "network",
       "class": "LoadBalancing",
       "description": "Compute Https Health Check"
+    },
+    "compute_managed_ssl_certificate": {
+      "category": "security",
+      "class": "CertificateManager",
+      "description": "Compute Managed Ssl Certificate"
     },
     "compute_instance": {
       "category": "compute",
@@ -2308,6 +2323,16 @@
       "category": "storage",
       "class": "GCS",
       "description": "Storage Bucket Object"
+    },
+    "video_intelligence_annotation": {
+      "category": "ml",
+      "class": "VideoIntelligenceAPI",
+      "description": "Video Intelligence Annotation"
+    },
+    "vision_product_set": {
+      "category": "ml",
+      "class": "VisionAPI",
+      "description": "Vision Product Set"
     },
     "vertex_ai_dataset": {
       "category": "ml",
