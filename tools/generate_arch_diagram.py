@@ -2047,6 +2047,109 @@ def _build_compute_subclusters(
     return parent_child
 
 
+_REGION_PATTERN = re.compile(r"\b[a-z]{2}(?:-[a-z]+)+-\d\b", re.IGNORECASE)
+
+
+def _extract_region_from_value(value: Any) -> Optional[str]:
+    """Extract cloud region token from free-form Terraform values."""
+    if isinstance(value, str):
+        match = _REGION_PATTERN.search(value)
+        return match.group(0).lower() if match else None
+
+    if isinstance(value, list):
+        for item in value:
+            region = _extract_region_from_value(item)
+            if region:
+                return region
+        return None
+
+    if isinstance(value, dict):
+        for nested_value in value.values():
+            region = _extract_region_from_value(nested_value)
+            if region:
+                return region
+        return None
+
+    return None
+
+
+def _infer_resource_regions(
+    all_resources: dict[str, dict[str, Any]],
+    edges: set[tuple[str, str]],
+) -> dict[str, str]:
+    """Infer resource-to-region assignments for multi-region diagram grouping."""
+    resource_regions: dict[str, str] = {}
+
+    for res_name, res_attrs in all_resources.items():
+        if not isinstance(res_attrs, dict):
+            continue
+
+        region: Optional[str] = None
+
+        provider_hint = res_attrs.get("provider")
+        if provider_hint is not None:
+            region = _extract_region_from_value(provider_hint)
+
+        if not region:
+            for key in (
+                "region",
+                "location",
+                "peer_region",
+                "secondary_region",
+                "destination_region",
+            ):
+                if key in res_attrs:
+                    region = _extract_region_from_value(res_attrs[key])
+                    if region:
+                        break
+
+        if not region:
+            tags = res_attrs.get("tags")
+            if isinstance(tags, dict):
+                for tag_key in ("Region", "region", "Location", "location"):
+                    if tag_key in tags:
+                        region = _extract_region_from_value(tags[tag_key])
+                        if region:
+                            break
+
+        if region:
+            resource_regions[res_name] = region
+
+    changed = True
+    while changed:
+        changed = False
+        for src, dst in sorted(edges):
+            src_region = resource_regions.get(src)
+            dst_region = resource_regions.get(dst)
+            if src_region and not dst_region:
+                resource_regions[dst] = src_region
+                changed = True
+            elif dst_region and not src_region:
+                resource_regions[src] = dst_region
+                changed = True
+
+    return resource_regions
+
+
+def _build_region_hierarchy(
+    all_resources: dict[str, dict[str, Any]],
+    edges: set[tuple[str, str]],
+) -> dict[str, list[str]]:
+    """Build region-to-resources mapping used for multi-region rendering."""
+    resource_regions = _infer_resource_regions(all_resources, edges)
+    if not resource_regions:
+        return {}
+
+    grouped: dict[str, list[str]] = {}
+    for res_name in sorted(all_resources.keys()):
+        region = resource_regions.get(res_name)
+        if region:
+            grouped.setdefault(region, []).append(res_name)
+
+    # Activate region clusters only when there are multiple distinct regions.
+    return grouped if len(grouped) >= 2 else {}
+
+
 def _build_subgraph_render_map(
     all_resources: dict[str, dict[str, Any]],
     edges: set[tuple[str, str]],
@@ -3099,6 +3202,11 @@ def _render_icon_diagram_from_terraform(
         "aws_cloudwatch_dashboard": ("diagrams.aws.management", "Cloudwatch"),
     }
 
+    region_hierarchy = _build_region_hierarchy(all_resources, edges)
+
+    # Multi-region diagrams are easier to read in provider-first layout.
+    effective_layout = "providers" if region_hierarchy else layout
+
     vpc_hierarchy, compute_subclusters, compute_children, resources_in_vpcs = (
         _build_subgraph_render_map(all_resources, edges)
     )
@@ -3189,117 +3297,197 @@ def _render_icon_diagram_from_terraform(
             else:
                 node_by_res[res] = _create_node_with_xlabel(Icon, _tf_node_label(res))
 
-        if layout == "providers":
-            # Provider-first: AWS/Azure/GCP/... with category sub-clusters and VPC grouping.
-            for provider, categories in sorted(grouped_providers.items()):
-                cluster_color = _get_cluster_color(provider, render)
-                with render_provider_cluster(provider, cluster_color, penwidth="1.5"):
-                    # First render VPC hierarchies for this provider
-                    provider_vpcs = {
-                        vpc: data
-                        for vpc, data in vpc_hierarchy.items()
-                        if _guess_provider(vpc.split(".", 1)[0]) == provider
+        if effective_layout == "providers":
+            def _render_provider_contents(
+                provider: str,
+                categories: dict[str, list[str]],
+                allowed_resources: Optional[set[str]] = None,
+            ) -> None:
+                provider_vpcs = {
+                    vpc: data
+                    for vpc, data in vpc_hierarchy.items()
+                    if _guess_provider(vpc.split(".", 1)[0]) == provider
+                    and (
+                        allowed_resources is None
+                        or vpc in allowed_resources
+                        or any(
+                            subnet_name in allowed_resources
+                            or any(child in allowed_resources for child in subnet_children)
+                            for subnet_name, subnet_children in data.items()
+                        )
+                    )
+                }
+
+                for vpc_name, subnets_dict in sorted(provider_vpcs.items()):
+                    vpc_label = _tf_node_label(vpc_name)
+                    vpc_attrs = {
+                        "bgcolor": render.color_vpc,
+                        "style": "rounded,filled",
+                        "penwidth": "2.0",
+                        "color": "#5DADE2",  # AWS VPC blue border
+                        "fontsize": "11",
+                        "fontname": "Helvetica-Bold",
                     }
+                    with Cluster(vpc_label, graph_attr=vpc_attrs):
+                        r_type, _name = vpc_name.split(".", 1)
+                        icon_override = None
+                        tags = all_resources.get(vpc_name, {}).get("tags", {})
+                        if isinstance(tags, dict) and "Icon" in tags:
+                            icon_override = tags["Icon"]
+                        if not icon_override and "icon" in all_resources.get(
+                            vpc_name, {}
+                        ):
+                            icon_override = all_resources[vpc_name]["icon"]
+                        if icon_override:
+                            globals()["_CURRENT_ICON_OVERRIDE"] = icon_override
+                        Icon = _icon_class_for(r_type) or _generic_icon_for_kind(
+                            "network"
+                        )
+                        if "_CURRENT_ICON_OVERRIDE" in globals():
+                            del globals()["_CURRENT_ICON_OVERRIDE"]
+                        node_by_res[vpc_name] = _create_node_with_xlabel(
+                            Icon, _tf_node_label(vpc_name)
+                        )
 
-                    for vpc_name, subnets_dict in sorted(provider_vpcs.items()):
-                        vpc_label = _tf_node_label(vpc_name)
-                        vpc_attrs = {
-                            "bgcolor": render.color_vpc,
-                            "style": "rounded,filled",
-                            "penwidth": "2.0",
-                            "color": "#5DADE2",  # AWS VPC blue border
-                            "fontsize": "11",
-                            "fontname": "Helvetica-Bold",
-                        }
-                        with Cluster(vpc_label, graph_attr=vpc_attrs):
-                            r_type, _name = vpc_name.split(".", 1)
-                            # Custom icon override logic
-                            icon_override = None
-                            tags = all_resources.get(vpc_name, {}).get("tags", {})
-                            if isinstance(tags, dict) and "Icon" in tags:
-                                icon_override = tags["Icon"]
-                            if not icon_override and "icon" in all_resources.get(
-                                vpc_name, {}
-                            ):
-                                icon_override = all_resources[vpc_name]["icon"]
-                            if icon_override:
-                                globals()["_CURRENT_ICON_OVERRIDE"] = icon_override
-                            Icon = _icon_class_for(r_type) or _generic_icon_for_kind(
-                                "network"
-                            )
-                            if "_CURRENT_ICON_OVERRIDE" in globals():
-                                del globals()["_CURRENT_ICON_OVERRIDE"]
-                            node_by_res[vpc_name] = _create_node_with_xlabel(
-                                Icon, _tf_node_label(vpc_name)
-                            )
-
-                            # Render subnets within VPC
-                            for subnet_name, subnet_resources in sorted(
-                                subnets_dict.items()
-                            ):
-                                if subnet_name == "other":
-                                    # VPC-level resources not in subnets
-                                    for res in sorted(subnet_resources):
+                        for subnet_name, subnet_resources in sorted(
+                            subnets_dict.items()
+                        ):
+                            if subnet_name == "other":
+                                for res in sorted(subnet_resources):
+                                    if (
+                                        allowed_resources is None
+                                        or res in allowed_resources
+                                    ):
                                         render_resource_node(res)
-                                else:
-                                    # Subnet cluster
-                                    subnet_attrs_dict = all_resources.get(
-                                        subnet_name, {}
+                            else:
+                                if (
+                                    allowed_resources is not None
+                                    and subnet_name not in allowed_resources
+                                    and not any(
+                                        res in allowed_resources
+                                        for res in subnet_resources
                                     )
-                                    is_public = _is_public_subnet(
-                                        subnet_name, subnet_attrs_dict
+                                ):
+                                    continue
+                                subnet_attrs_dict = all_resources.get(
+                                    subnet_name, {}
+                                )
+                                is_public = _is_public_subnet(
+                                    subnet_name, subnet_attrs_dict
+                                )
+                                subnet_color = (
+                                    render.color_public_subnet
+                                    if is_public
+                                    else render.color_private_subnet
+                                )
+                                subnet_label = _tf_node_label(subnet_name) + (
+                                    " (Public)" if is_public else " (Private)"
+                                )
+                                subnet_attrs = {
+                                    "bgcolor": subnet_color,
+                                    "style": "rounded,filled,dashed"
+                                    if is_public
+                                    else "rounded,filled",
+                                    "penwidth": "1.5",
+                                    "color": "#28A745"
+                                    if is_public
+                                    else "#FFC107",  # Green for public, amber for private
+                                }
+                                with Cluster(subnet_label, graph_attr=subnet_attrs):
+                                    r_type, _name = subnet_name.split(".", 1)
+                                    subnet_attrs_dict = all_resources.get(subnet_name, {})
+                                    Icon = _load_custom_icon(r_type, subnet_attrs_dict) or \
+                                        _icon_class_for(r_type) or _generic_icon_for_kind("network")
+                                    node_by_res[subnet_name] = _create_node_with_xlabel(
+                                        Icon, _tf_node_label(subnet_name)
                                     )
-                                    subnet_color = (
-                                        render.color_public_subnet
-                                        if is_public
-                                        else render.color_private_subnet
-                                    )
-                                    subnet_label = _tf_node_label(subnet_name) + (
-                                        " (Public)" if is_public else " (Private)"
-                                    )
-                                    subnet_attrs = {
-                                        "bgcolor": subnet_color,
-                                        "style": "rounded,filled,dashed"
-                                        if is_public
-                                        else "rounded,filled",
-                                        "penwidth": "1.5",
-                                        "color": "#28A745"
-                                        if is_public
-                                        else "#FFC107",  # Green for public, amber for private
-                                    }
-                                    with Cluster(subnet_label, graph_attr=subnet_attrs):
-                                        r_type, _name = subnet_name.split(".", 1)
-                                        subnet_attrs_dict = all_resources.get(subnet_name, {})
-                                        Icon = _load_custom_icon(r_type, subnet_attrs_dict) or \
-                                            _icon_class_for(r_type) or _generic_icon_for_kind("network")
-                                        node_by_res[subnet_name] = _create_node_with_xlabel(
-                                            Icon, _tf_node_label(subnet_name)
-                                        )
 
-                                        # Resources in subnet (compute cluster heads
-                                        # wrap their children via render_resource_node)
-                                        for res in sorted(subnet_resources):
+                                    for res in sorted(subnet_resources):
+                                        if (
+                                            allowed_resources is None
+                                            or res in allowed_resources
+                                        ):
                                             render_resource_node(res)
 
-                    # Then render category lanes for non-VPC resources
-                    for lane in lanes:
-                        resources = [
-                            r
-                            for r in (categories.get(lane) or [])
-                            if r not in resources_in_vpcs and r not in compute_children
-                        ]
-                        if not resources:
-                            continue
-                        lane_color = _get_cluster_color(lane, render)
-                        lane_cluster_attrs = {
-                            "bgcolor": lane_color,
-                            "style": "rounded,filled",
-                            "penwidth": "0.5",
-                            "color": "#CCCCCC",
+                for lane in lanes:
+                    resources = [
+                        r
+                        for r in (categories.get(lane) or [])
+                        if r not in resources_in_vpcs
+                        and r not in compute_children
+                        and (allowed_resources is None or r in allowed_resources)
+                    ]
+                    if not resources:
+                        continue
+                    lane_color = _get_cluster_color(lane, render)
+                    lane_cluster_attrs = {
+                        "bgcolor": lane_color,
+                        "style": "rounded,filled",
+                        "penwidth": "0.5",
+                        "color": "#CCCCCC",
+                    }
+                    with Cluster(lane, graph_attr=lane_cluster_attrs):
+                        for res in sorted(resources):
+                            render_resource_node(res)
+
+            def _render_provider_scope(
+                provider: str,
+                categories: dict[str, list[str]],
+                allowed_resources: Optional[set[str]] = None,
+            ) -> None:
+                cluster_color = _get_cluster_color(provider, render)
+                with render_provider_cluster(provider, cluster_color, penwidth="1.5"):
+                    _render_provider_contents(
+                        provider,
+                        categories,
+                        allowed_resources=allowed_resources,
+                    )
+
+            if region_hierarchy:
+                for provider, categories in sorted(grouped_providers.items()):
+                    cluster_color = _get_cluster_color(provider, render)
+                    with render_provider_cluster(provider, cluster_color, penwidth="1.5"):
+                        provider_resources = {
+                            res
+                            for category_resources in categories.values()
+                            for res in category_resources
                         }
-                        with Cluster(lane, graph_attr=lane_cluster_attrs):
-                            for res in sorted(resources):
-                                render_resource_node(res)
+                        rendered_resources: set[str] = set()
+                        for region_name, region_resources in sorted(region_hierarchy.items()):
+                            scoped_resources = provider_resources.intersection(
+                                set(region_resources)
+                            )
+                            if not scoped_resources:
+                                continue
+                            region_attrs = {
+                                "bgcolor": "#F8F9FA",
+                                "style": "rounded,filled",
+                                "penwidth": "1.5",
+                                "color": "#6C757D",
+                                "fontsize": "13",
+                                "fontname": "Helvetica-Bold",
+                            }
+                            with Cluster(
+                                f"Region: {region_name}", graph_attr=region_attrs
+                            ):
+                                _render_provider_contents(
+                                    provider,
+                                    categories,
+                                    allowed_resources=scoped_resources,
+                                )
+                            rendered_resources.update(scoped_resources)
+
+                        # If a provider has resources without region hints, keep them visible.
+                        unscoped_resources = provider_resources - rendered_resources
+                        if unscoped_resources:
+                            _render_provider_contents(
+                                provider,
+                                categories,
+                                allowed_resources=unscoped_resources,
+                            )
+            else:
+                for provider, categories in sorted(grouped_providers.items()):
+                    _render_provider_scope(provider, categories)
         else:
             # Category lanes (industry-friendly default): Network -> Security -> Compute -> Data...
             for lane in lanes:

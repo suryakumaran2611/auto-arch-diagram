@@ -49,6 +49,16 @@ This directory contains comprehensive examples demonstrating the full capabiliti
 
 ---
 
+### Multi-Region Active-Passive (AWS)
+
+**[terraform/multi-region-active-passive/](terraform/multi-region-active-passive/)** - Compact primary/DR reference architecture
+
+✅ **Region Grouping** - Distinct us-east-1 and us-west-2 region clusters  
+✅ **Primary + DR Topology** - Region-specific VPC/subnet layout  
+✅ **Cross-Region Links** - VPC peering and replica intent
+
+---
+
 ### VPC Peering Multi-Subnet
 
 **[terraform/vpc-peering-multi-subnet/](terraform/vpc-peering-multi-subnet/)** - Network-focused AWS peering topology
@@ -75,6 +85,7 @@ This directory contains comprehensive examples demonstrating the full capabiliti
 | [custom-icons-demo](terraform/custom-icons-demo/) ⭐ | ![](terraform/custom-icons-demo/architecture-diagram.jpg) | 40+ | Custom icons, VPC, event-driven |
 | [mlops-multi-cloud](terraform/mlops-multi-cloud/) | ![](terraform/mlops-multi-cloud/architecture-diagram.jpg) | 47 | AWS + Azure + GCP |
 | [mlops-multi-region-aws](terraform/mlops-multi-region-aws/) | ![](terraform/mlops-multi-region-aws/architecture-diagram.jpg) | 46 | Multi-region DR |
+| [multi-region-active-passive](terraform/multi-region-active-passive/) | - | 14 | Region-aware grouping (AWS) |
 | [multi-tier-web-app](terraform/multi-tier-web-app/) | - | 20+ | ALB + ASG + RDS + Redis + CloudFront |
 | [serverless-events](terraform/serverless-events/) | - | 35+ | API Gateway + Lambda + SNS/SQS + DynamoDB |
 | [data-pipeline-etl](terraform/data-pipeline-etl/) | - | 30+ | Event-driven ETL with Glue and Athena |
