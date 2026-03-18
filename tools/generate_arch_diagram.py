@@ -1698,6 +1698,20 @@ def _is_vpc_or_network(resource_type: str) -> bool:
     t = resource_type.lower()
     tokens = set(t.split("_"))
 
+    # Many Terraform resources contain "vpc" but are not network containers.
+    non_container_patterns = (
+        "vpc_peering",
+        "vpc_endpoint",
+        "vpc_security",
+        "vpc_dhcp",
+        "vpc_ipam",
+        "vpc_flow",
+        "vpc_block",
+        "vpc_access",
+    )
+    if any(pattern in t for pattern in non_container_patterns):
+        return False
+
     # Explicit network container patterns across providers.
     explicit_container_patterns = (
         "vpc",
@@ -1822,6 +1836,16 @@ def _build_vpc_hierarchy(
                         if ref in subnets:
                             resource_to_subnets.setdefault(res_name, set()).add(ref)
 
+    # Track direct VPC attachments for non-subnet resources.
+    # Resources attached to multiple VPCs (for example, VPC peering links) are rendered
+    # outside individual VPC containers to avoid duplication and preserve topology.
+    resource_to_vpcs: dict[str, set[str]] = {}
+    for src, dst in sorted(edges):
+        if src in vpcs and dst not in vpcs and dst not in subnets:
+            resource_to_vpcs.setdefault(dst, set()).add(src)
+        elif dst in vpcs and src not in vpcs and src not in subnets:
+            resource_to_vpcs.setdefault(src, set()).add(dst)
+
     # Derive final placements.
     resource_to_subnet: dict[str, str] = {}
     vpc_multi_subnet_resources: dict[str, set[str]] = {}
@@ -1862,11 +1886,19 @@ def _build_vpc_hierarchy(
 
         for src, dst in sorted(edges):
             if src == vpc_name and dst not in subnets and dst not in vpcs:
-                if dst not in resource_to_subnet and dst not in seen_other:
+                if (
+                    dst not in resource_to_subnet
+                    and dst not in seen_other
+                    and resource_to_vpcs.get(dst, {vpc_name}) == {vpc_name}
+                ):
                     other_resources.append(dst)
                     seen_other.add(dst)
             elif dst == vpc_name and src not in subnets and src not in vpcs:
-                if src not in resource_to_subnet and src not in seen_other:
+                if (
+                    src not in resource_to_subnet
+                    and src not in seen_other
+                    and resource_to_vpcs.get(src, {vpc_name}) == {vpc_name}
+                ):
                     other_resources.append(src)
                     seen_other.add(src)
         if other_resources:

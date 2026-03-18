@@ -49,6 +49,17 @@ This directory contains comprehensive examples demonstrating the full capabiliti
 
 ---
 
+### VPC Peering Multi-Subnet
+
+**[terraform/vpc-peering-multi-subnet/](terraform/vpc-peering-multi-subnet/)** - Network-focused AWS peering topology
+
+✅ **Two VPCs** - Primary and peer network boundaries  
+✅ **Multi-Subnet Layout** - Public/private subnet tiers in each VPC  
+✅ **VPC Peering** - Explicit cross-VPC peering link resource  
+✅ **Route Modeling** - Private route tables + subnet associations
+
+---
+
 ### Serverless Website (AWS)
 
 **[serverless-website/aws/terraform/](serverless-website/aws/terraform/)** - Simple S3 + CloudFront static hosting
@@ -64,6 +75,7 @@ This directory contains comprehensive examples demonstrating the full capabiliti
 | [custom-icons-demo](terraform/custom-icons-demo/) ⭐ | ![](terraform/custom-icons-demo/architecture-diagram.jpg) | 40+ | Custom icons, VPC, event-driven |
 | [mlops-multi-cloud](terraform/mlops-multi-cloud/) | ![](terraform/mlops-multi-cloud/architecture-diagram.jpg) | 47 | AWS + Azure + GCP |
 | [mlops-multi-region-aws](terraform/mlops-multi-region-aws/) | ![](terraform/mlops-multi-region-aws/architecture-diagram.jpg) | 46 | Multi-region DR |
+| [vpc-peering-multi-subnet](terraform/vpc-peering-multi-subnet/) | ![](terraform/vpc-peering-multi-subnet/architecture-diagram.jpg) | 16 | Dual VPC + peering |
 | [aws/terraform](serverless-website/aws/terraform/) | ![](serverless-website/aws/terraform/architecture-diagram.jpg) | 8 | S3 + CloudFront |
 | [azure/terraform](serverless-website/azure/terraform/) | ![](serverless-website/azure/terraform/architecture-diagram.jpg) | 7 | Storage + CDN |
 | [gcp/terraform](serverless-website/gcp/terraform/) | ![](serverless-website/gcp/terraform/architecture-diagram.jpg) | 6 | Cloud Storage + CDN |
@@ -113,6 +125,7 @@ python tools/generate_arch_diagram.py \
 | Example | Resources | VPCs | Subnets | Custom Icons | Edges | Lines |
 |---------|-----------|------|---------|--------------|-------|-------|
 | custom-icons-demo | 40 | 1 | 2 | 11 | 35+ | 530 |
+| vpc-peering-multi-subnet | 16 | 2 | 4 | 0 | 16+ | ~220 |
 | serverless/aws/tf | 8 | 0 | 0 | 0 | 5 | 120 |
 | serverless/azure/tf | 7 | 0 | 0 | 0 | 4 | 110 |
 | serverless/gcp/tf | 6 | 0 | 0 | 0 | 4 | 100 |
