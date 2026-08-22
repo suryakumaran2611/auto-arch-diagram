@@ -1285,6 +1285,45 @@ def _fallback_chain_edges(resources: dict[str, dict[str, Any]]) -> set[tuple[str
     return edges
 
 
+_HCL2_META_KEYS = {"__is_block__", "__comments__"}
+
+
+def _strip_wrapping_quotes(value: str) -> str:
+    """Remove a single layer of wrapping double quotes (hcl2 v8 style)."""
+    if len(value) >= 2 and value.startswith('"') and value.endswith('"'):
+        return value[1:-1]
+    return value
+
+
+def _normalize_hcl2_output(obj: Any) -> Any:
+    """Normalize python-hcl2 output across major versions.
+
+    hcl2 v7 returns unquoted keys/values; v8 quotes block-label keys
+    ('"aws_vpc"'), wraps scalar values in quotes and adds __is_block__ /
+    __comments__ metadata. Normalizing to the v7 shape keeps the rest of the
+    pipeline identical regardless of the installed hcl2 major.
+    """
+    if isinstance(obj, dict):
+        return {
+            _strip_wrapping_quotes(k) if isinstance(k, str) else k: _normalize_hcl2_output(v)
+            for k, v in obj.items()
+            if k not in _HCL2_META_KEYS
+        }
+    if isinstance(obj, list):
+        return [_normalize_hcl2_output(item) for item in obj]
+    if isinstance(obj, str):
+        return _strip_wrapping_quotes(obj)
+    return obj
+
+
+def _parse_hcl_text(text: str) -> dict[str, Any]:
+    if hcl2 is None:
+        raise RuntimeError(
+            "Missing dependency python-hcl2. Install it to enable Terraform static diagrams."
+        )
+    return _normalize_hcl2_output(hcl2.loads(text))
+
+
 def _terraform_resources_from_files(
     files: list[Path], limits: Limits, repo_root: Path
 ) -> tuple[
@@ -1314,7 +1353,7 @@ def _terraform_resources_from_files(
 
         try:
             text = _read_file_limited(f, max_bytes=limits.max_bytes_per_file)
-            parsed = hcl2.loads(text)
+            parsed = _parse_hcl_text(text)
         except Exception:  # nosec B112
             continue
 
@@ -1349,7 +1388,7 @@ def _terraform_resources_from_files(
                     text = _read_file_limited(
                         module_file, max_bytes=limits.max_bytes_per_file
                     )
-                    parsed_module = hcl2.loads(text)
+                    parsed_module = _parse_hcl_text(text)
                 except Exception:  # nosec B112
                     continue
                 base_module_resources = _terraform_resources_from_hcl(parsed_module)
