@@ -472,6 +472,7 @@ class PublishPaths:
     png: str | None = None
     jpg: str | None = None
     svg: str | None = None
+    drawio: str | None = None
 
 
 @dataclass(frozen=True)
@@ -515,6 +516,7 @@ def _load_config(
         png=publish_paths_cfg.get("png"),
         jpg=publish_paths_cfg.get("jpg"),
         svg=publish_paths_cfg.get("svg"),
+        drawio=publish_paths_cfg.get("drawio"),
     )
 
     # Optional render overrides (used for PNG/SVG/JPEG icon rendering).
@@ -973,6 +975,7 @@ def _maybe_publish_outputs(
     out_png: Path | None,
     out_jpg: Path | None,
     out_svg: Path | None,
+    out_drawio: Path | None = None,
 ) -> list[str]:
     """Copy generated outputs into user-configured repo paths (for committing in a follow-up PR)."""
 
@@ -1004,6 +1007,7 @@ def _maybe_publish_outputs(
     publish_file(out_png, publish.png, binary=True)
     publish_file(out_jpg, publish.jpg, binary=True)
     publish_file(out_svg, publish.svg, binary=False)
+    publish_file(out_drawio, publish.drawio, binary=False)
 
     return changed
 
@@ -4586,6 +4590,7 @@ def _static_markdown(
     out_png: Path | None,
     out_jpg: Path | None,
     out_svg: Path | None,
+    out_drawio: Path | None = None,
     render: RenderConfig,
 ) -> tuple[str, str]:
     # Prefer Terraform first, then CloudFormation, then Bicep, then Pulumi YAML.
@@ -4798,6 +4803,32 @@ def _static_markdown(
                 except Exception:  # nosec B110
                     pass
 
+    # draw.io export works for every supported IaC kind: it reuses the same
+    # parsed graph and icon pipeline, so the .drawio output mirrors the
+    # rendered diagrams exactly.
+    if out_drawio is not None:
+        drawio_graphs = {
+            "terraform": (tf_resources, tf_edges),
+            "cloudformation": (cfn_resources, cfn_edges),
+            "bicep": (bicep_resources, bicep_edges),
+            "pulumi": (pulumi_resources, pulumi_edges),
+        }
+        drawio_resources, drawio_edges = drawio_graphs.get(diag_kind, (None, None))
+        if drawio_resources and drawio_edges is not None:
+            try:
+                from drawio_exporter import export_drawio  # noqa: PLC0415
+
+                export_drawio(
+                    drawio_resources,
+                    drawio_edges,
+                    out_drawio,
+                    title=f"Architecture ({diag_kind.capitalize()})",
+                    render=render,
+                )
+                rendered_any = True
+            except Exception as exc:  # nosec B110
+                _debug(f"[DEBUG] draw.io export failed: {exc}")
+
     md = (
         f"{COMMENT_MARKER}\n\n"
         f"## Architecture Diagram (Auto)\n\n"
@@ -4967,6 +4998,11 @@ def main() -> int:
     parser.add_argument("--out-png", default="artifacts/architecture-diagram.png")
     parser.add_argument("--out-jpg", default="artifacts/architecture-diagram.jpg")
     parser.add_argument("--out-svg", default="artifacts/architecture-diagram.svg")
+    parser.add_argument(
+        "--out-drawio",
+        default="",
+        help="Output draw.io (.drawio) file path; empty string disables export",
+    )
     args = parser.parse_args()
 
     repo_root = Path.cwd()
@@ -4993,6 +5029,7 @@ def main() -> int:
             png=publish.png,
             jpg=publish.jpg,
             svg=publish.svg,
+            drawio=publish.drawio,
         )
 
     mode = (os.getenv("AUTO_ARCH_MODE") or config_mode or DEFAULT_MODE).strip().lower()
@@ -5007,9 +5044,11 @@ def main() -> int:
     out_png_raw = (args.out_png or "").strip()
     out_jpg_raw = (args.out_jpg or "").strip()
     out_svg_raw = (args.out_svg or "").strip()
+    out_drawio_raw = (args.out_drawio or "").strip()
     out_png = (repo_root / out_png_raw) if out_png_raw else None
     out_jpg = (repo_root / out_jpg_raw) if out_jpg_raw else None
     out_svg = (repo_root / out_svg_raw) if out_svg_raw else None
+    out_drawio = (repo_root / out_drawio_raw) if out_drawio_raw else None
 
     out_md.parent.mkdir(parents=True, exist_ok=True)
     out_mmd.parent.mkdir(parents=True, exist_ok=True)
@@ -5019,6 +5058,8 @@ def main() -> int:
         out_jpg.parent.mkdir(parents=True, exist_ok=True)
     if out_svg is not None:
         out_svg.parent.mkdir(parents=True, exist_ok=True)
+    if out_drawio is not None:
+        out_drawio.parent.mkdir(parents=True, exist_ok=True)
 
     if not changed_files:
         out_md.write_text(
@@ -5031,6 +5072,8 @@ def main() -> int:
             out_jpg.write_bytes(b"")
         if out_svg is not None:
             out_svg.write_text("", encoding="utf-8")
+        if out_drawio is not None:
+            out_drawio.write_text("", encoding="utf-8")
         return 0
 
     selected = changed_files[: limits.max_files]
@@ -5068,6 +5111,7 @@ def main() -> int:
             out_png=out_png,
             out_jpg=out_jpg,
             out_svg=out_svg,
+            out_drawio=out_drawio,
             render=render,
         )
         out_md.write_text(md, encoding="utf-8")
@@ -5081,6 +5125,7 @@ def main() -> int:
             out_png=out_png,
             out_jpg=out_jpg,
             out_svg=out_svg,
+            out_drawio=out_drawio,
         )
         return 0
 

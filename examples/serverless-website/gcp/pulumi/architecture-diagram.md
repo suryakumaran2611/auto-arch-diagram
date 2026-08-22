@@ -15,4 +15,4 @@ pulumi_siteBucket --> pulumi_cdn
 
 Assumptions: Connections represent options.dependsOn and ${resource.property} references in YAML.
 
-Rendered diagram: not available (icons require Graphviz + diagrams)
+Rendered diagram: available as workflow artifact

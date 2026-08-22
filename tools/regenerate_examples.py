@@ -34,6 +34,7 @@ def _generate_for_example(repo: Path, entry_file: Path) -> None:
     out_png = example_dir / "architecture-diagram.png"
     out_jpg = example_dir / "architecture-diagram.jpg"
     out_svg = example_dir / "architecture-diagram.svg"
+    out_drawio = example_dir / "architecture-diagram.drawio"
 
     env = dict(os.environ)
     # Don't publish into docs/ paths when regenerating examples.
@@ -53,6 +54,8 @@ def _generate_for_example(repo: Path, entry_file: Path) -> None:
         str(out_jpg.relative_to(repo)),
         "--out-svg",
         str(out_svg.relative_to(repo)),
+        "--out-drawio",
+        str(out_drawio.relative_to(repo)),
     ]
 
     res = subprocess.run(cmd, cwd=str(repo), env=env, capture_output=True, text=True)  # nosec B603
