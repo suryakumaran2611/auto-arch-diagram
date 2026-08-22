@@ -180,7 +180,7 @@ When working on this project, ALWAYS:
 
 ### 1. Generate Architecture Diagrams
 - **Script:** `tools/generate_arch_diagram.py`
-- **Functionality:** Generates Mermaid, PNG, SVG, JPG, and Markdown architecture diagrams from IaC files.
+- **Functionality:** Generates Mermaid, PNG, SVG, JPG, Markdown, and `.drawio` architecture diagrams from IaC files.
 - **Supported Arguments:**
   - `--changed-files <files>`: Space/newline-separated list of changed IaC files
   - `--iac-root <dir>`: Root directory to read IaC files from
@@ -190,15 +190,30 @@ When working on this project, ALWAYS:
   - `--out-png <file>`: Output PNG file path
   - `--out-jpg <file>`: Output JPG file path
   - `--out-svg <file>`: Output SVG file path
+  - `--out-drawio <file>`: Output draw.io (.drawio) file path; empty string disables export
+  - `--ai-enhance`: OpenRouter vision-assisted refinement (free models only); writes `*-ai.*` outputs
+- **AI enhancement environment variables:**
+  - `OPENROUTER_API_KEY` or key file `~/.config/auto-arch-diagram/openrouter_key` (chmod 600) - missing key skips enhancement silently
+  - `AUTO_ARCH_AI_ENHANCE=true` - env equivalent of `--ai-enhance`
+  - `AUTO_ARCH_AI_ITERATIONS` - max feedback iterations 1-5 (plateau early-stop built in)
+  - `OPENROUTER_MODEL` - optional override; must pass free+vision catalog checks or generation is refused
 - **Example:**
   ```bash
   python tools/generate_arch_diagram.py --changed-files examples/terraform/custom-icons-demo/main.tf --out-png artifacts/architecture-diagram.png --direction AUTO
   ```
 
+### 1b. Rendering Style Guarantees
+- White canvas everywhere (`RenderConfig.background` defaults to `white`; JPEG always white).
+- Official provider accents on cluster borders: AWS `#FF9900`, Azure `#0078D4`, GCP `#4285F4`, OCI `#C74634`, IBM `#0F62FE`, with matching ultra-light tint fills (`PROVIDER_ACCENT_COLORS` / `PROVIDER_TINT_COLORS`).
+- Graphviz clusters MUST set both `fillcolor` and `color`: with `style=filled` and no `fillcolor`, graphviz reuses the border color as fill (past saturated-fill bug).
+- Single-provider category lanes inherit the provider accent border/tint; mixed lanes stay neutral gray.
+- AI-refined renders get a standalone legend+hints guide rendered separately (`_render_guide_png`) and stitched below via PIL (`_stitch_guide_below`); SVGs embed the guide as a data URI (`_append_guide_to_svg`).
+
 ### 2. Regenerate All Example Diagrams
 - **Script:** `tools/regenerate_examples.py`
 - **Functionality:** Recursively finds all example IaC files and regenerates their diagrams using the main generator.
 - **Arguments:** None (auto-discovers examples)
+- **AI-assisted regeneration:** set `AUTO_ARCH_AI_ENHANCE=true` in the environment, or loop the direct CLI with `--ai-enhance` per example (see section 1). OpenRouter free tier allows 50 vision requests/day; the enhancement degrades gracefully when the quota is exhausted.
 - **Example:**
   ```bash
   python tools/regenerate_examples.py

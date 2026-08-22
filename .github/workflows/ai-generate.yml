@@ -1,0 +1,59 @@
+name: AI-Assisted Architecture Diagrams
+
+# OpenRouter vision-assisted diagram generation (free models only, $0 budget).
+# Produces the deterministic base outputs PLUS *-ai.* refinements that include
+# a legend + AI review hints guide. Requires the OPENROUTER_API_KEY secret;
+# when unset the job still succeeds and only skips the AI refinement step.
+
+on:
+  workflow_dispatch:
+    inputs:
+      iac_root:
+        description: "Root directory to scan for IaC files ('.' for whole repo)."
+        required: false
+        type: string
+        default: examples
+      changed_files:
+        description: "Optional space/newline-separated IaC files. Empty scans iac_root."
+        required: false
+        type: string
+        default: ''
+      direction:
+        description: "Diagram direction: LR | RL | TB | BT | AUTO."
+        required: false
+        type: string
+        default: AUTO
+      image_formats:
+        description: "Comma-separated image formats: png,jpg,svg (or none)."
+        required: false
+        type: string
+        default: png,jpg,svg
+      ai_iterations:
+        description: "Max AI feedback iterations (1-5). Empty uses default with plateau early-stop."
+        required: false
+        type: string
+        default: ''
+      artifact_name:
+        description: "Artifact name override."
+        required: false
+        type: string
+        default: architecture-diagrams-ai
+
+permissions:
+  contents: read
+
+jobs:
+  generate:
+    uses: ./.github/workflows/reusable-auto-arch-diagram.yml
+    with:
+      mode: static
+      direction: ${{ inputs.direction }}
+      iac_root: ${{ inputs.iac_root }}
+      changed_files: ${{ inputs.changed_files }}
+      image_formats: ${{ inputs.image_formats }}
+      ai_enhance: true
+      ai_iterations: ${{ inputs.ai_iterations }}
+      force_full: ${{ inputs.changed_files == '' }}
+      artifact_name: ${{ inputs.artifact_name }}
+      out_dir: architecture-diagrams-ai
+    secrets: inherit

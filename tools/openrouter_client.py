@@ -1,0 +1,314 @@
+"""OpenRouter client with strict FREE-model enforcement and vision support.
+
+Design goals (nothing hardcoded architecturally):
+- Model selection is computed live from OpenRouter's /models catalog:
+  only $0-cost models with image+text input qualify; ranking prefers stable
+  instruction-tuned general models over previews/safety/utility variants,
+  then largest context window.
+- Any explicit model override must still pass the free+vision checks or the
+  call is refused, guaranteeing a zero-dollar budget.
+- API key resolution order: OPENROUTER_API_KEY env -> key file at
+  ~/.config/auto-arch-diagram/openrouter_key (chmod 600, outside any repo).
+"""
+from __future__ import annotations
+
+import base64
+import json
+import os
+import re
+from pathlib import Path
+from typing import Any
+
+import requests
+
+OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
+KEY_FILE_PATH = Path.home() / ".config" / "auto-arch-diagram" / "openrouter_key"
+
+# Name fragments that indicate special-purpose models unsuitable for
+# architecture-diagram analysis. This is capability filtering, not
+# architecture-specific hardcoding.
+_EXCLUDED_NAME_FRAGMENTS = (
+    "content-safety",
+    "guard",
+    "moderation",
+    "embed",
+    "rerank",
+    "clip",
+    "whisper",
+    "tts",
+    "transcribe",
+)
+
+_TIMEOUT_SECONDS = 120
+
+
+class OpenRouterError(RuntimeError):
+    """Raised for configuration, policy, or API failures."""
+
+
+def load_api_key() -> str | None:
+    key = (os.getenv("OPENROUTER_API_KEY") or "").strip()
+    if key:
+        return key
+    try:
+        key = KEY_FILE_PATH.read_text(encoding="utf-8").strip()
+        return key or None
+    except OSError:
+        return None
+
+
+def fetch_catalog(timeout: int = 30) -> list[dict[str, Any]]:
+    resp = requests.get(
+        f"{OPENROUTER_BASE_URL}/models", timeout=timeout, headers=_headers(optional=True)
+    )
+    if resp.status_code != 200:
+        raise OpenRouterError(f"Failed to fetch model catalog: HTTP {resp.status_code}")
+    return resp.json().get("data", [])
+
+
+def _headers(optional: bool = False) -> dict[str, str]:
+    headers = {"Content-Type": "application/json"}
+    key = load_api_key()
+    if key:
+        headers["Authorization"] = f"Bearer {key}"
+    elif not optional:
+        raise OpenRouterError(
+            "No OpenRouter API key found. Set OPENROUTER_API_KEY or create "
+            f"{KEY_FILE_PATH} (chmod 600)."
+        )
+    return headers
+
+
+def _pricing_is_free(model: dict[str, Any]) -> bool:
+    pricing = model.get("pricing") or {}
+    try:
+        prompt = float(pricing.get("prompt") or 1)
+        completion = float(pricing.get("completion") or 1)
+    except (TypeError, ValueError):
+        return False
+    # Strict: any non-zero price disqualifies the model.
+    return prompt == 0.0 and completion == 0.0
+
+
+def _supports_vision(model: dict[str, Any]) -> bool:
+    arch = model.get("architecture") or {}
+    mods = arch.get("input_modalities") or arch.get("input_modality") or []
+    if isinstance(mods, str):
+        mods = [m.strip() for m in mods.split(",")]
+    return "image" in {m.lower() for m in mods}
+
+
+def _is_suitable(model: dict[str, Any]) -> bool:
+    mid = model.get("id", "").lower()
+    return not any(frag in mid for frag in _EXCLUDED_NAME_FRAGMENTS)
+
+
+def ranked_free_vision_models(
+    catalog: list[dict[str, Any]] | None = None,
+    override_model: str | None = None,
+) -> list[dict[str, Any]]:
+    """Rank all currently-available FREE vision models, best first.
+
+    Ranking: penalize preview/beta/experimental builds and auto-routers,
+    then prefer the largest context window.
+    """
+    catalog = catalog if catalog is not None else fetch_catalog()
+
+    eligible = [
+        m
+        for m in catalog
+        if _pricing_is_free(m) and _supports_vision(m) and _is_suitable(m)
+    ]
+    if not eligible:
+        raise OpenRouterError(
+            "No free vision-capable models are currently available on OpenRouter."
+        )
+
+    def penalty(model_id: str) -> int:
+        score = 0
+        mid = model_id.lower()
+        if ":free" not in mid and "/" in mid:
+            score += 5  # unmarked zero-cost promos rotate away more often
+        for frag in ("preview", "beta", "experimental", "alpha"):
+            if frag in mid:
+                score += 10
+        if mid == "openrouter/free":
+            score += 20  # meta-router: keep as last resort
+        if "gemma" in mid or "llama" in mid or "qwen" in mid or "nemotron" in mid:
+            score -= 2  # established open-vision families
+        return score
+
+    def rank(model: dict[str, Any]) -> tuple[int, int]:
+        pid = str(model.get("id", ""))
+        ctx = model.get("context_length") or 0
+        return (penalty(pid), -int(ctx))
+
+    eligible.sort(key=rank)
+
+    if override_model:
+        wanted = override_model.strip()
+        match = next((m for m in eligible if m.get("id") == wanted), None)
+        if match is None:
+            raise OpenRouterError(
+                f"Requested model {wanted!r} refused (not free, not vision-capable, "
+                "or unavailable). Budget is $0: only verified free vision models "
+                "may be used."
+            )
+        return [match]
+
+    return eligible
+
+
+def select_free_vision_model(
+    catalog: list[dict[str, Any]] | None = None,
+    override_model: str | None = None,
+) -> dict[str, Any]:
+    """Pick the best currently-available FREE vision model."""
+    return ranked_free_vision_models(catalog, override_model)[0]
+
+
+def chat_completion(
+    messages: list[dict[str, Any]],
+    model: str,
+    *,
+    temperature: float = 0.2,
+    max_tokens: int = 2000,
+    timeout: int = _TIMEOUT_SECONDS,
+) -> str:
+    payload = {
+        "model": model,
+        "messages": messages,
+        "temperature": temperature,
+        "max_tokens": max_tokens,
+    }
+    resp = requests.post(
+        f"{OPENROUTER_BASE_URL}/chat/completions",
+        headers=_headers(),
+        json=payload,
+        timeout=timeout,
+    )
+    if resp.status_code != 200:
+        raise OpenRouterError(f"OpenRouter request failed: HTTP {resp.status_code}: {resp.text[:300]}")
+    content = resp.json()["choices"][0]["message"]["content"]
+    return content or ""
+
+
+_FALLBACK_STATUS = {429, 500, 502, 503, 504}
+
+
+def chat_completion_with_fallback(
+    messages: list[dict[str, Any]],
+    models: list[str],
+    *,
+    temperature: float = 0.2,
+    max_tokens: int = 2000,
+    timeout: int = _TIMEOUT_SECONDS,
+    max_models: int = 4,
+) -> tuple[str, str]:
+    """Try ranked free models in order; fall through on rate limits/outages.
+
+    Returns (content, model_that_answered).
+    """
+    last_error: Exception | None = None
+    for model_id in models[:max_models]:
+        try:
+            content = chat_completion(
+                messages,
+                model_id,
+                temperature=temperature,
+                max_tokens=max_tokens,
+                timeout=timeout,
+            )
+            return content, model_id
+        except OpenRouterError as exc:
+            status_match = re.search(r"HTTP (\d{3})", str(exc))
+            if status_match and int(status_match.group(1)) in _FALLBACK_STATUS:
+                print(f"[ai-enhance] {model_id} unavailable ({status_match.group(1)}); trying next free model")
+                last_error = exc
+                continue
+            raise
+    raise OpenRouterError(
+        f"All candidate free models failed: {last_error}"
+    ) if last_error else OpenRouterError("No candidate models provided.")
+
+
+def _image_data_url(png_path: Path) -> str:
+    data = png_path.read_bytes()
+    return "data:image/png;base64," + base64.b64encode(data).decode("ascii")
+
+
+_CRITIQUE_PROMPT = """You are a principal cloud architect reviewing an auto-generated \
+architecture diagram rendered from Infrastructure-as-Code.
+
+The image shows the rendered diagram. The Mermaid source and the parsed resource \
+inventory are provided for cross-checking.
+
+Produce TWO things:
+
+1) A quality score for the DIAGRAM itself (readability, grouping, edge routing).
+
+2) CONTEXT HINTS explaining what the picture cannot show - the functional role of \
+key resources and their semantic relationships, grounded in the inventory.
+Hint rules (strict):
+- Objective and crisp: max 14 words each, no filler, no praise, no layout comments.
+- Reference concrete resource names from the inventory (e.g. assets_bucket).
+- Explain usage, purpose and flow: what is stored where, which component consumes \
+which secret, what a KMS key encrypts, which tier serves which traffic, queue \
+producers vs consumers, backup and retention behavior.
+- Provide 4 to 6 hints.
+
+Respond with STRICT JSON only (no markdown fence, no prose):
+{
+  "score": <integer 0-10 diagram quality>,
+  "hints": [{"tag": "s3|secrets|kms|iam|compute|network|data|general", "text": "..."}],
+  "labels": {"<resource-name-part>": "<contextual display label, max 5 words>"},
+  "insights_md": "<short markdown block (<=120 words): what this architecture does end-to-end>",
+  "issues": [{"type": "layout|labeling|grouping|edge-routing|completeness", "detail": "..."}],
+  "suggestions": [{"action": "increase_spacing|flip_direction|change_splines|enlarge_fonts|reduce_edge_noise",
+                   "params": {"multiplier": 1.25}}]
+}
+Label rules (strict):
+- Only propose labels when they add meaning beyond the generic type+name, e.g.
+  assets_bucket -> "Static Assets (versioned)", postgres_db -> "Primary Database (Multi-AZ)".
+- Ground every label in evidence from the inventory: resource type, name, tags.
+- Max 5 words, Title Case, no terraform prefixes (aws_, aws_lb_, etc.), no resource ids.
+- Propose at most 12 labels; skip resources whose default label is already clear.
+Score honestly; reserve 9-10 for diagrams you would publish unchanged."""
+
+_json_block_re = re.compile(r"\{.*\}", re.DOTALL)
+
+
+def critique_diagram(
+    png_path: Path,
+    mermaid_text: str,
+    resource_summary: str,
+    model: str | list[str],
+) -> tuple[dict[str, Any], str]:
+    """Send the rendered diagram for vision-based critique + validation.
+
+    `model` may be a single id or a ranked list for rate-limit fallback.
+    Returns (critique_json, model_that_answered).
+    """
+    models = [model] if isinstance(model, str) else list(model)
+    user_content = [
+        {"type": "text", "text": _CRITIQUE_PROMPT},
+        {
+            "type": "image_url",
+            "image_url": {"url": _image_data_url(png_path)},
+        },
+        {
+            "type": "text",
+            "text": f"Mermaid source:\n```mermaid\n{mermaid_text}```\n\n"
+                    f"Parsed resources ({resource_summary})",
+        },
+    ]
+    raw, answered_by = chat_completion_with_fallback(
+        [{"role": "user", "content": user_content}], models, max_tokens=1600
+    )
+    match = _json_block_re.search(raw)
+    if not match:
+        raise OpenRouterError("Model response did not contain a JSON object.")
+    try:
+        return json.loads(match.group(0)), answered_by
+    except json.JSONDecodeError as exc:
+        raise OpenRouterError(f"Model returned invalid JSON: {exc}") from exc

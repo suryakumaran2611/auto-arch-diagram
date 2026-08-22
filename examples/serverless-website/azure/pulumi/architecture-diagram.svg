@@ -8,49 +8,50 @@
  viewBox="0.00 0.00 298.24 356.24" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
 <g id="graph0" class="graph" transform="scale(1 1) rotate(0) translate(15.12 341.12)">
 <title>Architecture (Pulumi)</title>
+<polygon fill="white" stroke="transparent" points="-15.12,15.12 -15.12,-341.12 283.12,-341.12 283.12,15.12 -15.12,15.12"/>
 <text text-anchor="middle" x="134" y="-312.4" font-family="Open Sans Bold" font-size="12.00" fill="#2d3436">Architecture (Pulumi)</text>
 <g id="clust1" class="cluster">
 <title>cluster_Azure&#45;Native</title>
-<path fill="#6c757d" stroke="#aeb6be" stroke-width="2" d="M20,-8C20,-8 248,-8 248,-8 254,-8 260,-14 260,-20 260,-20 260,-285 260,-285 260,-291 254,-297 248,-297 248,-297 20,-297 20,-297 14,-297 8,-291 8,-285 8,-285 8,-20 8,-20 8,-14 14,-8 20,-8"/>
+<path fill="#ffffff" stroke="#aeb6be" stroke-width="1.5" d="M20,-8C20,-8 248,-8 248,-8 254,-8 260,-14 260,-20 260,-20 260,-285 260,-285 260,-291 254,-297 248,-297 248,-297 20,-297 20,-297 14,-297 8,-291 8,-285 8,-285 8,-20 8,-20 8,-14 14,-8 20,-8"/>
 <text text-anchor="middle" x="60" y="-283.4" font-family="Helvetica,sans-Serif" font-weight="bold" font-size="12.00" fill="#2d3436">Azure&#45;Native</text>
 </g>
 <g id="clust2" class="cluster">
 <title>cluster_Storage</title>
-<path fill="#cccccc" stroke="#aeb6be" d="M147,-146C147,-146 240,-146 240,-146 246,-146 252,-152 252,-158 252,-158 252,-256 252,-256 252,-262 246,-268 240,-268 240,-268 147,-268 147,-268 141,-268 135,-262 135,-256 135,-256 135,-158 135,-158 135,-152 141,-146 147,-146"/>
+<path fill="#f5f5f5" stroke="#aeb6be" d="M147,-146C147,-146 240,-146 240,-146 246,-146 252,-152 252,-158 252,-158 252,-256 252,-256 252,-262 246,-268 240,-268 240,-268 147,-268 147,-268 141,-268 135,-262 135,-256 135,-256 135,-158 135,-158 135,-152 141,-146 147,-146"/>
 <text text-anchor="middle" x="167.5" y="-255.2" font-family="Helvetica,sans-Serif" font-weight="bold" font-size="11.00" fill="#2d3436">Storage</text>
 </g>
 <g id="clust3" class="cluster">
 <title>cluster_Other</title>
-<path fill="#cccccc" stroke="#aeb6be" d="M28,-16C28,-16 240,-16 240,-16 246,-16 252,-22 252,-28 252,-28 252,-126 252,-126 252,-132 246,-138 240,-138 240,-138 28,-138 28,-138 22,-138 16,-132 16,-126 16,-126 16,-28 16,-28 16,-22 22,-16 28,-16"/>
+<path fill="#f5f5f5" stroke="#aeb6be" d="M28,-16C28,-16 240,-16 240,-16 246,-16 252,-22 252,-28 252,-28 252,-126 252,-126 252,-132 246,-138 240,-138 240,-138 28,-138 28,-138 22,-138 16,-132 16,-126 16,-126 16,-28 16,-28 16,-22 22,-16 28,-16"/>
 <text text-anchor="middle" x="41.5" y="-125.2" font-family="Helvetica,sans-Serif" font-weight="bold" font-size="11.00" fill="#2d3436">Other</text>
 </g>
-<!-- d70293877792473cbfa2064e25680448&#45;&gt;2e4dad9455654f35a5b4b062a0757911 -->
+<!-- 53be5b727db14d43a1a075a3deddaeab&#45;&gt;ff040da76a6549f39780ab7659fcbbd2 -->
 <g id="edge2" class="edge">
-<title>d70293877792473cbfa2064e25680448&#45;&gt;2e4dad9455654f35a5b4b062a0757911</title>
+<title>53be5b727db14d43a1a075a3deddaeab&#45;&gt;ff040da76a6549f39780ab7659fcbbd2</title>
 <path fill="none" stroke="#9e9e9e" stroke-width="1.3" stroke-dasharray="1,5" d="M75,-110.29C75,-148.11 75,-197 75,-197 75,-197 134.9,-197 134.9,-197"/>
 <polygon fill="#9e9e9e" stroke="#9e9e9e" stroke-width="1.3" points="134.9,-199.8 142.9,-197 134.9,-194.2 134.9,-199.8"/>
 </g>
-<!-- d70293877792473cbfa2064e25680448&#45;&gt;124d6ea814ee4fd98ef529977ff06ab4 -->
+<!-- 53be5b727db14d43a1a075a3deddaeab&#45;&gt;b46af251b5fd44b886fe58e9ad93dfbf -->
 <g id="edge1" class="edge">
-<title>d70293877792473cbfa2064e25680448&#45;&gt;124d6ea814ee4fd98ef529977ff06ab4</title>
+<title>53be5b727db14d43a1a075a3deddaeab&#45;&gt;b46af251b5fd44b886fe58e9ad93dfbf</title>
 <path fill="none" stroke="#9e9e9e" stroke-width="1.3" stroke-dasharray="1,5" d="M125.31,-67C125.31,-67 134.86,-67 134.86,-67"/>
 <polygon fill="#9e9e9e" stroke="#9e9e9e" stroke-width="1.3" points="134.86,-69.8 142.86,-67 134.86,-64.2 134.86,-69.8"/>
 </g>
-<!-- 2e4dad9455654f35a5b4b062a0757911 -->
+<!-- ff040da76a6549f39780ab7659fcbbd2 -->
 <g id="node1" class="node">
-<title>2e4dad9455654f35a5b4b062a0757911</title>
+<title>ff040da76a6549f39780ab7659fcbbd2</title>
 <path fill="none" stroke="black" d="M232,-240C232,-240 155,-240 155,-240 149,-240 143,-234 143,-228 143,-228 143,-166 143,-166 143,-160 149,-154 155,-154 155,-154 232,-154 232,-154 238,-154 244,-160 244,-166 244,-166 244,-228 244,-228 244,-234 238,-240 232,-240"/>
 <text text-anchor="middle" x="193.5" y="-157.6" font-family="Sans-Serif" font-size="13.00" fill="#2d3436">stg</text>
 </g>
-<!-- 124d6ea814ee4fd98ef529977ff06ab4 -->
+<!-- b46af251b5fd44b886fe58e9ad93dfbf -->
 <g id="node2" class="node">
-<title>124d6ea814ee4fd98ef529977ff06ab4</title>
+<title>b46af251b5fd44b886fe58e9ad93dfbf</title>
 <path fill="none" stroke="black" d="M232,-110C232,-110 155,-110 155,-110 149,-110 143,-104 143,-98 143,-98 143,-36 143,-36 143,-30 149,-24 155,-24 155,-24 232,-24 232,-24 238,-24 244,-30 244,-36 244,-36 244,-98 244,-98 244,-104 238,-110 232,-110"/>
 <text text-anchor="middle" x="193.5" y="-27.6" font-family="Sans-Serif" font-size="13.00" fill="#2d3436">cdnProfile</text>
 </g>
-<!-- d70293877792473cbfa2064e25680448 -->
+<!-- 53be5b727db14d43a1a075a3deddaeab -->
 <g id="node3" class="node">
-<title>d70293877792473cbfa2064e25680448</title>
+<title>53be5b727db14d43a1a075a3deddaeab</title>
 <path fill="none" stroke="black" d="M113,-110C113,-110 36,-110 36,-110 30,-110 24,-104 24,-98 24,-98 24,-36 24,-36 24,-30 30,-24 36,-24 36,-24 113,-24 113,-24 119,-24 125,-30 125,-36 125,-36 125,-98 125,-98 125,-104 119,-110 113,-110"/>
 <text text-anchor="middle" x="74.5" y="-27.6" font-family="Sans-Serif" font-size="13.00" fill="#2d3436">rg</text>
 </g>

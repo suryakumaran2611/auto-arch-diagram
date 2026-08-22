@@ -322,6 +322,53 @@ Uses OpenAI's models to analyze and generate more intelligent diagrams.
 - Not recommended for production environments
 - Generated diagrams should be reviewed manually
 
+### AI-Assisted Refinement (`--ai-enhance`)
+
+A separate, budget-safe enhancement pass (distinct from AI mode above): a free
+OpenRouter vision model critiques the rendered diagram and the generator keeps
+the best-scoring render configuration.
+
+```bash
+# CLI flag or environment variable (workflow-friendly)
+python tools/generate_arch_diagram.py --changed-files main.tf --out-png arch.png --ai-enhance
+AUTO_ARCH_AI_ENHANCE=true python tools/generate_arch_diagram.py ...
+```
+
+**How it works**
+
+1. Renders the diagram, sends it to a vision model for critique (score 0-10).
+2. Applies mapped suggestions (spacing, direction, splines, fonts, edge noise)
+   and re-renders; iterations cap at 5 with plateau early-stop.
+3. Re-renders the winning configuration to `architecture-diagram-ai.png/.jpg/.svg`
+   with contextual label overrides applied.
+4. Stitches a standalone guide image below each `-ai.` output: an edge/zone
+   **Legend** plus **AI Review Hints** distilled from the critique. SVG outputs
+   embed the guide as a data URI so files stay self-contained.
+5. Appends an *AI Architecture Insights* section to the markdown report.
+
+**Key guarantees**
+
+- **$0 budget**: only models whose catalog pricing is exactly 0 for prompt and
+  completion AND that accept image input are used; explicit `OPENROUTER_MODEL`
+  overrides must pass the same checks or generation is refused.
+- **Base outputs untouched**: deterministic `architecture-diagram.*` files are
+  never modified by the AI pass.
+- **Never breaks generation**: missing key, rate limits, or API failures simply
+  skip enhancement (429/5xx fall through ranked candidate models).
+
+**Configuration**
+
+| Env var | Purpose |
+| --- | --- |
+| `OPENROUTER_API_KEY` | API key (else `~/.config/auto-arch-diagram/openrouter_key`, chmod 600) |
+| `AUTO_ARCH_AI_ENHANCE` | `true`/`false` equivalent of `--ai-enhance` |
+| `AUTO_ARCH_AI_ITERATIONS` | Max feedback iterations, 1-5 (default 5 with plateau stop) |
+| `OPENROUTER_MODEL` | Optional model override (must be free + vision-capable) |
+
+In CI, dispatch the **AI-Assisted Architecture Diagrams** workflow
+(`.github/workflows/ai-generate.yml`) or set the reusable workflow input
+`ai_enhance: true` (plus `ai_iterations`) with the `OPENROUTER_API_KEY` secret.
+
 ## PR Creation and Updates
 
 ### How PR Creation Works

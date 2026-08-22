@@ -6,6 +6,8 @@ import base64
 import json
 import os
 import re
+import shutil
+import tempfile
 from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
@@ -394,12 +396,44 @@ def _publish_to_confluence(
     return True
 
 
+# Official cloud-provider brand accents used for cluster borders, with
+# matching ultra-light tints for fills so everything stays on a white canvas
+# (per AWS/Azure/GCP/OCI/IBM architecture design guidelines).
+PROVIDER_ACCENT_COLORS: dict[str, str] = {
+    "AWS": "#FF9900",  # AWS orange (Squid Ink palette primary)
+    "AZURERM": "#0078D4",  # Microsoft Azure blue
+    "AZURE": "#0078D4",
+    "GOOGLE": "#4285F4",  # Google Blue 500
+    "GCP": "#4285F4",
+    "OCI": "#C74634",  # Oracle Red
+    "IBM": "#0F62FE",  # IBM Blue 60
+}
+PROVIDER_TINT_COLORS: dict[str, str] = {
+    "AWS": "#FFF6E8",
+    "AZURERM": "#EAF3FB",
+    "AZURE": "#EAF3FB",
+    "GOOGLE": "#EDF2FE",
+    "GCP": "#EDF2FE",
+    "OCI": "#FDF0EE",
+    "IBM": "#ECF2FD",
+}
+
+
+def _provider_accent(provider: str) -> str | None:
+    """Official brand accent color for a provider name (None if unknown)."""
+    return PROVIDER_ACCENT_COLORS.get(provider.strip().upper())
+
+
+def _provider_tint(provider: str) -> str | None:
+    """Ultra-light brand tint fill color for a provider name (None if unknown)."""
+    return PROVIDER_TINT_COLORS.get(provider.strip().upper())
+
+
 @dataclass(frozen=True)
 class RenderConfig:
     # "lanes" (category-first) tends to produce more readable, professional diagrams.
     # "providers" groups primarily by provider.
     layout: str = "lanes"  # lanes | providers
-
     # The order of lanes when layout == "lanes".
     lanes: tuple[str, ...] = (
         "Network",
@@ -453,7 +487,7 @@ class RenderConfig:
     edge_density_scale: float = 1.2  # Additional scaling for high edge density
 
     # Styling
-    background: str = "transparent"  # transparent | white
+    background: str = "white"  # white | transparent
     fontname: str = "Open Sans Bold"
     graph_fontsize: int = 12
     node_fontsize: int = 9
@@ -2263,6 +2297,11 @@ def _tf_pretty_kind(terraform_resource_type: str) -> str:
 
 def _tf_node_label(res_id: str) -> str:
     # res_id is like "aws_vpc.main".
+    override = _CURRENT_LABEL_OVERRIDES.get(res_id)
+    if override is None and "." in res_id:
+        override = _CURRENT_LABEL_OVERRIDES.get(res_id.split(".", 1)[1])
+    if override:
+        return _wrap_text(override, max_width=20, max_lines=2)
     try:
         r_type, name = res_id.split(".", 1)
     except ValueError:
@@ -2851,38 +2890,32 @@ def _render_icon_diagram_from_terraform(
         edge_attr=edge_attr,
     ):
         # Helper function to render provider icon + label cluster
-        def render_provider_cluster(provider: str, penwidth: str = "0.5"):
-            # Map provider to border color
-            border_colors = {
-                "AWS": "#FFE7C4B6",  # AWS orange
-                "AZURERM": "#9BD0F9B5",  # Azure blue
-                "AZURE": "#A7D6FBAF",  # Azure blue
-                "GOOGLE": "#C0D3F3BA",  # GCP blue
-                "GCP": "#AAC7F596",  # GCP blue
-                "OCI": "#FFCCCC",  # Oracle red
-                "IBM": "#BBCEF2AE",  # IBM blue
-            }
-            border_color = border_colors.get(provider.upper(), "#6C757D")
+        def render_provider_cluster(provider: str, penwidth: str = "1.2"):
+            # Official cloud-provider brand accents on a white canvas.
+            accent = _provider_accent(provider) or "#6C757D"
+            tint = _provider_tint(provider) or "#FFFFFF"
 
             provider_label = f"{provider} Cloud"
             provider_cluster_attrs = {
-                "bgcolor": "#FFFFFF",  # White background
+                "bgcolor": tint,
+                "fillcolor": tint,  # Ultra-light brand tint fill
                 "style": "rounded,filled",
                 "penwidth": penwidth,
                 "fontsize": "12",
                 "fontname": "Helvetica-Bold",
-                "color": border_color,  # Colored border
+                "color": accent,  # Official brand accent border
                 "labelloc": "t",
                 "labeljust": "l",
             }
             return Cluster(provider_label, graph_attr=provider_cluster_attrs)
 
-        # Kubernetes/compute cluster visual styling
+        # Kubernetes/compute cluster visual styling (official Kubernetes blue)
         _k8s_cluster_attrs = {
-            "bgcolor": "#E8F4FD",   # Light blue tint for Kubernetes/EKS clusters
+            "bgcolor": "#EBF1FA",  # Ultra-light Kubernetes blue tint
+            "fillcolor": "#EBF1FA",
             "style": "rounded,filled",
-            "penwidth": "2.0",
-            "color": "#2496ED",    # Kubernetes blue border
+            "penwidth": "1.5",
+            "color": "#326CE5",  # Official Kubernetes blue border
             "fontsize": "10",
             "fontname": "Helvetica-Bold",
         }
@@ -2937,9 +2970,10 @@ def _render_icon_diagram_from_terraform(
                     vpc_label = _tf_node_label(vpc_name)
                     vpc_attrs = {
                         "bgcolor": render.color_vpc,
+                        "fillcolor": render.color_vpc,  # Ultra-light blue tint
                         "style": "rounded,filled",
-                        "penwidth": "2.0",
-                        "color": "#5DADE2",  # AWS VPC blue border
+                        "penwidth": "1.5",
+                        "color": "#5DADE2",  # VPC blue border
                         "fontsize": "11",
                         "fontname": "Helvetica-Bold",
                     }
@@ -2989,6 +3023,7 @@ def _render_icon_diagram_from_terraform(
                                 )
                                 subnet_attrs = {
                                     "bgcolor": subnet_color,
+                                    "fillcolor": subnet_color,  # Ultra-light tint
                                     "style": "rounded,filled,dashed"
                                     if is_public
                                     else "rounded,filled",
@@ -3025,9 +3060,10 @@ def _render_icon_diagram_from_terraform(
                         continue
                     lane_color = _get_cluster_color(lane, render)
                     lane_cluster_attrs = {
-                        "bgcolor": lane_color,
+                        "bgcolor": "#FFFFFF",
+                        "fillcolor": lane_color,
                         "style": "rounded,filled",
-                        "penwidth": "0.5",
+                        "penwidth": "1.0",
                         "color": "#CCCCCC",
                     }
                     with Cluster(lane, graph_attr=lane_cluster_attrs):
@@ -3063,6 +3099,7 @@ def _render_icon_diagram_from_terraform(
                                 continue
                             region_attrs = {
                                 "bgcolor": "#F8F9FA",
+                                "fillcolor": "#F8F9FA",
                                 "style": "rounded,filled",
                                 "penwidth": "1.5",
                                 "color": "#6C757D",
@@ -3096,14 +3133,27 @@ def _render_icon_diagram_from_terraform(
                 providers = grouped_lanes.get(lane) or {}
                 if not providers:
                     continue
-                lane_color = _get_cluster_color(lane, render)
+                # Single-provider lanes carry that provider's official accent;
+                # mixed-provider lanes stay neutral on the white canvas.
+                lane_provider_names = sorted(providers.keys())
+                lane_accent = (
+                    _provider_accent(lane_provider_names[0])
+                    if len(lane_provider_names) == 1
+                    else None
+                )
+                lane_tint = (
+                    _provider_tint(lane_provider_names[0])
+                    if len(lane_provider_names) == 1
+                    else None
+                )
                 lane_cluster_attrs = {
-                    "bgcolor": "#FFFFFF",  # White background
+                    "bgcolor": "#FFFFFF",  # White canvas
+                    "fillcolor": lane_tint or "#FFFFFF",
                     "style": "rounded,filled",
-                    "penwidth": "1.0",
+                    "penwidth": "1.2",
                     "fontsize": "14",
                     "fontname": "Helvetica-Bold",
-                    "color": "#CCCCCC",  # Light gray border
+                    "color": lane_accent or "#CCCCCC",  # Brand accent border
                 }
                 with Cluster(lane, graph_attr=lane_cluster_attrs):
                     for provider, resources in sorted(providers.items()):
@@ -3123,15 +3173,16 @@ def _render_icon_diagram_from_terraform(
                         if not provider_resources and not provider_vpcs:
                             continue
 
-                        with render_provider_cluster(provider, penwidth="0.5"):
+                        with render_provider_cluster(provider, penwidth="1.0"):
                             # First render VPCs with their hierarchies
                             for vpc_name, subnets_dict in sorted(provider_vpcs.items()):
                                 vpc_label = _tf_node_label(vpc_name)
                                 vpc_attrs = {
                                     "bgcolor": render.color_vpc,
+                                    "fillcolor": render.color_vpc,  # Ultra-light blue tint
                                     "style": "rounded,filled",
-                                    "penwidth": "2.0",
-                                    "color": "#5DADE2",  # AWS VPC blue border
+                                    "penwidth": "1.5",
+                                    "color": "#5DADE2",  # VPC blue border
                                     "fontsize": "11",
                                     "fontname": "Helvetica-Bold",
                                 }
@@ -3174,6 +3225,7 @@ def _render_icon_diagram_from_terraform(
                                             )
                                             subnet_attrs = {
                                                 "bgcolor": subnet_color,
+                                                "fillcolor": subnet_color,  # Ultra-light tint
                                                 "style": "rounded,filled,dashed"
                                                 if is_public
                                                 else "rounded,filled",
@@ -4271,10 +4323,11 @@ def _render_cfn_diagram(
                     with Cluster(
                         f"{provider_name} Cloud",
                         graph_attr={
-                            "bgcolor": "#f8f9fa",
+                            "bgcolor": _provider_tint(provider_name) or "#f8f9fa",
+                            "fillcolor": _provider_tint(provider_name) or "#f8f9fa",
                             "style": "rounded,filled",
-                            "penwidth": "2.0",
-                            "color": "#6c757d",
+                            "penwidth": "1.5",
+                            "color": _provider_accent(provider_name) or "#6c757d",
                             "fontsize": "14",
                             "fontname": render.fontname,
                         },
@@ -4291,7 +4344,8 @@ def _render_cfn_diagram(
                                 with Cluster(
                                     category,
                                     graph_attr={
-                                        "bgcolor": "#e9ecef",
+                                        "bgcolor": "#FFFFFF",
+                                        "fillcolor": "#e9ecef",
                                         "style": "rounded,filled",
                                         "penwidth": "1.5",
                                         "color": "#adb5bd",
@@ -4309,9 +4363,10 @@ def _render_cfn_diagram(
                 if category in grouped_resources and grouped_resources[category]:
                     # Professional cluster styling like Terraform
                     cluster_attrs = {
-                        "bgcolor": "#cccccc",
+                        "bgcolor": "#FFFFFF",
+                        "fillcolor": "#F8F9FA",
                         "style": "rounded,filled",
-                        "penwidth": "2.0",
+                        "penwidth": "1.2",
                         "color": "#aeb6be",
                         "fontsize": "14",
                         "fontname": render.fontname,
@@ -4533,12 +4588,13 @@ def _render_generic_iac_diagram(
                 provider, provider.replace("_", " ").title() or "Other"
             )
             provider_attrs = {
-                "bgcolor": "#FFFFFF",
+                "bgcolor": _provider_tint(provider_label) or "#FFFFFF",
+                "fillcolor": _provider_tint(provider_label) or "#FFFFFF",
                 "style": "rounded,filled",
-                "penwidth": "2.0",
+                "penwidth": "1.5",
                 "fontsize": "12",
                 "fontname": "Helvetica-Bold",
-                "color": "#6C757D",
+                "color": _provider_accent(provider_label) or "#6C757D",
                 "labelloc": "t",
                 "labeljust": "l",
             }
@@ -4552,7 +4608,8 @@ def _render_generic_iac_diagram(
                     if not rids:
                         continue
                     category_attrs = {
-                        "bgcolor": _get_cluster_color(category, render),
+                        "bgcolor": "#FFFFFF",
+                        "fillcolor": _get_cluster_color(category, render),
                         "style": "rounded,filled",
                         "penwidth": "1.0",
                         "fontsize": "11",
@@ -4582,6 +4639,351 @@ def _render_generic_iac_diagram(
         _embed_images_in_svg(out_path)
 
 
+# Contextual display-label overrides applied ONLY to AI-refined renders.
+# Keyed by full resource id or its name part; populated from validated model
+# suggestions and cleared right after the refined render completes.
+_CURRENT_LABEL_OVERRIDES: dict[str, str] = {}
+
+
+def _sanitize_label(text: Any, max_len: int = 32) -> str | None:
+    """Normalize a model-proposed label to a safe single-line string."""
+    if not isinstance(text, str):
+        return None
+    cleaned = re.sub(r"\s+", " ", text).strip()
+    cleaned = re.sub(r"[^\w\s\-+()/&.:]", "", cleaned)
+    if not cleaned or not any(ch.isalnum() for ch in cleaned):
+        return None
+    return cleaned[:max_len].rstrip()
+
+
+def _extract_label_overrides(
+    critique: dict[str, Any], resources: dict[str, dict[str, Any]]
+) -> dict[str, str]:
+    """Validate model-suggested labels against real resource ids."""
+    proposed = critique.get("labels")
+    if not isinstance(proposed, dict):
+        return {}
+    overrides: dict[str, str] = {}
+    resource_ids = list(resources.keys())
+    for key, value in list(proposed.items())[:24]:
+        clean_value = _sanitize_label(value)
+        if not clean_value or not isinstance(key, str):
+            continue
+        key = key.strip()
+        matches = [rid for rid in resource_ids if rid == key]
+        if not matches:
+            matches = [rid for rid in resource_ids if rid.split(".", 1)[-1] == key]
+        if not matches:
+            continue
+        for rid in matches:
+            overrides[rid] = clean_value
+    return overrides
+
+
+def _build_ai_annotations(critique: dict[str, Any]) -> tuple[str, ...]:
+    """Distill an AI critique into short on-diagram hint lines.
+
+    Hints are IaC-contextual (functional roles, secret flows, encryption
+    scope) rather than visual commentary, so the diagram is self-explanatory.
+    """
+    hints: list[str] = []
+    for h in (critique.get("hints") or [])[:6]:
+        if not isinstance(h, dict):
+            continue
+        tag = str(h.get("tag", "general")).strip().upper() or "INFO"
+        text = str(h.get("text", "")).strip()
+        if text:
+            hints.append(f"[{tag}] {text}")
+    if not hints:  # legacy fallback for models that skip the hints array
+        insights = str(critique.get("insights_md") or "").strip()
+        if insights:
+            first_lines = [
+                ln.strip().lstrip("-* ")
+                for ln in insights.splitlines()
+                if ln.strip() and not ln.strip().startswith(("#", "```"))
+            ]
+            hints.extend(first_lines[:2])
+        for s in (critique.get("strengths") or [])[:2]:
+            hints.append(f"+ {s}")
+        for i in (critique.get("issues") or [])[:2]:
+            hints.append(f"! [{i.get('type', 'general')}] {i.get('detail', '')}")
+    return tuple(h for h in hints if h)[:6]
+
+
+def _wrap_hint(text: str, width: int = 46) -> str:
+    lines: list[str] = []
+    for paragraph in text.splitlines():
+        if not paragraph.strip():
+            lines.append("")
+            continue
+        current = ""
+        for word in paragraph.split():
+            candidate = f"{current} {word}".strip()
+            if len(candidate) <= width:
+                current = candidate
+            else:
+                lines.append(current)
+                current = word
+        if current:
+            lines.append(current)
+    return "\n".join(lines)
+
+
+def _render_guide_png(
+    render: RenderConfig,
+    ai_annotations: tuple[str, ...],
+    out_path: Path,
+) -> bool:
+    """Render a standalone guide image (legend + AI review hints).
+
+    The guide is its own small Graphviz diagram so it never perturbs the
+    layout of the main architecture graph; callers stitch it below the
+    refined diagram afterwards (raster via PIL, SVG via an embedded image).
+    """
+    try:
+        import graphviz  # type: ignore[import-not-found]
+    except ImportError:
+        return False
+
+    font = render.fontname or "Helvetica"
+    g = graphviz.Digraph(
+        "guide",
+        graph_attr={
+            "rankdir": "TB",
+            "bgcolor": "#FFFFFF",
+            "pad": "0.25",
+            "nodesep": "0.3",
+            "ranksep": "0.28",
+            "fontsize": "11",
+            "fontname": "Helvetica-Bold",
+        },
+    )
+
+    # ------------------------------------------------------------ legend panel
+    with g.subgraph(name="cluster_legend") as leg:
+        leg.attr(
+            label="Legend",
+            style="rounded,filled",
+            fillcolor="#FFFFFF",
+            color="#CCCCCC",
+            fontsize="11",
+            fontname="Helvetica-Bold",
+            labelloc="t",
+        )
+        prev_tail: str | None = None
+        for row, (name, edge_type) in enumerate(
+            [
+                ("Security / boundary", "security"),
+                ("Data flow", "data"),
+                ("Dependency", "dependency"),
+                ("Network link", "network"),
+            ]
+        ):
+            src_id, dst_id = f"lg_src{row}", f"lg_dst{row}"
+            leg.node(
+                src_id,
+                "",
+                shape="point",
+                width="0.05",
+                height="0.05",
+                fixedsize="true",
+            )
+            leg.node(
+                dst_id,
+                name,
+                shape="box",
+                style="rounded,filled",
+                fillcolor="#FFFFFF",
+                color="#B9BEC6",
+                fontsize="9",
+                fontname=font,
+                height="0.26",
+            )
+            leg.edge(src_id, dst_id, **_get_edge_style_attrs(edge_type, render))
+            if prev_tail:
+                leg.edge(prev_tail, src_id, style="invis")
+            prev_tail = dst_id
+        zones = [
+            ("VPC boundary", render.color_vpc, "#5DADE2"),
+            ("Public subnet", render.color_public_subnet, "#28A745"),
+            ("Private subnet", render.color_private_subnet, "#FFC107"),
+            ("Security zone", render.color_security, "#F44336"),
+        ]
+        for row, (name, fill, border) in enumerate(zones):
+            zid = f"lg_zone{row}"
+            leg.node(
+                zid,
+                name,
+                shape="box",
+                style="rounded,filled",
+                fillcolor=fill,
+                color=border,
+                fontsize="9",
+                fontname=font,
+                height="0.26",
+            )
+            if prev_tail:
+                leg.edge(prev_tail, zid, style="invis")
+            prev_tail = zid
+
+    # ------------------------------------------------- AI review hints panel
+    if ai_annotations:
+        with g.subgraph(name="cluster_hints") as hints:
+            hints.attr(
+                label="AI Review Hints",
+                style="rounded,filled",
+                fillcolor="#FFFDF0",
+                color="#D8C689",
+                fontsize="11",
+                fontname="Helvetica-Bold",
+                labelloc="t",
+            )
+            prev_hint: str | None = None
+            for row, hint in enumerate(ai_annotations[:4]):
+                hid = f"hint{row}"
+                hints.node(
+                    hid,
+                    _wrap_hint(hint, width=34),
+                    shape="plaintext",
+                    fontsize="9",
+                    fontname=font,
+                )
+                if prev_hint:
+                    hints.edge(prev_hint, hid, style="invis")
+                prev_hint = hid
+
+    try:
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        g.render(str(out_path.with_suffix("")), format="png", cleanup=True)
+        rendered = out_path.with_suffix(".png")
+        if rendered.exists() and rendered != out_path:
+            shutil.move(str(rendered), str(out_path))
+        return out_path.exists()
+    except Exception:  # nosec B112 - guide is best-effort
+        return False
+
+
+def _flatten_on_white(img: Any) -> Any:
+    """Composite a possibly-transparent image onto a solid white RGB canvas."""
+    from PIL import Image  # type: ignore[import-not-found]  # noqa: PLC0415
+
+    rgba = img.convert("RGBA")
+    flattened = Image.new("RGB", rgba.size, "#FFFFFF")
+    flattened.paste(rgba, (0, 0), rgba)
+    return flattened
+
+
+def _stitch_guide_below(diagram_path: Path, guide_path: Path) -> bool:
+    """Append the standalone guide image below a rendered diagram, in place.
+
+    Raster formats are stitched with PIL on a white canvas; SVGs get their
+    canvas extended downward with the guide embedded as a data URI.
+    """
+    if not diagram_path.exists() or not guide_path.exists():
+        return False
+
+    suffix = diagram_path.suffix.lower()
+    if suffix == ".svg":
+        return _append_guide_to_svg(diagram_path, guide_path)
+    if suffix not in {".png", ".jpg", ".jpeg"}:
+        return False
+
+    try:
+        from PIL import Image  # type: ignore[import-not-found]
+    except ImportError:
+        return False
+
+    try:
+        with Image.open(guide_path) as guide_src:
+            guide = _flatten_on_white(guide_src)
+        with Image.open(diagram_path) as diagram_src:
+            diagram = _flatten_on_white(diagram_src)
+
+        if guide.width > diagram.width > 0:
+            scale = diagram.width / guide.width
+            guide = guide.resize(
+                (diagram.width, max(1, round(guide.height * scale))),
+                getattr(Image, "LANCZOS", Image.BICUBIC),
+            )
+        gap = max(16, round(diagram.width * 0.01))
+        x_off = max(0, (diagram.width - guide.width) // 2)
+        canvas = Image.new(
+            "RGB",
+            (diagram.width, diagram.height + gap + guide.height),
+            "#FFFFFF",
+        )
+        canvas.paste(diagram, (0, 0))
+        canvas.paste(guide, (x_off, diagram.height + gap))
+
+        save_kwargs: dict[str, Any] = {}
+        if suffix in {".jpg", ".jpeg"}:
+            save_kwargs["quality"] = 92
+        canvas.save(diagram_path, **save_kwargs)
+        return True
+    except Exception:  # nosec B112 - stitching is best-effort
+        return False
+
+
+def _append_guide_to_svg(svg_path: Path, guide_png_path: Path) -> bool:
+    """Extend an SVG canvas downward and embed the guide PNG as a data URI."""
+    import struct
+
+    from xml.etree import ElementTree as ET  # noqa: PLC0415
+
+    svg_ns = "http://www.w3.org/2000/svg"
+    xlink_ns = "http://www.w3.org/1999/xlink"
+    ET.register_namespace("xlink", xlink_ns)
+
+    def _length(value: Any) -> float | None:
+        match = re.match(r"(-?[0-9]*\.?[0-9]+)", str(value or "").strip())
+        return float(match.group(1)) if match else None
+
+    try:
+        png_bytes = guide_png_path.read_bytes()
+        if len(png_bytes) < 24 or not png_bytes.startswith(b"\x89PNG\r\n\x1a\n"):
+            return False
+        guide_w, guide_h = struct.unpack(">II", png_bytes[16:24])
+        if guide_w <= 0 or guide_h <= 0:
+            return False
+
+        tree = ET.parse(svg_path)
+        root = tree.getroot()
+        svg_w = _length(root.get("width"))
+        svg_h = _length(root.get("height"))
+        viewBox = (root.get("viewBox") or "").replace(",", " ").split()
+        if svg_w is None and len(viewBox) == 4:
+            svg_w = _length(viewBox[2])
+        if svg_h is None and len(viewBox) == 4:
+            svg_h = _length(viewBox[3])
+        if svg_w is None or svg_h is None:
+            return False
+
+        gap = max(10.0, svg_w * 0.01)
+        scaled_guide_h = svg_w * (guide_h / guide_w)
+        total_h = svg_h + gap + scaled_guide_h
+
+        root.set("width", f"{svg_w:.0f}pt")
+        root.set("height", f"{total_h:.0f}pt")
+        if len(viewBox) == 4:
+            root.set("viewBox", f"0 0 {svg_w:g} {total_h:g}")
+
+        image_el = ET.SubElement(root, f"{{{svg_ns}}}image")
+        image_el.set("x", "0")
+        image_el.set("y", f"{svg_h + gap:g}")
+        image_el.set("width", f"{svg_w:g}")
+        image_el.set("height", f"{scaled_guide_h:g}")
+        image_el.set("preserveAspectRatio", "xMidYMin meet")
+        data_uri = "data:image/png;base64," + base64.b64encode(png_bytes).decode(
+            "ascii"
+        )
+        image_el.set(f"{{{xlink_ns}}}href", data_uri)
+
+        tree.write(svg_path, encoding="utf-8", xml_declaration=False)
+        return True
+    except Exception:  # nosec B110 - embedding is best-effort
+        return False
+
+
 def _static_markdown(
     changed_paths: list[Path],
     direction: str,
@@ -4592,6 +4994,7 @@ def _static_markdown(
     out_svg: Path | None,
     out_drawio: Path | None = None,
     render: RenderConfig,
+    ai_enhance: bool = False,
 ) -> tuple[str, str]:
     # Prefer Terraform first, then CloudFormation, then Bicep, then Pulumi YAML.
     mermaid = None
@@ -4696,6 +5099,72 @@ def _static_markdown(
         except Exception:  # nosec B110
             # Keep Mermaid output even if Graphviz/diagrams fails.
             pass
+
+    # Vision-assisted feedback loop (OpenRouter, free models only): critique
+    # the rendered diagram and refine render settings when it improves.
+    # AI-refined renders go to unique *-ai.* files (with legend + hints) so
+    # the deterministic base outputs are never overwritten.
+    ai_critique: dict[str, Any] = {}
+    ai_history: list[dict[str, Any]] = []
+    ai_model_id = ""
+    ai_refined_files: list[str] = []
+    if (
+        ai_enhance
+        and diag_kind == "terraform"
+        and tf_resources is not None
+        and tf_edges is not None
+        and Diagram is not None
+    ):
+        try:
+            from diagram_feedback import format_insights_markdown, run_feedback_loop
+
+            best_render, best_direction, ai_critique, ai_history = run_feedback_loop(
+                tf_resources,
+                tf_edges,
+                direction=direction,
+                render=render,
+                title="Architecture (Terraform)",
+            )
+            if ai_critique:
+                ai_model_id = str(
+                    ai_history[0]["model"] if ai_history else os.getenv("OPENROUTER_MODEL", "")
+                )
+                ai_hints = _build_ai_annotations(ai_critique)
+                label_overrides = _extract_label_overrides(ai_critique, tf_resources)
+                if label_overrides:
+                    _CURRENT_LABEL_OVERRIDES.clear()
+                    _CURRENT_LABEL_OVERRIDES.update(label_overrides)
+                guide_png: Path | None = None
+                guide_dir = Path(tempfile.mkdtemp(prefix="autoarch-guide-"))
+                try:
+                    guide_candidate = guide_dir / "guide.png"
+                    if _render_guide_png(best_render, ai_hints, guide_candidate):
+                        guide_png = guide_candidate
+                    for out in (out_png, out_jpg, out_svg):
+                        if out is None:
+                            continue
+                        ai_out = out.with_name(f"{out.stem}-ai{out.suffix}")
+                        try:
+                            _render_icon_diagram_from_terraform(
+                                tf_resources,
+                                tf_edges,
+                                out_path=ai_out,
+                                title="Architecture (Terraform, AI-refined)",
+                                direction=best_direction,
+                                render=best_render,
+                            )
+                            if guide_png is not None:
+                                _stitch_guide_below(ai_out, guide_png)
+                            ai_refined_files.append(ai_out.name)
+                        except Exception:  # nosec B112
+                            continue
+                finally:
+                    shutil.rmtree(guide_dir, ignore_errors=True)
+                    # Contextual labels apply to AI renders only; the
+                    # deterministic base outputs keep their generic labels.
+                    _CURRENT_LABEL_OVERRIDES.clear()
+        except Exception as exc:  # nosec B110 - enhancement is strictly optional
+            _debug(f"[DEBUG] AI enhancement skipped: {exc}")
 
     # For CloudFormation, we don't have provider-wide icon mapping yet; render a generic diagram.
     if (
@@ -4837,6 +5306,18 @@ def _static_markdown(
         f"Assumptions: {assumptions}\n\n"
         f"Rendered diagram: {'available as workflow artifact' if rendered_any else 'not available (icons require Graphviz + diagrams)'}\n"
     )
+    if ai_critique:
+        try:
+            from diagram_feedback import format_insights_markdown
+
+            md += format_insights_markdown(ai_critique, ai_history, ai_model_id)
+            if ai_refined_files:
+                md += (
+                    "\n**AI-refined diagram files** (include legend and review "
+                    f"hints): {', '.join(ai_refined_files)}\n"
+                )
+        except Exception:  # nosec B110
+            pass
     return (md, mermaid)
 
 
@@ -5003,6 +5484,11 @@ def main() -> int:
         default="",
         help="Output draw.io (.drawio) file path; empty string disables export",
     )
+    parser.add_argument(
+        "--ai-enhance",
+        action="store_true",
+        help="Enable OpenRouter vision-assisted refinement (free models only)",
+    )
     args = parser.parse_args()
 
     repo_root = Path.cwd()
@@ -5104,6 +5590,9 @@ def main() -> int:
     mermaid_direction = _normalize_mermaid_direction(direction)
 
     if mode != "ai":
+        ai_enhance_enabled = args.ai_enhance or bool(
+            _parse_env_bool(os.getenv("AUTO_ARCH_AI_ENHANCE"))
+        )
         md, mermaid = _static_markdown(
             changed_paths,
             mermaid_direction,
@@ -5113,6 +5602,7 @@ def main() -> int:
             out_svg=out_svg,
             out_drawio=out_drawio,
             render=render,
+            ai_enhance=ai_enhance_enabled,
         )
         out_md.write_text(md, encoding="utf-8")
         out_mmd.write_text(mermaid, encoding="utf-8")

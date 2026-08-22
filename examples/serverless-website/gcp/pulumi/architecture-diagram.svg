@@ -8,32 +8,33 @@
  viewBox="0.00 0.00 298.24 226.24" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
 <g id="graph0" class="graph" transform="scale(1 1) rotate(0) translate(15.12 211.12)">
 <title>Architecture (Pulumi)</title>
+<polygon fill="white" stroke="transparent" points="-15.12,15.12 -15.12,-211.12 283.12,-211.12 283.12,15.12 -15.12,15.12"/>
 <text text-anchor="middle" x="134" y="-182.4" font-family="Open Sans Bold" font-size="12.00" fill="#2d3436">Architecture (Pulumi)</text>
 <g id="clust1" class="cluster">
 <title>cluster_GCP</title>
-<path fill="#6c757d" stroke="#aeb6be" stroke-width="2" d="M20,-8C20,-8 248,-8 248,-8 254,-8 260,-14 260,-20 260,-20 260,-155 260,-155 260,-161 254,-167 248,-167 248,-167 20,-167 20,-167 14,-167 8,-161 8,-155 8,-155 8,-20 8,-20 8,-14 14,-8 20,-8"/>
+<path fill="#edf2fe" stroke="#aeb6be" stroke-width="1.5" d="M20,-8C20,-8 248,-8 248,-8 254,-8 260,-14 260,-20 260,-20 260,-155 260,-155 260,-161 254,-167 248,-167 248,-167 20,-167 20,-167 14,-167 8,-161 8,-155 8,-155 8,-20 8,-20 8,-14 14,-8 20,-8"/>
 <text text-anchor="middle" x="30" y="-153.4" font-family="Helvetica,sans-Serif" font-weight="bold" font-size="12.00" fill="#2d3436">GCP</text>
 </g>
 <g id="clust2" class="cluster">
 <title>cluster_Storage</title>
-<path fill="#cccccc" stroke="#aeb6be" d="M28,-16C28,-16 240,-16 240,-16 246,-16 252,-22 252,-28 252,-28 252,-126 252,-126 252,-132 246,-138 240,-138 240,-138 28,-138 28,-138 22,-138 16,-132 16,-126 16,-126 16,-28 16,-28 16,-22 22,-16 28,-16"/>
+<path fill="#f5f5f5" stroke="#aeb6be" d="M28,-16C28,-16 240,-16 240,-16 246,-16 252,-22 252,-28 252,-28 252,-126 252,-126 252,-132 246,-138 240,-138 240,-138 28,-138 28,-138 22,-138 16,-132 16,-126 16,-126 16,-28 16,-28 16,-22 22,-16 28,-16"/>
 <text text-anchor="middle" x="48.5" y="-125.2" font-family="Helvetica,sans-Serif" font-weight="bold" font-size="11.00" fill="#2d3436">Storage</text>
 </g>
-<!-- e6f2bad7afb343e58ffcc1c1c5767a57&#45;&gt;e3227b65fbfa4e5eb826b52c09724249 -->
+<!-- fa4ee793c5184d77b6859d1f38294cc5&#45;&gt;4775e67db84349329cd192862641ec76 -->
 <g id="edge1" class="edge">
-<title>e6f2bad7afb343e58ffcc1c1c5767a57&#45;&gt;e3227b65fbfa4e5eb826b52c09724249</title>
+<title>fa4ee793c5184d77b6859d1f38294cc5&#45;&gt;4775e67db84349329cd192862641ec76</title>
 <path fill="none" stroke="#2196f3" stroke-width="1.95" d="M125.31,-67C125.31,-67 134.86,-67 134.86,-67"/>
 <polygon fill="#2196f3" stroke="#2196f3" stroke-width="1.95" points="134.86,-69.8 142.86,-67 134.86,-64.2 134.86,-69.8"/>
 </g>
-<!-- e3227b65fbfa4e5eb826b52c09724249 -->
+<!-- 4775e67db84349329cd192862641ec76 -->
 <g id="node1" class="node">
-<title>e3227b65fbfa4e5eb826b52c09724249</title>
+<title>4775e67db84349329cd192862641ec76</title>
 <path fill="none" stroke="black" d="M232,-110C232,-110 155,-110 155,-110 149,-110 143,-104 143,-98 143,-98 143,-36 143,-36 143,-30 149,-24 155,-24 155,-24 232,-24 232,-24 238,-24 244,-30 244,-36 244,-36 244,-98 244,-98 244,-104 238,-110 232,-110"/>
 <text text-anchor="middle" x="193.5" y="-27.6" font-family="Sans-Serif" font-size="13.00" fill="#2d3436">cdn</text>
 </g>
-<!-- e6f2bad7afb343e58ffcc1c1c5767a57 -->
+<!-- fa4ee793c5184d77b6859d1f38294cc5 -->
 <g id="node2" class="node">
-<title>e6f2bad7afb343e58ffcc1c1c5767a57</title>
+<title>fa4ee793c5184d77b6859d1f38294cc5</title>
 <path fill="none" stroke="black" d="M113,-110C113,-110 36,-110 36,-110 30,-110 24,-104 24,-98 24,-98 24,-36 24,-36 24,-30 30,-24 36,-24 36,-24 113,-24 113,-24 119,-24 125,-30 125,-36 125,-36 125,-98 125,-98 125,-104 119,-110 113,-110"/>
 <text text-anchor="middle" x="74.5" y="-27.6" font-family="Sans-Serif" font-size="13.00" fill="#2d3436">siteBucket</text>
 </g>

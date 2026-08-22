@@ -26,14 +26,27 @@ _tools_dir = Path(__file__).resolve().parent
 if str(_tools_dir) not in sys.path:
     sys.path.insert(0, str(_tools_dir))
 
+# Official cloud-provider brand accents (mirrors generate_arch_diagram).
 _PROVIDER_BORDER_COLORS = {
-    "AWS": "#FFE7C4",
-    "AZURERM": "#9BD0F9",
-    "AZURE": "#A7D6FB",
-    "GOOGLE": "#C0D3F3",
-    "GCP": "#AAC7F5",
-    "OCI": "#FFCCCC",
-    "IBM": "#BBCEF2",
+    "AWS": "#FF9900",
+    "AZURERM": "#0078D4",
+    "AZURE": "#0078D4",
+    "GOOGLE": "#4285F4",
+    "GCP": "#4285F4",
+    "OCI": "#C74634",
+    "IBM": "#0F62FE",
+}
+
+# Ultra-light brand tints for provider group fills on a white canvas
+# (mirrors generate_arch_diagram.PROVIDER_TINT_COLORS).
+_PROVIDER_TINT_COLORS = {
+    "AWS": "#FFF6E8",
+    "AZURERM": "#EAF3FB",
+    "AZURE": "#EAF3FB",
+    "GOOGLE": "#EDF2FE",
+    "GCP": "#EDF2FE",
+    "OCI": "#FDF0EE",
+    "IBM": "#ECF2FD",
 }
 
 _LANE_ORDER = (
@@ -424,12 +437,13 @@ class _DrawioExporter:
         for provider in sorted(providers):
             pw_pad = self.gap * 0.8
             pcid = self._next_id("provider")
+            provider_upper = provider.upper()
             self._add(
                 pcid,
                 f"{provider} Cloud",
                 self._cluster_style(
-                    _PROVIDER_BORDER_COLORS.get(provider.upper(), "#6C757D"),
-                    "#FFFFFF",
+                    _PROVIDER_BORDER_COLORS.get(provider_upper, "#6C757D"),
+                    _PROVIDER_TINT_COLORS.get(provider_upper, "#FFFFFF"),
                 ),
                 "1",
                 offset_x + pw_pad,

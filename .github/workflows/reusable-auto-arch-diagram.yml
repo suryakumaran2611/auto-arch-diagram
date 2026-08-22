@@ -56,6 +56,16 @@ on:
         required: false
         type: string
         default: gpt-4o-mini
+      ai_enhance:
+        description: "OpenRouter vision-assisted refinement (free models only). Produces extra *-ai.* outputs with legend + hints. Requires OPENROUTER_API_KEY secret; skipped gracefully when unset."
+        required: false
+        type: boolean
+        default: false
+      ai_iterations:
+        description: "Max AI feedback iterations (1-5). Empty uses the built-in default with plateau early-stop."
+        required: false
+        type: string
+        default: ''
       render_layout:
         description: "Icon render layout: lanes (default) or providers."
         required: false
@@ -443,6 +453,9 @@ jobs:
           AUTO_ARCH_MODE: ${{ inputs.mode }}
           AUTO_ARCH_MODEL: ${{ inputs.model }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          AUTO_ARCH_AI_ENHANCE: ${{ inputs.ai_enhance && 'true' || 'false' }}
+          AUTO_ARCH_AI_ITERATIONS: ${{ inputs.ai_iterations }}
           AUTO_ARCH_DIRECTION: ${{ inputs.direction }}
           AUTO_ARCH_RENDER_LAYOUT: ${{ inputs.render_layout }}
           AUTO_ARCH_RENDER_BG: ${{ inputs.render_bg }}
@@ -947,6 +960,9 @@ jobs:
           AUTO_ARCH_MODE: ${{ inputs.mode }}
           AUTO_ARCH_MODEL: ${{ inputs.model }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          AUTO_ARCH_AI_ENHANCE: ${{ inputs.ai_enhance && 'true' || 'false' }}
+          AUTO_ARCH_AI_ITERATIONS: ${{ inputs.ai_iterations }}
           AUTO_ARCH_DIRECTION: ${{ inputs.direction }}
           AUTO_ARCH_RENDER_LAYOUT: ${{ inputs.render_layout }}
           AUTO_ARCH_RENDER_BG: ${{ inputs.render_bg }}
