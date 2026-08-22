@@ -459,15 +459,31 @@ def test_stitch_guide_below_raster(tmp_path: Path) -> None:
     assert gen._stitch_guide_below(diagram, guide) is True
     with Image.open(diagram) as stitched:
         assert stitched.mode == "RGB"
-        # Guide scaled to fit width; canvas grew vertically.
-        assert stitched.height > 300
         assert stitched.width == 400
         # Transparent regions were flattened onto white, not black.
         assert stitched.getpixel((10, 10)) == (255, 255, 255)
 
+        # The guide strip must stay a footnote: at most ~8% of page area.
+        pixels = stitched.load()
+        xs = [
+            x
+            for x in range(stitched.width)
+            if pixels[x, stitched.height - 10] == (238, 238, 238)
+        ]
+        ys = [
+            y
+            for y in range(stitched.height)
+            if pixels[stitched.width // 2, y] == (238, 238, 238)
+        ]
+        assert xs and ys, "expected a visible guide strip"
+        guide_fraction = (len(xs) * len(ys)) / (stitched.width * stitched.height)
+        assert guide_fraction <= 0.09
+
 
 def test_append_guide_to_svg_extends_canvas(tmp_path: Path) -> None:
     pytest.importorskip("PIL")
+    import xml.etree.ElementTree as ET
+
     from PIL import Image
 
     svg = tmp_path / "diagram.svg"
@@ -483,9 +499,22 @@ def test_append_guide_to_svg_extends_canvas(tmp_path: Path) -> None:
     assert gen._append_guide_to_svg(svg, guide) is True
     text = svg.read_text(encoding="utf-8")
     assert "data:image/png;base64," in text
-    # 400pt original + 10pt gap + 300pt scaled guide = 710pt canvas.
-    assert 'height="710pt"' in text
-    assert 'viewBox="0 0 600 710"' in text
+
+    ET.register_namespace("xlink", "http://www.w3.org/1999/xlink")
+    root = ET.fromstring(text)
+    total_h = float(root.get("height").removesuffix("pt"))
+    images = root.findall("{http://www.w3.org/2000/svg}image")
+    assert len(images) == 1
+    img = images[0]
+    img_w = float(img.get("width"))
+    img_h = float(img.get("height"))
+
+    # Embedded guide stays a footnote: at most ~8% of the final page area.
+    assert (img_w * img_h) / (600 * total_h) <= 0.085
+    # Centered horizontally within the original canvas.
+    assert abs(float(img.get("x")) + img_w / 2 - 300) < 1.5
+    # Canvas grew only modestly.
+    assert total_h < 400 * 1.4
 
 
 def test_stitch_guide_below_missing_files_is_noop(tmp_path: Path) -> None:
@@ -522,3 +551,46 @@ def test_drawio_exporter_mirrors_palette(tmp_path: Path) -> None:
     text = out.read_text(encoding="utf-8")
     assert "#FF9900" in text  # AWS accent
     assert "#0078D4" in text  # Azure accent
+
+
+def test_drawio_exporter_proper_diagram_structure(tmp_path: Path) -> None:
+    """Nodes use pretty labels, valid PNG URIs, official AWS shapes; no
+    floating utility-provider groups (jgraph AWS-diagram conventions)."""
+    import xml.etree.ElementTree as ET
+
+    from tools.drawio_exporter import export_drawio
+
+    resources = {
+        "aws_vpc.main": {},
+        "aws_instance.web": {},
+        "random_password.db_master_password": {"Type": "random_password"},
+    }
+    edges: set[tuple[str, str]] = set()
+    out = tmp_path / "arch.drawio"
+    export_drawio(resources, edges, out, title="Structure", render=gen.RenderConfig())
+
+    root = ET.fromstring(out.read_text(encoding="utf-8"))
+    vertices = [c for c in root.findall(".//mxCell") if c.get("vertex") == "1"]
+    assert vertices
+
+    # No raw terraform ids as node labels.
+    assert not [c for c in vertices if c.get("value", "").startswith("aws_")]
+
+    # Every embedded icon is a properly-formed base64 data URI.
+    for cell in vertices:
+        style = cell.get("style", "")
+        if "image=data:image/png," in style:
+            assert "image=data:image/png;base64," in style
+
+    # Known AWS resource uses the official mxgraph.aws4 shape library.
+    styles = {c.get("value", ""): c.get("style", "") for c in vertices}
+    assert any("resIcon=mxgraph.aws4.ec2" in s for s in styles.values())
+
+    # Utility providers fold into a single bucket - no "{X} Cloud" noise.
+    values = set(styles)
+    assert "Other Resources" in values
+    assert not any(v.endswith("RANDOM Cloud") for v in values)
+
+    # White page background like reference diagrams.
+    model = root.find(".//mxGraphModel")
+    assert model is not None and model.get("background") == "#ffffff"

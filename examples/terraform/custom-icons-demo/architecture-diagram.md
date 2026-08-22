@@ -109,30 +109,3 @@ tf_aws_vpc_serverless_vpc --> tf_aws_subnet_public_subnet
 Assumptions: Connections represent inferred references (including depends_on and attribute references).
 
 Rendered diagram: available as workflow artifact
-
-## AI Architecture Insights
-
-*Reviewed by OpenRouter free vision model `stealth/ox-alpha` (quality score: 3/10).*
-
-**Serverless AWS data pipeline** sharing one `lambda_role`. API Gateway `data_api` POSTs reach `data_ingestion`, which lands raw payloads in `raw_data` and onto Kinesis `data_stream`. `stream_processor` consumes the stream from private subnets, indexing into Elasticsearch `search_cluster` guarded by `lambda_sg`. A scheduled CloudWatch rule runs `batch_processor` across `raw_data` and `processed_data`. Glue `data_crawler` catalogs `processed_data` into `data_catalog`; Athena `analytics` writes query output to `query_results`. DynamoDB `metadata` changes stream to `dynamodb_stream_handler`. Failures collect in SQS `dlq` for `dlq_processor` retries; the `lambda_errors` alarm notifies SNS `alerts`, fanning out to `email_alerts`.
-
-**Context hints**
-- `[COMPUTE]` data_ingestion Lambda ingests API POST payloads into raw_data bucket and Kinesis data_stream.
-- `[COMPUTE]` stream_processor consumes Kinesis data_stream events; failures raise lambda_errors alarm publishing to alerts.
-- `[COMPUTE]` scheduled_processing rule triggers batch_processor over raw_data and processed_data contents.
-- `[COMPUTE]` dlq_processor retries failed records from sqs_queue.dlq; alerts fans out to email_alerts.
-- `[DATA]` data_crawler catalogs processed_data into data_catalog; Athena analytics stores query output in query_results.
-- `[DATA]` dynamodb_stream_handler reacts to metadata table changes via dynamodb_to_lambda event source mapping.
-
-**Contextual labels applied:** `data_api` → Data Ingestion REST API, `data_ingestion` → API Payload Ingester, `raw_data` → Raw Landing Zone, `processed_data` → Curated Data Lake Zone, `query_results` → Athena Query Output Store, `metadata` → Pipeline Metadata Store (+6 more)
-
-**Review notes**
-- [layout] Extreme vertical aspect ratio; six stacked clusters force long scrolling and push related nodes thousands of pixels apart.
-- [edge-routing] Dozens of blue/red dashed edges span the full canvas height between Network, Security, Other, Compute, Data, Storage; dense crossings converge on the Lambda nodes.
-- [labeling] Truncated labels throughout: 'Api Gateway Rest Ap...', 'IAM Role Policy...', 'Cloudwatch Event...', 'Lambda Function dynamodb stream...'.
-- [grouping] Security cluster sits mid-canvas far from the six Lambda functions it authorizes; three policy-attachment leaf nodes add noise without information.
-- [completeness] public_subnet dangles with no routes or attached resources; several edges encode reverse associations (e.g., search_cluster to stream_processor), obscuring true dependency direction.
-
-Feedback iterations: iter0: 3/10, iter1: 3/10, iter2: 3/10
-
-**AI-refined diagram files** (include legend and review hints): architecture-diagram-ai.png, architecture-diagram-ai.jpg, architecture-diagram-ai.svg

@@ -90,30 +90,3 @@ tf_google_storage_bucket_functions --> tf_google_cloudfunctions_function_analyti
 Assumptions: Connections represent inferred references (including depends_on and attribute references).
 
 Rendered diagram: available as workflow artifact
-
-## AI Architecture Insights
-
-*Reviewed by OpenRouter free vision model `stealth/ox-alpha` (quality score: 5/10).*
-
-**Multi-cloud data platform spanning AWS, Azure, and GCP.** Raw data lands in the versioned S3 `data_lake`, where IAM role `lambda_role` scopes Lambda `data_processor` access. Azure mirrors this: `datalake` storage holds the `processed` container, feeding Linux Function App `data_processor`, which subscribes to Event Grid `events`. Relational state lives in three engines: RDS Postgres (private subnets, `rds` security group), Azure MSSQL/Cosmos `app_db`, and Cloud SQL Postgres. On GCP, `functions` and `data_warehouse` buckets drive Cloud Function `analytics_processor`, with Pub/Sub `events` fanning out via `events_sub`; BigQuery `analytics` sits unconnected. SNS `data_events` is likewise isolated.
-
-**Context hints**
-- `[S3]` data_lake bucket stores raw objects; versioning resource enables object retention
-- `[IAM]` lambda_role policies grant data_processor S3 access plus basic execution
-- `[COMPUTE]` Function App data_processor consumes datalake storage and eventgrid events
-- `[NETWORK]` VPC main private subnets host RDS postgres through db subnet group
-- `[DATA]` mssql_server.main and cosmosdb_account.main each host separate app_db
-- `[GENERAL]` GCP buckets feed analytics_processor; pubsub events reach events_sub
-
-**Contextual labels applied:** `aws_s3_bucket_versioning` → Data Lake Versioning, `aws_lambda_function` → Data Processing Lambda, `aws_security_group_rds` → RDS Access Rules, `aws_db_subnet_group` → RDS Subnet Group, `azurerm_linux_function_app` → Azure Data Processor, `azurerm_storage_container_processed` → Processed Data Container (+5 more)
-
-**Review notes**
-- [labeling] Truncated labels: 'IAM Role Policy...', 'Cloudfunctions...', 'Eventgrid Event...' hide full names
-- [grouping] 'Other' cluster mixes messaging, management, and analytics resources without semantic basis
-- [edge-routing] Long parallel edges span Storage-to-Compute-to-Data, creating dense crossings mid-canvas
-- [completeness] Orphan nodes aws_sns_topic.data_events and google_bigquery_dataset.analytics show zero edges
-- [layout] Extreme vertical height; Data cluster placed far right forces longest edge spans
-
-Feedback iterations: iter0: 5/10
-
-**AI-refined diagram files** (include legend and review hints): architecture-diagram-ai.png, architecture-diagram-ai.jpg, architecture-diagram-ai.svg

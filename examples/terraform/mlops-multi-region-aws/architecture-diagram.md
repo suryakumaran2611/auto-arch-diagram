@@ -150,30 +150,3 @@ tf_aws_vpc_primary_vpc --> tf_aws_vpc_peering_connection_primary_to_dr
 Assumptions: Connections represent inferred references (including depends_on and attribute references).
 
 Rendered diagram: available as workflow artifact
-
-## AI Architecture Insights
-
-*Reviewed by OpenRouter free vision model `stealth/ox-alpha` (quality score: 3/10).*
-
-**End-to-end flow:** Multi-region MLOps platform on AWS. Public ALB (`mlops_alb`) admits traffic into EKS (`mlops_cluster` + `mlops_nodes`) in `primary_vpc` private subnets. Step Functions (`ml_pipeline`) orchestrates two Lambdas: `data_preprocessor` ingests `training_data` from S3, enriching features via `feature_cache` (ElastiCache) and `feature_store` (Aurora); `model_evaluator` scores candidates against `experiment_tracking` (DynamoDB) and publishes `model_artifacts`, versioned by `model_versioning`. Aurora replicates to `feature_store_replica`; `primary_to_dr` peering links `dr_vpc` for resilience. Layered security groups, NACL, scoped IAM roles, and `mlops_key` (KMS) enforce isolation; `ml_alerts` and `ml_pipeline_logs` provide observability.
-
-**Context hints**
-- `[S3]` training_data stores raw datasets; data_preprocessor lambda consumes them for feature ingestion.
-- `[S3]` model_artifacts holds trained models; model_versioning resource enables bucket versioning retention.
-- `[COMPUTE]` ml_pipeline state machine orchestrates data_preprocessor and model_evaluator lambda executions.
-- `[DATA]` feature_store aurora cluster replicates to feature_store_replica; eks_sg authorizes access.
-- `[DATA]` experiment_tracking dynamodb table records runs; model_evaluator reads them for scoring.
-- `[KMS]` mlops_key renders with zero encryption bindings; likely protects ML storage.
-
-**Contextual labels applied:** `mlops_cluster` → EKS ML Platform Core, `mlops_alb` → Public Ingress Balancer, `feature_store` → Aurora Feature Store, `feature_store_replica` → DR Read Replica, `feature_cache` → Feature Lookup Cache, `ml_pipeline` → Training Pipeline Orchestrator (+6 more)
-
-**Review notes**
-- [layout] Extreme vertical sprawl; canvas requires heavy scrolling and separates tightly coupled compute/data nodes by full screen heights.
-- [grouping] primary_vpc appears as two separate duplicated subgraph blocks; bottom 'Other' cluster (ml_pipeline_logs, ml_alerts, mlops_key, data_lake) floats outside any region/VPC context.
-- [labeling] Truncated labels destroy distinctions: 'primary private...' hides 1a vs 1b, 'IAM Role Policy...' hides which attachment, 'Sagemaker Notebook...' cut off.
-- [edge-routing] Red dashed IAM attachment edges crisscross the entire canvas repeatedly; one blue edge spans nearly full diagram height.
-- [completeness] mlops_key, ml_alerts, ml_pipeline_logs, and data_lake render as isolated nodes despite existing in inventory; their consuming relationships are invisible.
-
-Feedback iterations: iter0: 3/10, iter1: 3/10
-
-**AI-refined diagram files** (include legend and review hints): architecture-diagram-ai.png, architecture-diagram-ai.jpg, architecture-diagram-ai.svg

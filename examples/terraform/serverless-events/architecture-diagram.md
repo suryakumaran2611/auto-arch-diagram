@@ -93,30 +93,3 @@ tf_aws_sqs_queue_payment_queue --> tf_aws_sqs_queue_policy_payment_queue
 Assumptions: Connections represent inferred references (including depends_on and attribute references).
 
 Rendered diagram: available as workflow artifact
-
-## AI Architecture Insights
-
-*Reviewed by OpenRouter free vision model `stealth/ox-alpha` (quality score: 4/10).*
-
-**End-to-end flow:** Clients hit `apigatewayv2_stage.main`, routed to `api_handler` Lambda, which writes orders, payments, and notifications to three DynamoDB tables. Domain events (`order_events`, `payment_events`) fan out over SNS; `order_to_queue` and `payment_to_queue` subscriptions bridge them into SQS queues consumed asynchronously by `order_processor` and `payment_processor` via event source mappings. Failures dead-letter into `order_dlq` / `payment_dlq`. `notification_sender` emits emails through `email_notifications`. All four functions share `lambda_role`, scoped by `lambda_dynamodb_access`; `api_logs` captures request logging.
-
-**Context hints**
-- `[COMPUTE]` api_handler Lambda serves API Gateway traffic and persists records to orders table.
-- `[GENERAL]` payment_events topic fans out to payment_queue via subscription payment_to_queue.
-- `[COMPUTE]` order_processor and payment_processor poll their queues through event source mappings.
-- `[DATA]` Failed messages from payment_queue and order_queue land in payment_dlq, order_dlq.
-- `[IAM]` lambda_role plus lambda_dynamodb_access policy grants all four Lambdas DynamoDB access.
-- `[GENERAL]` notification_sender delivers customer emails through email_notifications SNS topic.
-
-**Contextual labels applied:** `apigatewayv2_api.main` → HTTP API Entry Point, `lambda_function.api_handler` → Request Handler, `lambda_function.payment_processor` → Payment Queue Consumer, `lambda_function.order_processor` → Order Queue Consumer, `lambda_function.notification_sender` → Email Notifier, `dynamodb_table.payments` → Payments Store (+5 more)
-
-**Review notes**
-- [labeling] Multiple node labels truncated ('Sns Topic...', 'Lambda Event Source...', 'Apigatewayv2...'), hiding resource identity.
-- [edge-routing] Dashed red IAM/policy edges converge densely on Security group, causing heavy crossings and unreadable bundles.
-- [grouping] All SNS/SQS messaging resources sit under 'Other' instead of a dedicated Messaging group.
-- [layout] Long cross-group edges between Data, Compute, and Other span the full canvas, fragmenting flow reading order.
-- [completeness] cloudwatch_log_group.api_logs floats disconnected; its relationship to apigatewayv2_stage.main is not shown.
-
-Feedback iterations: iter0: 3/10, iter1: 4/10, iter2: 4/10, iter3: 4/10
-
-**AI-refined diagram files** (include legend and review hints): architecture-diagram-ai.png, architecture-diagram-ai.jpg, architecture-diagram-ai.svg

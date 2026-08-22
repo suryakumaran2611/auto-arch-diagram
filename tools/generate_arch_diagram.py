@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 import base64
 import json
+import math
 import os
 import re
 import shutil
@@ -4734,83 +4735,97 @@ def _render_guide_png(
     ai_annotations: tuple[str, ...],
     out_path: Path,
 ) -> bool:
-    """Render a standalone guide image (legend + AI review hints).
+    """Render a COMPACT standalone guide (legend + AI review hints).
 
-    The guide is its own small Graphviz diagram so it never perturbs the
-    layout of the main architecture graph; callers stitch it below the
-    refined diagram afterwards (raster via PIL, SVG via an embedded image).
+    The guide must stay tiny relative to the diagram: two legend columns sit
+    side by side (edge samples left, zone chips right), fonts are small and
+    spacing tight. Callers additionally cap its stitched area at
+    _MAX_GUIDE_AREA_FRACTION of the page.
     """
     try:
         import graphviz  # type: ignore[import-not-found]
     except ImportError:
         return False
 
-    font = render.fontname or "Helvetica"
+    entry_font = "7"
+    title_font = "8"
+    font = "Helvetica"
+
     g = graphviz.Digraph(
         "guide",
         graph_attr={
             "rankdir": "TB",
             "bgcolor": "#FFFFFF",
-            "pad": "0.25",
-            "nodesep": "0.3",
-            "ranksep": "0.28",
-            "fontsize": "11",
-            "fontname": "Helvetica-Bold",
+            "pad": "0.08",
+            "nodesep": "0.12",
+            "ranksep": "0.14",
+            "newrank": "true",  # allow rank=same pairing across clusters
         },
     )
 
-    # ------------------------------------------------------------ legend panel
+    # ------------------------------------------- horizontal single-row legend
+    # All edge samples share one graphviz rank so they align side by side;
+    # same-rank endpoints make each sample arrow draw horizontally.
+    samples = [
+        ("Security / boundary", "security"),
+        ("Data flow", "data"),
+        ("Dependency", "dependency"),
+        ("Network link", "network"),
+    ]
+    zones = [
+        ("VPC boundary", render.color_vpc, "#5DADE2"),
+        ("Public subnet", render.color_public_subnet, "#28A745"),
+        ("Private subnet", render.color_private_subnet, "#FFC107"),
+        ("Security zone", render.color_security, "#F44336"),
+    ]
+
     with g.subgraph(name="cluster_legend") as leg:
         leg.attr(
             label="Legend",
             style="rounded,filled",
             fillcolor="#FFFFFF",
             color="#CCCCCC",
-            fontsize="11",
+            fontsize=title_font,
             fontname="Helvetica-Bold",
             labelloc="t",
+            margin="0.08",
         )
-        prev_tail: str | None = None
-        for row, (name, edge_type) in enumerate(
-            [
-                ("Security / boundary", "security"),
-                ("Data flow", "data"),
-                ("Dependency", "dependency"),
-                ("Network link", "network"),
-            ]
-        ):
-            src_id, dst_id = f"lg_src{row}", f"lg_dst{row}"
+        sample_ids: list[str] = []
+        chain_prev: str | None = None
+        for row, (name, edge_type) in enumerate(samples):
+            sid, did = f"lg_s{row}", f"lg_d{row}"
             leg.node(
-                src_id,
+                sid,
                 "",
                 shape="point",
-                width="0.05",
-                height="0.05",
+                width="0.03",
+                height="0.03",
                 fixedsize="true",
             )
             leg.node(
-                dst_id,
+                did,
                 name,
                 shape="box",
                 style="rounded,filled",
                 fillcolor="#FFFFFF",
                 color="#B9BEC6",
-                fontsize="9",
+                fontsize=entry_font,
                 fontname=font,
-                height="0.26",
+                height="0.16",
+                margin="0.02,0.01",
             )
-            leg.edge(src_id, dst_id, **_get_edge_style_attrs(edge_type, render))
-            if prev_tail:
-                leg.edge(prev_tail, src_id, style="invis")
-            prev_tail = dst_id
-        zones = [
-            ("VPC boundary", render.color_vpc, "#5DADE2"),
-            ("Public subnet", render.color_public_subnet, "#28A745"),
-            ("Private subnet", render.color_private_subnet, "#FFC107"),
-            ("Security zone", render.color_security, "#F44336"),
-        ]
+            edge_attrs = _get_edge_style_attrs(edge_type, render)
+            edge_attrs["arrowsize"] = "0.5"
+            leg.edge(sid, did, **edge_attrs)
+            if chain_prev:
+                leg.edge(chain_prev, sid, style="invis")
+            chain_prev = did
+            sample_ids.extend([sid, did])
+
+        zone_first: str | None = None
+        zone_ids: list[str] = []
         for row, (name, fill, border) in enumerate(zones):
-            zid = f"lg_zone{row}"
+            zid = f"lg_z{row}"
             leg.node(
                 zid,
                 name,
@@ -4818,15 +4833,23 @@ def _render_guide_png(
                 style="rounded,filled",
                 fillcolor=fill,
                 color=border,
-                fontsize="9",
+                fontsize=entry_font,
                 fontname=font,
-                height="0.26",
+                height="0.16",
+                margin="0.02,0.01",
             )
-            if prev_tail:
-                leg.edge(prev_tail, zid, style="invis")
-            prev_tail = zid
+            if chain_prev:
+                leg.edge(chain_prev, zid, style="invis")
+            chain_prev = zid
+            zone_ids.append(zid)
+        # One shared rank => every entry sits side by side in a single strip.
+        if sample_ids or zone_ids:
+            with g.subgraph() as same_rank:
+                same_rank.attr(rank="same")
+                for nid in sample_ids + zone_ids:
+                    same_rank.node(nid)
 
-    # ------------------------------------------------- AI review hints panel
+    # --------------------------------------------- compact AI hints panel
     if ai_annotations:
         with g.subgraph(name="cluster_hints") as hints:
             hints.attr(
@@ -4834,18 +4857,19 @@ def _render_guide_png(
                 style="rounded,filled",
                 fillcolor="#FFFDF0",
                 color="#D8C689",
-                fontsize="11",
+                fontsize=title_font,
                 fontname="Helvetica-Bold",
                 labelloc="t",
+                margin="0.06",
             )
             prev_hint: str | None = None
             for row, hint in enumerate(ai_annotations[:4]):
                 hid = f"hint{row}"
                 hints.node(
                     hid,
-                    _wrap_hint(hint, width=34),
+                    _wrap_hint(hint, width=40),
                     shape="plaintext",
-                    fontsize="9",
+                    fontsize=entry_font,
                     fontname=font,
                 )
                 if prev_hint:
@@ -4871,6 +4895,26 @@ def _flatten_on_white(img: Any) -> Any:
     flattened = Image.new("RGB", rgba.size, "#FFFFFF")
     flattened.paste(rgba, (0, 0), rgba)
     return flattened
+
+
+# The stitched guide (legend + hints) must stay a footnote on the page:
+# at most 8% of the final canvas area (diagram + gap + guide).
+_MAX_GUIDE_AREA_FRACTION = 0.08
+_BUDGET_FACTOR = _MAX_GUIDE_AREA_FRACTION / (1 - _MAX_GUIDE_AREA_FRACTION)
+
+
+def _guide_area_scale(
+    diagram_w: float, diagram_h: float, guide_w: float, guide_h: float
+) -> float:
+    """Scale factor shrinking the guide into the page-area budget (<=1.0)."""
+    diagram_area = diagram_w * diagram_h
+    guide_area = guide_w * guide_h
+    if diagram_area <= 0 or guide_area <= 0:
+        return 1.0
+    max_guide_area = diagram_area * _BUDGET_FACTOR
+    if guide_area <= max_guide_area:
+        return 1.0
+    return math.sqrt(max_guide_area / guide_area)
 
 
 def _stitch_guide_below(diagram_path: Path, guide_path: Path) -> bool:
@@ -4905,7 +4949,19 @@ def _stitch_guide_below(diagram_path: Path, guide_path: Path) -> bool:
                 (diagram.width, max(1, round(guide.height * scale))),
                 getattr(Image, "LANCZOS", Image.BICUBIC),
             )
-        gap = max(16, round(diagram.width * 0.01))
+        # Keep the guide a footnote: cap it at 8% of the final page area.
+        shrink = _guide_area_scale(
+            diagram.width, diagram.height, guide.width, guide.height
+        )
+        if shrink < 1.0:
+            guide = guide.resize(
+                (
+                    max(1, round(guide.width * shrink)),
+                    max(1, round(guide.height * shrink)),
+                ),
+                getattr(Image, "LANCZOS", Image.BICUBIC),
+            )
+        gap = max(8, round(diagram.width * 0.005))
         x_off = max(0, (diagram.width - guide.width) // 2)
         canvas = Image.new(
             "RGB",
@@ -4958,8 +5014,12 @@ def _append_guide_to_svg(svg_path: Path, guide_png_path: Path) -> bool:
         if svg_w is None or svg_h is None:
             return False
 
-        gap = max(10.0, svg_w * 0.01)
-        scaled_guide_h = svg_w * (guide_h / guide_w)
+        gap = max(8.0, svg_w * 0.005)
+        # Cap the embedded guide at 8% of the final page area, then center it.
+        # The scale factor applies to the GUIDE's native size, not the canvas.
+        shrink = _guide_area_scale(svg_w, svg_h, guide_w, guide_h)
+        display_w = min(float(svg_w), guide_w * shrink)
+        scaled_guide_h = display_w * (guide_h / guide_w)
         total_h = svg_h + gap + scaled_guide_h
 
         root.set("width", f"{svg_w:.0f}pt")
@@ -4968,9 +5028,9 @@ def _append_guide_to_svg(svg_path: Path, guide_png_path: Path) -> bool:
             root.set("viewBox", f"0 0 {svg_w:g} {total_h:g}")
 
         image_el = ET.SubElement(root, f"{{{svg_ns}}}image")
-        image_el.set("x", "0")
+        image_el.set("x", f"{max(0.0, (svg_w - display_w) / 2):g}")
         image_el.set("y", f"{svg_h + gap:g}")
-        image_el.set("width", f"{svg_w:g}")
+        image_el.set("width", f"{display_w:g}")
         image_el.set("height", f"{scaled_guide_h:g}")
         image_el.set("preserveAspectRatio", "xMidYMin meet")
         data_uri = "data:image/png;base64," + base64.b64encode(png_bytes).decode(
