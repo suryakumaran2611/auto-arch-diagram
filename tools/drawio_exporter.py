@@ -40,6 +40,8 @@ _tools_dir = Path(__file__).resolve().parent
 if str(_tools_dir) not in sys.path:
     sys.path.insert(0, str(_tools_dir))
 
+from drawio_native_shapes import native_icon_size, native_style_for
+
 # Official cloud-provider brand accents (mirrors generate_arch_diagram).
 _PROVIDER_BORDER_COLORS = {
     "AWS": "#FF9900",
@@ -143,16 +145,16 @@ _AWS_VPC_STYLE = _aws_group_style(
 )
 _AWS_PUBLIC_SUBNET_STYLE = _aws_group_style(
     gr_icon="mxgraph.aws4.group_security_group",
-    stroke=_VPC_GREEN,
-    font_color=_VPC_GREEN,
-    fill=_PUBLIC_SUBNET_FILL,
+    stroke="#7AA116",
+    font_color="#248814",
+    fill="#E9F3D2",
     gr_stroke=0,
 )
 _AWS_PRIVATE_SUBNET_STYLE = _aws_group_style(
     gr_icon="mxgraph.aws4.group_security_group",
-    stroke=_SUBNET_BLUE,
-    font_color=_SUBNET_BLUE,
-    fill=_PRIVATE_SUBNET_FILL,
+    stroke="#00A4A6",
+    font_color="#147EBA",
+    fill="#E6F6F7",
     gr_stroke=0,
 )
 
@@ -161,33 +163,9 @@ _GENERIC_FRAME_STYLE = (
     "spacingLeft=10;fontSize=12;fontStyle=1;container=1;collapsible=0;"
 )
 
-# Official draw.io AWS shape library (mxgraph.aws4) - only icon ids verified
-# against jgraph's AWS libraries; unknown types fall back to embedded PNGs.
-_AWS4_RESOURCE_ICONS = {
-    "instance": "ec2",
-    "lambda_function": "lambda_function",
-    "s3_bucket": "s3",
-    "db_instance": "rds",
-    "dynamodb_table": "dynamodb",
-    "elasticache_cluster": "elasticache",
-    "internet_gateway": "internet_gateway",
-    "nat_gateway": "nat_gateway",
-    "route_table": "route_table",
-    "security_group": "security_group",
-    "cloudfront_distribution": "cloudfront",
-    "lb": "elastic_load_balancing",
-    "alb": "elastic_load_balancing",
-    "autoscaling_group": "auto_scaling",
-    "api_gateway_rest_api": "api_gateway",
-}
-
-
-def _aws4_icon_for(r_type: str) -> str | None:
-    """Official mxgraph.aws4 resIcon name for a terraform type (None if unknown)."""
-    t = r_type.lower()
-    if not t.startswith("aws_"):
-        return None
-    return _AWS4_RESOURCE_ICONS.get(t[4:])
+# Official draw.io shape libraries are resolved via drawio_native_shapes
+# (mxgraph.aws4 / azure2 / mxgraph.gcp2); unknown types fall back to the
+# embedded PNG icon pipeline below.
 
 
 class _DrawioExporter:
@@ -344,30 +322,31 @@ class _DrawioExporter:
 
         return _tf_node_label(rid)
 
-    def _node_metrics(self, rid: str) -> tuple[str, float, float]:
+    def _node_metrics(self, rid: str) -> tuple[str, float, float, float]:
         label = self._node_label(rid)
         lines = [ln for ln in label.split("\n") if ln] or [rid]
         widest = max(len(ln) for ln in lines)
-        w = max(_ICON_SIZE + 22, widest * _CHAR_PX + 14)
-        h = _ICON_SIZE + 8 + len(lines) * _LINE_PX
-        return label, w, h
+        icon = float(native_icon_size(rid.split(".", 1)[0]))
+        w = max(icon + 22, widest * _CHAR_PX + 14)
+        h = icon + 8 + len(lines) * _LINE_PX
+        return label, w, h, icon
 
     def _add_resource_node(
-        self, rid: str, parent: str, x: float, y: float, label: str
+        self,
+        rid: str,
+        parent: str,
+        x: float,
+        y: float,
+        label: str,
+        icon_size: float | None = None,
     ) -> str:
         r_type = rid.split(".", 1)[0]
         attrs = self.resources.get(rid, {}) or {}
         cid = self._safe_id(rid)
-        res_icon = _aws4_icon_for(r_type)
-        if res_icon:
-            # Official vector shape from the mxgraph.aws4 library.
-            style = (
-                "sketch=0;html=1;shape=mxgraph.aws4.resourceIcon;"
-                f"resIcon=mxgraph.aws4.{res_icon};"
-                "verticalLabelPosition=bottom;verticalAlign=top;align=center;"
-                f"fontSize={_LABEL_FONT};fontColor={_AWS_SQUID_INK};"
-                "labelBackgroundColor=#FFFFFF;"
-            )
+        size = float(icon_size) if icon_size else float(native_icon_size(r_type))
+        native = native_style_for(r_type)
+        if native:
+            style = f"{native}fontSize={_LABEL_FONT};labelBackgroundColor=#FFFFFF;"
         else:
             uri = self._png_data_uri(self._icon_png_path(rid, r_type, attrs))
             if uri:
@@ -385,7 +364,7 @@ class _DrawioExporter:
                     "verticalAlign=top;"
                     f"fontSize={_LABEL_FONT};fontColor=#334155;"
                 )
-        self._add(cid, label, style, parent, x, y, _ICON_SIZE, _ICON_SIZE)
+        self._add(cid, label, style, parent, x, y, size, size)
         return cid
 
     # ------------------------------------------------------------- grid pack
@@ -402,7 +381,7 @@ class _DrawioExporter:
         metrics = [self._node_metrics(r) for r in rids]
         col_w = [0.0] * cols
         row_h = [0.0] * rows
-        for i, (_, w, h) in enumerate(metrics):
+        for i, (_, w, h, _icon) in enumerate(metrics):
             r, c = divmod(i, cols)
             col_w[c] = max(col_w[c], w)
             row_h[r] = max(row_h[r], h)
@@ -411,11 +390,11 @@ class _DrawioExporter:
         total_w = sum(col_w) + (cols - 1) * _COL_GAP
         total_h = sum(row_h) + (rows - 1) * _ROW_GAP
         for i, rid in enumerate(rids):
-            label, _, _ = metrics[i]
+            label, _, _, icon = metrics[i]
             r, c = divmod(i, cols)
-            x = ox + col_x[c] + (col_w[c] - _ICON_SIZE) / 2
+            x = ox + col_x[c] + (col_w[c] - icon) / 2
             y = oy + row_y[r]
-            self._add_resource_node(rid, parent, x, y, label)
+            self._add_resource_node(rid, parent, x, y, label, icon)
         return total_w, total_h
 
     # -------------------------------------------------------------- clusters
@@ -461,8 +440,10 @@ class _DrawioExporter:
 
         pad_x = _FRAME_PAD * 0.55
         top = _TITLE_H * 0.7
-        label, slot_w, slot_h = self._node_metrics(subnet_name)
-        self._add_resource_node(subnet_name, rec["id"], pad_x, top, label)
+        label, slot_w, slot_h, slot_icon = self._node_metrics(subnet_name)
+        self._add_resource_node(
+            subnet_name, rec["id"], pad_x, top, label, slot_icon
+        )
         y = top + slot_h + _CLUSTER_GAP * 0.6
         by_cat: dict[str, list[str]] = {}
         for rid in subnet_rids:
@@ -508,8 +489,10 @@ class _DrawioExporter:
 
         pad_x = _FRAME_PAD * 0.55
         top = _TITLE_H * 0.7
-        label, slot_w, slot_h = self._node_metrics(vpc_name)
-        self._add_resource_node(vpc_name, rec["id"], pad_x, top, label)
+        label, slot_w, slot_h, slot_icon = self._node_metrics(vpc_name)
+        self._add_resource_node(
+            vpc_name, rec["id"], pad_x, top, label, slot_icon
+        )
         y = top + slot_h + _CLUSTER_GAP * 0.6
         w = max(slot_w, _ICON_SIZE + 22)
         other_rids = list(subnets.get("other", []))

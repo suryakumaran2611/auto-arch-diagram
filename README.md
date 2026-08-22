@@ -90,7 +90,7 @@
 - 📤 **Multiple Formats** - Mermaid, PNG, SVG, JPEG with embedded icons
 - 🤖 **AI Refinement** - OpenRouter free vision models critique & refine renders ($0 budget) into `*-ai.*` outputs with legend + review hints
 - 🎨 **Official Provider Palette** - AWS/Azure/GCP/OCI/IBM brand accent borders on a white canvas
-- 📊 **draw.io Export** - Fully editable logic-driven `.drawio` files mirroring the rendered palette
+- 📊 **draw.io Export** - Fully editable `.drawio` files using native official icon packs (AWS 2026 `mxgraph.aws4.*`, Azure `azure2` SVGs, GCP `mxgraph.gcp2.*`) with aws4 group frames, short wrapped labels and geometry-aware orthogonal routing
 - 🎨 **Open Sans Bold Typography** - Enhanced readability with professional bold fonts
 - 🏷️ **Network-Aware Labels** - Diagrams show network segregation (aws-network, global, etc.)
 - ☁️ **Enhanced CloudFormation** - Production-ready templates with monitoring and security

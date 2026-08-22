@@ -47,6 +47,15 @@ wsl -d Ubuntu bash -c "cd /home/suryakumaran/GitHub/auto-arch-diagram && source 
 - **`tools/cloud_icons_util.py`** - Loads cloud icon catalogs
 - **`tools/cloud_services_util.py`** - Loads dynamic cloud service lists
 
+#### **Native draw.io Shape Mappings**
+- **`tools/drawio_native_shapes.py`** - Maps Terraform types to official draw.io native shapes so `.drawio` exports render with the built-in icon packs (fully editable, no embedded PNGs):
+  - AWS: `mxgraph.aws4.resourceIcon;resIcon=...` + official category fill colours (extracted from jgraph/drawio `Sidebar-AWS4.js`, the current "AWS 2026" pack, v29.6.1+)
+  - Azure: `image=img/lib/azure2/<category>/<File>.svg` (current draw.io Azure SVG library)
+  - GCP: `shape=mxgraph.gcp2.<Name>` with brand fills
+  - Public API: `native_style_for(r_type)`, `native_icon_size(r_type)` (resIcons are 78px tiles, direct shapes 48px)
+  - Unknown types fall back to the PNG pipeline in `drawio_exporter._add_resource_node`
+  - Data extracted from jgraph/drawio sources (Apache-2.0); regenerate rather than hand-edit
+
 #### **Custom Icon Processing**
 - **`icons/custom/generate_icons.py`** - Generates custom programmatic icons for data processing services
 - **`icons/custom/`** - Directory for storing custom icons
