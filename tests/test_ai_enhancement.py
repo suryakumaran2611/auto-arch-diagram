@@ -20,6 +20,12 @@ import diagram_feedback as feedback
 import generate_arch_diagram as gen
 
 
+@pytest.fixture(autouse=True)
+def _isolated_sticky_model_state(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    """Every test gets isolated sticky-model state; never touch the real cache."""
+    monkeypatch.setattr(orc, "_PREFERRED_MODEL_FILE", tmp_path / "preferred_model")
+
+
 # --------------------------------------------------------------------- key
 def test_load_api_key_prefers_env(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("OPENROUTER_API_KEY", "  env-key  ")
@@ -127,6 +133,89 @@ def test_fallback_walks_models_on_rate_limit(monkeypatch: pytest.MonkeyPatch) ->
     assert content == "ok"
     assert answered == "m2"
     assert calls == ["m1", "m2"]
+
+
+def test_fallback_walks_entire_ranked_list(monkeypatch: pytest.MonkeyPatch) -> None:
+    """An exhausted candidate must never block later ranked models."""
+    exhausted = {f"m{i}" for i in range(1, 6)}
+
+    def fake_post(url, headers=None, json=None, timeout=None):  # noqa: A002
+        model = json["model"]
+        if model in exhausted:
+            return _Resp(status_code=429, text="rate limited", _json={})
+        return _Resp(
+            status_code=200,
+            _json={"choices": [{"message": {"content": f"from-{model}"}}]},
+        )
+
+    monkeypatch.setattr(orc.requests, "post", fake_post)
+    ranked = [f"m{i}" for i in range(1, 8)]  # m1..m5 dead, m6 answers
+    content, answered = orc.chat_completion_with_fallback(
+        [{"role": "user", "content": "hi"}], ranked
+    )
+    assert answered == "m6"
+    assert content == "from-m6"
+    # Explicit cap still honored.
+    with pytest.raises(orc.OpenRouterError):
+        orc.chat_completion_with_fallback([{"role": "user", "content": "hi"}], ranked, max_models=2)
+
+
+def test_sticky_model_reused_and_persisted(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    """After discovery the working model is called directly on every later call."""
+    state_file = tmp_path / "preferred_model"
+    monkeypatch.setattr(orc, "_PREFERRED_MODEL_FILE", state_file)
+
+    calls: list[str] = []
+
+    def fake_post(url, headers=None, json=None, timeout=None):  # noqa: A002
+        model = json["model"]
+        calls.append(model)
+        if model == "dead1":
+            return _Resp(status_code=429, text="rate limited", _json={})
+        return _Resp(
+            status_code=200,
+            _json={"choices": [{"message": {"content": f"from-{model}"}}]},
+        )
+
+    monkeypatch.setattr(orc.requests, "post", fake_post)
+
+    # First call walks past dead1 and sticks to good2.
+    _, answered = orc.chat_completion_with_fallback(
+        [{"role": "user", "content": "hi"}], ["dead1", "good2"]
+    )
+    assert answered == "good2"
+    assert calls == ["dead1", "good2"]
+    assert state_file.read_text().strip() == "good2"
+
+    # Second call goes straight to the sticky model - no re-probing.
+    _, answered = orc.chat_completion_with_fallback(
+        [{"role": "user", "content": "hi"}], ["dead1", "good2"]
+    )
+    assert answered == "good2"
+    assert calls == ["dead1", "good2", "good2"]
+
+
+def test_sticky_model_cleared_on_failure(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    """When the sticky model dies it is forgotten so a new one can stick."""
+    state_file = tmp_path / "preferred_model"
+    state_file.write_text("was-good\n", encoding="utf-8")
+    monkeypatch.setattr(orc, "_PREFERRED_MODEL_FILE", state_file)
+
+    def fake_post(url, headers=None, json=None, timeout=None):  # noqa: A002
+        model = json["model"]
+        if model in {"was-good", "also-dead"}:
+            return _Resp(status_code=429, text="rate limited", _json={})
+        return _Resp(
+            status_code=200,
+            _json={"choices": [{"message": {"content": f"from-{model}"}}]},
+        )
+
+    monkeypatch.setattr(orc.requests, "post", fake_post)
+    _, answered = orc.chat_completion_with_fallback(
+        [{"role": "user", "content": "hi"}], ["was-good", "also-dead", "new-good"]
+    )
+    assert answered == "new-good"
+    assert state_file.read_text().strip() == "new-good"
 
 
 def test_fallback_does_not_retry_client_errors(monkeypatch: pytest.MonkeyPatch) -> None:

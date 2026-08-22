@@ -82,3 +82,30 @@ tf_oci_ai_service_vision_ai_vision --> tf_oci_blockchain_platform_blockchain
 Assumptions: Connections represent inferred references (including depends_on and attribute references).
 
 Rendered diagram: available as workflow artifact
+
+## AI Architecture Insights
+
+*Reviewed by OpenRouter free vision model `stealth/ox-alpha` (quality score: 5/10).*
+
+A single directed chain spans five clouds. Amplify **web_app** serves users through **graphql_api**; Bedrock **agent** consults **knowledge**, Comprehend **nlp_analysis** feeds the Lex **chatbot**, whose events reach **blockchain_node**, Polly **text_to_speech**, and the QLDB **quantum_ledger**. Rekognition **image_analysis** and SageMaker **ml_endpoint**/**ml_model** (built in **ml_notebook**, orchestrated by **ml_pipeline**) continue into Textract and Transcribe, then Azure OpenAI/Cognitive, GCP Vertex/AutoML/Vision, IBM Watson/Cloud Pak, and OCI AI/Blockchain services. The uniform sequence reflects generated dependency ordering, not proven dataflow; no IAM, network, or storage tiers exist.
+
+**Context hints**
+- `[COMPUTE]` web_app user traffic enters via graphql_api GraphQL interface
+- `[DATA]` agent answers using knowledge; nlp_analysis entities feed chatbot
+- `[GENERAL]` chatbot events hit blockchain_node; text_to_speech audio logs to quantum_ledger
+- `[COMPUTE]` image_analysis inputs scored by ml_endpoint serving ml_model
+- `[DATA]` ml_notebook and ml_pipeline orchestrate text_extraction, speech_to_text jobs
+- `[GENERAL]` openai_service, auto_ml, watson_ml, ai_vision continue cross-cloud processing
+
+**Contextual labels applied:** `web_app` → Public Web Frontend, `graphql_api` → Managed GraphQL API, `agent` → Conversational AI Agent, `knowledge` → RAG Knowledge Base, `nlp_analysis` → Entity Extraction Service, `chatbot` → Voice Chatbot (+6 more)
+
+**Review notes**
+- [labeling] Multiple node labels truncate mid-word: 'Sagemaker Notebook...', 'Bedrock Knowledge...', 'Managed Blockchain...', 'Machine Learning...'.
+- [grouping] 'Compute' and 'Data' clusters nest duplicate 'AWS Cloud' subgroups, fragmenting the top-level AWS provider group.
+- [edge-routing] Inter-cloud edges become dotted segments crossing group borders; transcribe_job to blockchain_member takes a long upward detour.
+- [layout] Extreme horizontal aspect ratio with a large empty band beneath the provider row.
+- [completeness] No legend distinguishes solid intra-cloud edges from dotted inter-cloud edges.
+
+Feedback iterations: iter0: 5/10, iter1: 4/10, iter2: 4/10
+
+**AI-refined diagram files** (include legend and review hints): architecture-diagram-ai.png, architecture-diagram-ai.jpg, architecture-diagram-ai.svg

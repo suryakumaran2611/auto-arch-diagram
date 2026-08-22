@@ -184,3 +184,34 @@ tf_aws_wafv2_web_acl_alb_web_acl --> tf_aws_wafv2_web_acl_association_alb_waf_as
 Assumptions: Connections represent inferred references (including depends_on and attribute references).
 
 Rendered diagram: available as workflow artifact
+
+## AI Architecture Insights
+
+*Reviewed by OpenRouter free vision model `stealth/ox-alpha` (quality score: 4/10).*
+
+**End-to-end:** Public traffic reaches `app_alb` in public subnets, passes `alb_web_acl` inspection, lands on `https_listener` (`http_redirect_listener` enforces TLS), then routes via `app_target_group` to `app_service` tasks in private app subnets across two AZs.
+
+Tasks query `postgres_db`, cache in `redis_replication_group`, mount `app_file_system` via per-AZ EFS targets, and serve static files from `assets_bucket` (versioned, lifecycle-managed, KMS-encrypted, public access blocked).
+
+`data_encryption_key` uniformly encrypts storage services; `db_credentials_secret` injects DB credentials into `app_task_definition`. Alarms on ALB 5xx and RDS CPU fan out through `ops_alerts_topic` to operator email.
+
+**Context hints**
+- `[KMS]` data_encryption_key encrypts RDS, EFS, Redis, SNS, secrets, logs, and S3.
+- `[SECRETS]` db_credentials_secret holds postgres_db master password; app_task_definition consumes it.
+- `[S3]` assets_bucket stores static assets; versioned, lifecycle rules, KMS-encrypted, public access blocked.
+- `[NETWORK]` app_alb terminates TLS on https_listener; http_redirect_listener forces HTTPS inbound.
+- `[COMPUTE]` app_service tasks in private subnets use postgres_db, redis_replication_group, app_file_system mounts.
+- `[GENERAL]` alb_5xx_alarm and rds_cpu_alarm publish to ops_alerts_topic; ops_email_subscription emails operators.
+
+**Contextual labels applied:** `assets_bucket` → Static Assets (Versioned), `postgres_db` → Primary PostgreSQL Database, `redis_replication_group` → Redis Cache Replication Group, `app_alb` → Public HTTPS Entry Point, `app_service` → Containerized App (Autoscaled), `data_encryption_key` → Central Encryption Key (+6 more)
+
+**Review notes**
+- [layout] Extreme vertical sprawl; Security cluster sits far above its Network/Storage consumers, forcing full-height dashed edges.
+- [labeling] Many node labels truncated mid-word ('ecs task execution...', 'db credentials...', 'Ssm Parameter').
+- [grouping] 'Other' is a catch-all mixing logging, secrets, messaging, config, and alarms, obscuring functional tiers.
+- [edge-routing] Dense crossings among NAT gateway, route tables, and security groups; KMS fan-out overlaps every other flow.
+- [completeness] Orphan nodes with zero edges: app_repository, app_feature_flags, db_master_password hide real dependencies.
+
+Feedback iterations: iter0: 3/10, iter1: 3/10, iter2: 4/10
+
+**AI-refined diagram files** (include legend and review hints): architecture-diagram-ai.png, architecture-diagram-ai.jpg, architecture-diagram-ai.svg

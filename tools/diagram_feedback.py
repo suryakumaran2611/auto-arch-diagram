@@ -134,7 +134,11 @@ def run_feedback_loop(
         return render, direction, {}, []
 
     model_ids = [m["id"] for m in candidates]
-    print(f"[ai-enhance] Free vision models (ranked): {', '.join(model_ids[:4])}")
+    print(
+        f"[ai-enhance] Free vision models (ranked, {len(model_ids)} total): "
+        + ", ".join(model_ids[:10])
+        + (" ..." if len(model_ids) > 10 else "")
+    )
 
     mermaid_context = graph_to_mermaid(resources, edges)
     inventory = (

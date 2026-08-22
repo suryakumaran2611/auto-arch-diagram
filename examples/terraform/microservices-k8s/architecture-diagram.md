@@ -97,3 +97,30 @@ tf_aws_vpc_main --> tf_aws_subnet_public
 Assumptions: Connections represent inferred references (including depends_on and attribute references).
 
 Rendered diagram: available as workflow artifact
+
+## AI Architecture Insights
+
+*Reviewed by OpenRouter free vision model `stealth/ox-alpha` (quality score: 4/10).*
+
+**End-to-end:** Terraform provisions `vpc_main` split into public/private subnets. `internet_gateway_main` handles public ingress; `nat_gateway_main` with `eip_nat` grants private subnets outbound-only access. `eks_cluster_main` controls `eks_node_group_main`, whose nodes assume `iam_role_eks_nodes` (CNI, worker, registry policies) and pull images from `ecr_repository_microservices`. Pod traffic reaches `db_instance_microservices` (relational state) and `elasticache_cluster_microservices` (cache tier) only through chained security groups: `eks_cluster` → `eks_nodes` → `rds` / `elasticache`. Subnet groups pin both data stores into private subnets; logs flow to `cloudwatch_log_group_eks`.
+
+**Context hints**
+- `[COMPUTE]` eks_node_group_main runs containerized microservices in private subnets via NAT egress.
+- `[DATA]` db_instance_microservices stores relational state; reachable only through security_group_rds.
+- `[DATA]` elasticache_cluster_microservices caches hot data for pods; guarded by security_group_elasticache.
+- `[IAM]` iam_role_eks_nodes grants nodes CloudWatch logging and ECR pull via attached policies.
+- `[NETWORK]` nat_gateway_main plus eip_nat give private subnets outbound-only internet access.
+- `[GENERAL]` ecr_repository_microservices supplies container images pulled by eks_node_group_main.
+
+**Contextual labels applied:** `eks_cluster_main` → EKS Control Plane, `eks_node_group_main` → Worker Nodes (Private), `db_instance_microservices` → Primary Relational Database, `elasticache_cluster_microservices` → Redis Cache Tier, `nat_gateway_main` → Outbound NAT Gateway, `ecr_repository_microservices` → Microservice Image Registry (+2 more)
+
+**Review notes**
+- [labeling] Truncated labels: 'Route Table...', 'IAM Role Policy...', 'Elastiache Subnet...' obscure resource identity.
+- [edge-routing] Red dashed IAM/security-group edges cross the full canvas, overlapping every cluster.
+- [layout] Security cluster placed far above Network, forcing dozens of long vertical edges.
+- [grouping] 'Other' mixes unrelated concerns: EIP belongs beside NAT gateway, not with logs/registry.
+- [completeness] Data-plane flows (pods→RDS/ElastiCache/ECR) absent; only infrastructure wiring is drawn.
+
+Feedback iterations: iter0: 4/10, iter1: 4/10, iter2: 4/10
+
+**AI-refined diagram files** (include legend and review hints): architecture-diagram-ai.png, architecture-diagram-ai.jpg, architecture-diagram-ai.svg

@@ -22,7 +22,7 @@ def _python_cmd(repo: Path) -> list[str]:
     return [sys.executable]
 
 
-def _generate_for_example(repo: Path, entry_file: Path) -> None:
+def _generate_for_example(repo: Path, entry_file: Path, *, ai_enhance: bool = False) -> None:
     if not entry_file.exists():
         return
 
@@ -57,15 +57,27 @@ def _generate_for_example(repo: Path, entry_file: Path) -> None:
         "--out-drawio",
         str(out_drawio.relative_to(repo)),
     ]
+    if ai_enhance:
+        cmd.append("--ai-enhance")
 
-    res = subprocess.run(cmd, cwd=str(repo), env=env, capture_output=True, text=True)  # nosec B603
+    # Stream generator output (progress, [ai-enhance] logs) instead of
+    # capturing it - silent capture hid enhancement failures.
+    res = subprocess.run(cmd, cwd=str(repo), env=env)  # nosec B603
     if res.returncode != 0:
-        raise RuntimeError(
-            f"Failed generating for {example_dir}:\n{res.stderr}\n{res.stdout}"
-        )
+        raise RuntimeError(f"Failed generating for {example_dir}")
 
 
 def main() -> int:
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Regenerate all example diagrams")
+    parser.add_argument(
+        "--ai-enhance",
+        action="store_true",
+        help="Pass --ai-enhance through to the generator for each terraform example",
+    )
+    args = parser.parse_args()
+
     repo = _repo_root()
     examples_root = repo / "examples"
 
@@ -86,7 +98,7 @@ def main() -> int:
         if entry.suffix.lower() in {".ts", ".py"} and entry.name.endswith(".cdk.ts"):
             continue
         print(f"Generating: {entry.parent.relative_to(repo)} (from {entry.name})")
-        _generate_for_example(repo, entry)
+        _generate_for_example(repo, entry, ai_enhance=args.ai_enhance)
 
     print("Done.")
     return 0

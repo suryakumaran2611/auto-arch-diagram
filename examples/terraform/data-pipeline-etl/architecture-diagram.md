@@ -99,3 +99,30 @@ tf_aws_sqs_queue_data_transformation_queue --> tf_aws_sqs_queue_policy_data_tran
 Assumptions: Connections represent inferred references (including depends_on and attribute references).
 
 Rendered diagram: available as workflow artifact
+
+## AI Architecture Insights
+
+*Reviewed by OpenRouter free vision model `stealth/ox-alpha` (quality score: 3/10).*
+
+**End-to-end:** an EventBridge schedule invokes `data_ingestion`, landing files from `data_sources` into `raw_data`. SNS topics `processing_events` / `transformation_events` fan out to SQS queues whose event source mappings trigger `data_processing` and `data_transformation`, writing results to `processed_data`; failures drain to `data_ingestion_dlq`. The Glue `etl_job` (via `glue_role` + `glue_s3_access`) curates data into `data_lake`, registered in the `data_pipeline` catalog. All buckets are versioned (`s3_bucket_versioning.all`). IAM policies scope least privilege; CloudWatch log groups capture Glue and Lambda logs.
+
+**Context hints**
+- `[S3]` data_sources receives uploads; raw_data archives ingested copies; processed_data stores transformed outputs
+- `[COMPUTE]` EventBridge schedule triggers data_ingestion Lambda copying new files into raw_data
+- `[GENERAL]` processing_events fans out to data_processing_queue; data_processing Lambda consumes via event source mapping
+- `[GENERAL]` transformation_events feeds data_transformation_queue triggering data_transformation Lambda writing processed_data
+- `[DATA]` etl_job reads data_sources, writes curated tables to data_lake via glue_role
+- `[IAM]` lambda_s3_access grants all three Lambdas read-write across four pipeline buckets
+
+**Contextual labels applied:** `data_sources` → Raw Uploads Landing Zone, `raw_data` → Ingested Raw Archive, `processed_data` → Transformed Output Store, `data_lake` → Curated Analytics Lake, `data_ingestion` → Scheduled Ingestion Worker, `data_processing` → Queue Consumer Processor (+6 more)
+
+**Review notes**
+- [edge-routing] Dense red dashed IAM edge bundle runs vertically through the canvas center, obscuring nodes across all groups
+- [labeling] Multiple truncated labels: 'Sns Topic transformation...', 'Sqs Queue data processing...', 'Lambda Event Source...', 'IAM Role Policy...'
+- [grouping] 'Other' group mixes CloudWatch monitoring, SNS/SQS messaging, and the Glue ETL job with no semantic cohesion
+- [layout] Long cross-group edges (buckets to IAM policies, queues to Lambdas) span nearly full diagram height
+- [completeness] No legend explaining three edge styles (red dashed, blue solid, black solid) or whether arrows denote references vs dataflow
+
+Feedback iterations: iter0: 3/10, iter1: 3/10, iter2: 3/10
+
+**AI-refined diagram files** (include legend and review hints): architecture-diagram-ai.png, architecture-diagram-ai.jpg, architecture-diagram-ai.svg

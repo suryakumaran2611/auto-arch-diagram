@@ -52,3 +52,29 @@ tf_aws_vpc_primary --> tf_aws_vpc_peering_connection_primary_to_dr
 Assumptions: Connections represent inferred references (including depends_on and attribute references).
 
 Rendered diagram: available as workflow artifact
+
+## AI Architecture Insights
+
+*Reviewed by OpenRouter free vision model `stealth/ox-alpha` (quality score: 6/10).*
+
+**Multi-region HA web stack.** Each region runs a private-subnet EC2 app tier (`app_primary`, `app_dr`) backed by an Aurora cluster (`app_db_primary`, `app_db_dr`) placed via db subnet groups. `read_replica_link` streams changes from the primary writer to the DR cluster, keeping `app_db_dr` promotable during regional failure. `primary_to_dr` VPC peering provides the private path for replication and administrative traffic. `app_sg` gates inbound access to the primary instance only; the DR side currently relies on subnet isolation alone.
+
+**Context hints**
+- `[COMPUTE]` app_primary serves primary traffic; app_dr is warm standby in us-west-2
+- `[DATA]` app_db_primary writes; app_db_dr receives cross-region replication via read_replica_link
+- `[NETWORK]` primary_to_dr enables private inter-VPC routing for replication and failover traffic
+- `[NETWORK]` app_sg restricts ingress to app_primary; app_dr has no security group
+- `[DATA]` db subnet groups anchor each cluster to private subnets per VPC
+
+**Contextual labels applied:** `app_primary` → Primary App Server, `app_dr` → Standby App Server, `app_db_primary` → Primary Aurora Writer, `app_db_dr` → Cross-Region Replica, `read_replica_link` → Aurora Replication Link, `primary_to_dr` → Inter-Region Peering
+
+**Review notes**
+- [layout] read_replica_link node drawn inside primary_private_a subnet despite spanning both regions
+- [labeling] VPC peering label truncated to 'VPC Peering...' hiding target name
+- [edge-routing] Dashed red VPC-to-SG-to-instance edges loop outside containers and overlap subnet border
+- [grouping] Peering connection nested solely under us-west-2 though it belongs to both VPCs
+- [completeness] No security-group edge shown for app_dr, leaving DR ingress posture ambiguous
+
+Feedback iterations: iter0: 6/10, iter1: 6/10, iter2: 6/10
+
+**AI-refined diagram files** (include legend and review hints): architecture-diagram-ai.png, architecture-diagram-ai.jpg, architecture-diagram-ai.svg
