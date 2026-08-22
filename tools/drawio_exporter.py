@@ -134,7 +134,10 @@ def _aws_group_style(
     return "".join(parts)
 
 
-_AWS_CLOUD_STYLE_TMPL = dict(gr_icon="mxgraph.aws4.group_aws_cloud_alt")
+_AWS_CLOUD_STYLE = _aws_group_style(
+    gr_icon="mxgraph.aws4.group_aws_cloud_alt", stroke="#FF9900",
+    font_color=_AWS_SQUID_INK,
+)
 _AWS_VPC_STYLE = _aws_group_style(
     gr_icon="mxgraph.aws4.group_vpc", stroke=_VPC_GREEN, font_color=_VPC_GREEN
 )
@@ -158,6 +161,34 @@ _GENERIC_FRAME_STYLE = (
     "spacingLeft=10;fontSize=12;fontStyle=1;container=1;collapsible=0;"
 )
 
+# Official draw.io AWS shape library (mxgraph.aws4) - only icon ids verified
+# against jgraph's AWS libraries; unknown types fall back to embedded PNGs.
+_AWS4_RESOURCE_ICONS = {
+    "instance": "ec2",
+    "lambda_function": "lambda_function",
+    "s3_bucket": "s3",
+    "db_instance": "rds",
+    "dynamodb_table": "dynamodb",
+    "elasticache_cluster": "elasticache",
+    "internet_gateway": "internet_gateway",
+    "nat_gateway": "nat_gateway",
+    "route_table": "route_table",
+    "security_group": "security_group",
+    "cloudfront_distribution": "cloudfront",
+    "lb": "elastic_load_balancing",
+    "alb": "elastic_load_balancing",
+    "autoscaling_group": "auto_scaling",
+    "api_gateway_rest_api": "api_gateway",
+}
+
+
+def _aws4_icon_for(r_type: str) -> str | None:
+    """Official mxgraph.aws4 resIcon name for a terraform type (None if unknown)."""
+    t = r_type.lower()
+    if not t.startswith("aws_"):
+        return None
+    return _AWS4_RESOURCE_ICONS.get(t[4:])
+
 
 class _DrawioExporter:
     def __init__(
@@ -175,6 +206,8 @@ class _DrawioExporter:
         self._seq = 0
         self._ids_by_raw: dict[str, str] = {}
         self._used_ids: set[str] = set()
+        self._cursor_x = 0.0
+        self._max_h = 0.0
 
     # --------------------------------------------------------------- helpers
     def _next_id(self, prefix: str) -> str:
@@ -291,20 +324,20 @@ class _DrawioExporter:
             data = Path(path).read_bytes()
         except Exception:
             return ""
-        return "data:image/png," + base64.b64encode(data).decode("ascii")
+        # draw.io/browsers require the explicit ;base64 marker.
+        return "data:image/png;base64," + base64.b64encode(data).decode("ascii")
 
     # ------------------------------------------------------------- vertices
-    def _open_frame(
-        self, cid: str, title: str, style: str, parent: str, x: float, y: float
-    ) -> str:
-        self._add(cid, title, style, parent, x, y, 10, 10)
+    def _open_frame(self, title: str, style: str, x: float, y: float) -> str:
+        cid = self._next_id("grp")
+        self._add(cid, title, style, "1", x, y, 10, 10)
         return cid
 
-    def _close_frame(self, cid: str, w: float, h: float) -> tuple[float, float]:
-        rec = self.cells[cid]
-        rec["w"] = round(w, 1)
-        rec["h"] = round(h, 1)
-        return rec["w"], rec["h"]
+    @staticmethod
+    def _close_frame(cid_rec: dict[str, Any], w: float, h: float) -> tuple[float, float]:
+        cid_rec["w"] = round(w, 1)
+        cid_rec["h"] = round(h, 1)
+        return cid_rec["w"], cid_rec["h"]
 
     def _node_label(self, rid: str) -> str:
         from generate_arch_diagram import _tf_node_label  # noqa: PLC0415
@@ -325,19 +358,33 @@ class _DrawioExporter:
         r_type = rid.split(".", 1)[0]
         attrs = self.resources.get(rid, {}) or {}
         cid = self._safe_id(rid)
-        uri = self._png_data_uri(self._icon_png_path(rid, r_type, attrs))
-        if uri:
+        res_icon = _aws4_icon_for(r_type)
+        if res_icon:
+            # Official vector shape from the mxgraph.aws4 library.
             style = (
-                "shape=image;html=1;verticalLabelPosition=bottom;verticalAlign=top;"
-                f"imageAspect=0;aspect=fixed;image={uri};fontSize={_LABEL_FONT};"
-                f"fontColor={_AWS_SQUID_INK};labelBackgroundColor=#FFFFFF;"
+                "sketch=0;html=1;shape=mxgraph.aws4.resourceIcon;"
+                f"resIcon=mxgraph.aws4.{res_icon};"
+                "verticalLabelPosition=bottom;verticalAlign=top;align=center;"
+                f"fontSize={_LABEL_FONT};fontColor={_AWS_SQUID_INK};"
+                "labelBackgroundColor=#FFFFFF;"
             )
         else:
-            style = (
-                "rounded=1;whiteSpace=wrap;html=1;arcSize=18;fillColor=#EEF2F7;"
-                "strokeColor=#94A3B8;verticalLabelPosition=bottom;verticalAlign=top;"
-                f"fontSize={_LABEL_FONT};fontColor=#334155;"
-            )
+            uri = self._png_data_uri(self._icon_png_path(rid, r_type, attrs))
+            if uri:
+                style = (
+                    "shape=image;html=1;verticalLabelPosition=bottom;"
+                    "verticalAlign=top;"
+                    f"imageAspect=0;aspect=fixed;image={uri};"
+                    f"fontSize={_LABEL_FONT};fontColor={_AWS_SQUID_INK};"
+                    "labelBackgroundColor=#FFFFFF;"
+                )
+            else:
+                style = (
+                    "rounded=1;whiteSpace=wrap;html=1;arcSize=18;fillColor=#EEF2F7;"
+                    "strokeColor=#94A3B8;verticalLabelPosition=bottom;"
+                    "verticalAlign=top;"
+                    f"fontSize={_LABEL_FONT};fontColor=#334155;"
+                )
         self._add(cid, label, style, parent, x, y, _ICON_SIZE, _ICON_SIZE)
         return cid
 
@@ -396,42 +443,39 @@ class _DrawioExporter:
         if provider_upper == "AWS":
             style = _AWS_PUBLIC_SUBNET_STYLE if is_public else _AWS_PRIVATE_SUBNET_STYLE
         elif is_public:
-            style = _GENERIC_FRAME_STYLE.format(
-                fillColor="#F8FFF8", strokeColor="#28A745", fontColor="#248814"
+            style = (
+                f"{_GENERIC_FRAME_STYLE}fillColor={self.render.color_public_subnet};"
+                "strokeColor=#28A745;fontColor=#248814;"
             )
         else:
-            style = _GENERIC_FRAME_STYLE.format(
-                fillColor="#FFFEF8", strokeColor="#FFC107", fontColor="#8D6E00"
+            style = (
+                f"{_GENERIC_FRAME_STYLE}fillColor={self.render.color_private_subnet};"
+                "strokeColor=#FFC107;fontColor=#8D6E00;"
             )
         title = _tf_node_label(subnet_name) + (
             " (Public)" if is_public else " (Private)"
         )
-        cid = self._next_id("subnet")
-        self._open_frame(cid, title, style, parent, ox, oy)
+        rec = self._add(
+            self._next_id("subnet"), title, style, parent, ox, oy, 10, 10
+        )
 
         pad_x = _FRAME_PAD * 0.55
         top = _TITLE_H * 0.7
         label, slot_w, slot_h = self._node_metrics(subnet_name)
-        self._add_resource_node(
-            subnet_name,
-            cid,
-            pad_x + (_ICON_SIZE + 22 - _ICON_SIZE) / 2,
-            top,
-            label,
-        )
+        self._add_resource_node(subnet_name, rec["id"], pad_x, top, label)
         y = top + slot_h + _CLUSTER_GAP * 0.6
         by_cat: dict[str, list[str]] = {}
         for rid in subnet_rids:
             by_cat.setdefault(_tf_category(rid.split(".", 1)[0]), []).append(rid)
-        w = max(slot_w, _ICON_SIZE) + pad_x
+        w = max(slot_w, _ICON_SIZE + 22)
         for lane in _LANE_ORDER:
             group = sorted(by_cat.get(lane, []))
             if not group:
                 continue
-            gw, gh = self.place_nodes_grid(group, cid, pad_x, y)
-            w = max(w, gw + pad_x)
+            gw, gh = self.place_nodes_grid(group, rec["id"], pad_x, y)
+            w = max(w, gw)
             y += gh + _CLUSTER_GAP * 0.5
-        return self._close_frame(cid, w, y + _FRAME_PAD * 0.35)
+        return self._close_frame(rec, w + 2 * pad_x, y + _FRAME_PAD * 0.35)
 
     def layout_vpc(
         self,
@@ -447,36 +491,41 @@ class _DrawioExporter:
         if provider_upper == "AWS":
             style = _AWS_VPC_STYLE
         else:
-            style = _GENERIC_FRAME_STYLE.format(
-                fillColor="#F8FCFF", strokeColor="#5DADE2", fontColor="#1F618D"
+            style = (
+                f"{_GENERIC_FRAME_STYLE}fillColor={self.render.color_vpc};"
+                "strokeColor=#5DADE2;fontColor=#1F618D;"
             )
-        cid = self._next_id("vpc")
-        self._open_frame(
-            cid, _tf_node_label(vpc_name), style, parent, ox, oy
+        rec = self._add(
+            self._next_id("vpc"),
+            _tf_node_label(vpc_name),
+            style,
+            parent,
+            ox,
+            oy,
+            10,
+            10,
         )
 
         pad_x = _FRAME_PAD * 0.55
         top = _TITLE_H * 0.7
         label, slot_w, slot_h = self._node_metrics(vpc_name)
-        self._add_resource_node(
-            vpc_name, cid, pad_x + (_ICON_SIZE + 22 - _ICON_SIZE) / 2, top, label
-        )
+        self._add_resource_node(vpc_name, rec["id"], pad_x, top, label)
         y = top + slot_h + _CLUSTER_GAP * 0.6
-        w = max(slot_w, _ICON_SIZE) + pad_x
+        w = max(slot_w, _ICON_SIZE + 22)
         other_rids = list(subnets.get("other", []))
         if other_rids:
-            gw, gh = self.place_nodes_grid(other_rids, cid, pad_x, y)
-            w = max(w, gw + pad_x)
+            gw, gh = self.place_nodes_grid(other_rids, rec["id"], pad_x, y)
+            w = max(w, gw)
             y += gh + _CLUSTER_GAP * 0.5
         for subnet_name, subnet_rids in sorted(subnets.items()):
             if subnet_name == "other":
                 continue
             sw, sh = self.layout_subnet(
-                subnet_name, subnet_rids, cid, pad_x, y, provider_upper
+                subnet_name, subnet_rids, rec["id"], pad_x, y, provider_upper
             )
-            w = max(w, sw + pad_x)
+            w = max(w, sw)
             y += sh + _CLUSTER_GAP * 0.5
-        return self._close_frame(cid, w + pad_x, y - oy + _FRAME_PAD * 0.3)
+        return self._close_frame(rec, w + 2 * pad_x, y - oy + _FRAME_PAD * 0.3)
 
     def layout_category(
         self,
@@ -496,8 +545,9 @@ class _DrawioExporter:
             f"{_GENERIC_FRAME_STYLE}fillColor={tint};strokeColor={border};"
             f"fontColor={font};"
         )
-        cid = self._next_id("cat")
-        self._open_frame(cid, category, style, parent, ox, oy)
+        rec = self._add(
+            self._next_id("cat"), category, style, parent, ox, oy, 10, 10
+        )
 
         pad_x = _FRAME_PAD * 0.55
         top = _TITLE_H * 0.65
@@ -510,10 +560,10 @@ class _DrawioExporter:
             group = sorted(by_cat.get(lane, []))
             if not group:
                 continue
-            gw, gh = self.place_nodes_grid(group, cid, pad_x, y)
-            w = max(w, gw + pad_x)
+            gw, gh = self.place_nodes_grid(group, rec["id"], pad_x, y)
+            w = max(w, gw)
             y += gh + _CLUSTER_GAP * 0.5
-        return self._close_frame(cid, max(w, 60) + pad_x, y - oy + _FRAME_PAD * 0.3)
+        return self._close_frame(rec, max(w, 60) + 2 * pad_x, y - oy + _FRAME_PAD * 0.3)
 
     # ---------------------------------------------------------------- export
     def export(self, out_path: Path, title: str) -> dict[str, Any]:
@@ -538,43 +588,60 @@ class _DrawioExporter:
             else:
                 unknown_rids.append(rid)
 
-        offset_x = 0.0
-        max_h = 0.0
+        blocks: list[tuple[str, str | None, str, list[str], bool]] = []
+        for provider in sorted(known_providers):
+            provider_upper = provider.upper()
+            blocks.append(
+                (
+                    f"{provider} Cloud",
+                    _PROVIDER_BORDER_COLORS.get(provider_upper, "#6C757D"),
+                    _PROVIDER_TINT_COLORS.get(provider_upper, "#FFFFFF"),
+                    known_providers[provider],
+                    True,
+                )
+            )
+        if unknown_rids:
+            blocks.append(("Other Resources", None, "#F8F9FA", unknown_rids, False))
 
-        def _provider_block(
-            pcid: str,
-            heading: str,
-            accent: str | None,
-            tint: str,
-            rids: list[str],
-        ) -> tuple[float, float]:
-            nonlocal offset_x, max_h
+        offset_x = _FRAME_PAD
+        for heading, accent, tint, rids, is_cloud in blocks:
             pw_pad = _FRAME_PAD
-            if accent:
-                style = (
+            if heading == "AWS Cloud":
+                frame_style = _AWS_CLOUD_STYLE
+            elif accent:
+                frame_style = (
                     f"{_GENERIC_FRAME_STYLE}fontSize=13;fillColor={tint};"
                     f"strokeColor={accent};fontColor={accent};"
                 )
             else:
-                style = (
+                frame_style = (
                     f"{_GENERIC_FRAME_STYLE}fillColor={tint};"
                     "strokeColor=#CED4DA;fontColor=#495057;"
                 )
-            self._open_frame(pcid, heading, style, "1", offset_x + pw_pad, pw_pad)
+            prec = self._add(
+                self._next_id("provider"),
+                heading,
+                frame_style,
+                "1",
+                offset_x,
+                _FRAME_PAD,
+                10,
+                10,
+            )
+            provider_key = heading.split()[0]
+
             x, y = pw_pad, pw_pad + _TITLE_H * 0.8
             inner_w = 0.0
             handled: set[str] = set()
 
-            provider_upper = heading.split()[0].upper()
             provider_vpcs = {
                 v: sub
                 for v, sub in vpc_hierarchy.items()
-                if _guess_provider(v.split(".", 1)[0]) == heading.split()[0]
-                or _guess_provider(v.split(".", 1)[0]).upper() == provider_upper
+                if _guess_provider(v.split(".", 1)[0]) == provider_key
             }
             for vpc_name, subnets in sorted(provider_vpcs.items()):
                 vw, vh = self.layout_vpc(
-                    vpc_name, subnets, pcid, x, y, provider_upper
+                    vpc_name, subnets, prec["id"], x, y, provider_key.upper()
                 )
                 handled.add(vpc_name)
                 for s in subnets:
@@ -598,14 +665,12 @@ class _DrawioExporter:
                 cw, ch = self.layout_category(
                     _tf_category(head.split(".", 1)[0]),
                     [head],
-                    pcid,
+                    prec["id"],
                     x,
                     y,
                     accent=accent,
                 )
-                kw, kh = self.place_nodes_grid(
-                    sorted(kids), pcid, x + cw + _COL_GAP, y
-                )
+                kw, kh = self.place_nodes_grid(sorted(kids), prec["id"], x + cw + _COL_GAP, y)
                 inner_w = max(inner_w, cw + _COL_GAP + kw)
                 y += max(ch, kh) + _CLUSTER_GAP
 
@@ -613,173 +678,114 @@ class _DrawioExporter:
             for rid in remaining:
                 if rid in compute_subclusters:
                     continue
-                lanes_left.setdefault(
-                    _tf_category(rid.split(".", 1)[0]), []
-                ).append(rid)
+                lanes_left.setdefault(_tf_category(rid.split(".", 1)[0]), []).append(rid)
             for lane in _LANE_ORDER:
                 group = lanes_left.get(lane) or []
                 if not group:
                     continue
                 lw, lh = self.layout_category(
-                    lane, group, pcid, x, y, accent=accent
+                    lane, group, prec["id"], x, y, accent=accent
                 )
                 inner_w = max(inner_w, lw)
                 y += lh + _CLUSTER_GAP
 
-            fw, fh = self._close_frame(pcid, inner_w + 2 * pw_pad, y - pw_pad)
-            offset_x += fw + self.render.node_width * 160 * 0.8
-            max_h = max(max_h, fh)
-            return fw, fh
-
-        for provider in sorted(known_providers):
-            provider_upper = provider.upper()
-            pcid = self._next_id("provider")
-            accent = _PROVIDER_BORDER_COLORS.get(provider_upper, "#6C757D")
-            tint = _PROVIDER_TINT_COLORS.get(provider_upper, "#FFFFFF")
-            if provider_upper == "AWS":
-                style = _aws_group_style(
-                    gr_icon="mxgraph.aws4.group_aws_cloud_alt",
-                    stroke=accent,
-                    font_color=_AWS_SQUID_INK,
-                )
-                self._open_frame(
-                    pcid, f"{provider} Cloud", style, "1", offset_x + _FRAME_PAD, _FRAME_PAD
-                )
-                # Re-use the generic block by closing immediately is complex;
-                # instead lay out content manually below.
-                fw, fh = self._provider_frame_content(
-                    pcid, provider, known_providers[provider], accent, tint
-                )
-            else:
-                fw, fh = self._provider_frame_content(
-                    pcid, provider, known_providers[provider], accent, tint
-                )
+            fw, fh = self._close_frame(prec, inner_w + 2 * pw_pad, y - pw_pad)
             offset_x += fw + _FRAME_PAD * 1.6
-            max_h = max(max_h, fh)
+            self._max_h = max(self._max_h, fh)
 
-        if unknown_rids:
-            pcid = self._next_id("provider")
-            fw, fh = self._provider_frame_content(
-                pcid, "Resources", unknown_rids, None, "#F8F9FA"
-            )
-            offset_x += fw + _FRAME_PAD * 1.6
-            max_h = max(max_h, fh)
-
-        edge_count = self._export_edges(_filter_architectural_edges)
+        edge_count = self._export_edges(_filter_architectural_edges, _detect_edge_type)
 
         _write_mxfile(out_path, title, self.cells)
         return {
             "nodes": len(self.resources),
             "edges": edge_count,
-            "providers": len(known_providers) + (1 if unknown_rids else 0),
+            "providers": len(blocks),
             "clusters": sum(
                 1 for c in self.cells.values() if "container=1" in c["style"]
             ),
             "path": str(out_path),
         }
 
-    def _provider_frame_content(
-        self,
-        pcid: str,
-        display: str,
-        rids: list[str],
-        accent: str | None,
-        tint: str,
-    ) -> tuple[float, float]:
-        from generate_arch_diagram import (  # noqa: PLC0415
-            _build_subgraph_render_map,
-            _guess_provider,
-            _tf_category,
+    # ------------------------------------------------------------------ edges
+    def _abs_top_left(self, cid: str) -> tuple[float, float]:
+        x = 0.0
+        y = 0.0
+        cur: str | None = cid
+        while cur and cur not in {"0", "1"}:
+            rec = self.cells.get(cur)
+            if rec is None:
+                break
+            x += float(rec["x"])
+            y += float(rec["y"])
+            cur = rec["parent"]
+        return x, y
+
+    def _abs_center(self, cid: str) -> tuple[float, float]:
+        x, y = self._abs_top_left(cid)
+        rec = self.cells[cid]
+        return x + rec["w"] / 2, y + rec["h"] / 2
+
+    @staticmethod
+    def _edge_style(edge_type: str, exit_pt: tuple[float, float], entry_pt: tuple[float, float]) -> str:
+        base = (
+            "edgeStyle=orthogonalEdgeStyle;rounded=1;arcSize=8;html=1;jettySize=auto;"
+            "orthogonalLoop=1;"
+        )
+        color = _EDGE_COLORS.get(edge_type, "#455A64")
+        width = {"security": 1.5, "data": 2.0, "dependency": 1.0}.get(edge_type, 1.2)
+        dashed = "dashed=1;" if edge_type in {"security", "dependency"} else ""
+        ex, ey = exit_pt
+        nx, ny = entry_pt
+        return (
+            f"{base}strokeColor={color};strokeWidth={width};{dashed}"
+            "endArrow=block;endFill=1;"
+            f"exitX={ex:g};exitY={ey:g};exitDx=0;exitDy=0;"
+            f"entryX={nx:g};entryY={ny:g};entryDx=0;entryDy=0;"
         )
 
-        if accent:
-            style = (
-                f"{_GENERIC_FRAME_STYLE}fontSize=13;fillColor={tint};"
-                f"strokeColor={accent};fontColor={accent};"
-            )
-        else:
-            style = (
-                f"{_GENERIC_FRAME_STYLE}fillColor={tint};"
-                "strokeColor=#CED4DA;fontColor=#495057;"
-            )
-        if display == "AWS" or display.endswith("Cloud"):
-            heading = display if display.endswith("Cloud") else f"{display} Cloud"
-            if display == "AWS":
-                style = _aws_group_style(
-                    gr_icon="mxgraph.aws4.group_aws_cloud_alt",
-                    stroke=_PROVIDER_BORDER_COLORS["AWS"],
-                    font_color=_AWS_SQUID_INK,
-                )
-        else:
-            heading = display
-        self._open_frame(
-            pcid, heading, style, "1", self._cursor_x(), _FRAME_PAD
-        )
-
-        vpc_hierarchy, compute_subclusters, compute_children, resources_in_vpcs = (
-            _build_subgraph_render_map(self.resources, self.edges)
-        )
-        pw_pad = _FRAME_PAD
-        x, y = pw_pad, pw_pad + _TITLE_H * 0.8
-        inner_w = 0.0
-        handled: set[str] = set()
-        provider_key = display.split()[0]
-
-        provider_vpcs = {
-            v: sub
-            for v, sub in vpc_hierarchy.items()
-            if _guess_provider(v.split(".", 1)[0]) == provider_key
-        }
-        for vpc_name, subnets in sorted(provider_vpcs.items()):
-            vw, vh = self.layout_vpc(
-                vpc_name, subnets, pcid, x, y, provider_key.upper()
-            )
-            handled.add(vpc_name)
-            for s in subnets:
-                handled.add(s)
-                handled.update(subnets[s])
-            inner_w = max(inner_w, vw)
-            y += vh + _CLUSTER_GAP
-
-        remaining = [
-            rid
-            for rid in rids
-            if rid not in handled
-            and rid not in resources_in_vpcs
-            and rid not in compute_children
-            and rid not in vpc_hierarchy
-        ]
-
-        for head, kids in sorted(compute_subclusters.items()):
-            if head not in remaining:
+    def _export_edges(self, filter_fn, detect_fn) -> int:
+        filtered = set(filter_fn(self.resources, set(self.edges)))
+        seen: set[tuple[str, str]] = set()
+        count = 0
+        for src, dst in sorted(filtered):
+            if src == dst or (dst, src) in seen:
                 continue
-            cw, ch = self.layout_category(
-                _tf_category(head.split(".", 1)[0]), [head], pcid, x, y, accent=accent
+            seen.add((src, dst))
+            src_id = self._ids_by_raw.get(src)
+            dst_id = self._ids_by_raw.get(dst)
+            if not src_id or not dst_id or src_id not in self.cells or dst_id not in self.cells:
+                continue
+            sx, sy = self._abs_center(src_id)
+            tx, ty = self._abs_center(dst_id)
+            dx = tx - sx
+            dy = ty - sy
+            if abs(dx) >= abs(dy):
+                if dx >= 0:
+                    exit_pt, entry_pt = (1.0, 0.5), (0.0, 0.5)
+                else:
+                    exit_pt, entry_pt = (0.0, 0.5), (1.0, 0.5)
+            else:
+                if dy >= 0:
+                    exit_pt, entry_pt = (0.5, 1.0), (0.5, 0.0)
+                else:
+                    exit_pt, entry_pt = (0.5, 0.0), (0.5, 1.0)
+            edge_type = detect_fn(src, dst, self.resources)
+            ecid = self._next_id("edge")
+            rec = self._add(
+                ecid,
+                "",
+                self._edge_style(edge_type, exit_pt, entry_pt),
+                "1",
+                0,
+                0,
+                0,
+                0,
             )
-            kw, kh = self.place_nodes_grid(sorted(kids), pcid, x + cw + _COL_GAP, y)
-            inner_w = max(inner_w, cw + _COL_GAP + kw)
-            y += max(ch, kh) + _CLUSTER_GAP
-
-        lanes_left: dict[str, list[str]] = {}
-        for rid in remaining:
-            if rid in compute_subclusters:
-                continue
-            lanes_left.setdefault(_tf_category(rid.split(".", 1)[0]), []).append(rid)
-        for lane in _LANE_ORDER:
-            group = lanes_left.get(lane) or []
-            if not group:
-                continue
-            lw, lh = self.layout_category(lane, group, pcid, x, y, accent=accent)
-            inner_w = max(inner_w, lw)
-            y += lh + _CLUSTER_GAP
-
-        return self._close_frame(pcid, inner_w + 2 * pw_pad, y - pw_pad)
-
-    def _cursor_x(self) -> float:
-        return self._next_offset_x
-
-    def _export_edges(self, filter_fn) -> int:
-        raise NotImplementedError
+            rec["edge"] = True
+            rec["source"] = src_id
+            rec["target"] = dst_id
+            count += 1
+        return count
 
 
 def export_drawio(

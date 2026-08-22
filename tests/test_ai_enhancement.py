@@ -593,4 +593,5 @@ def test_drawio_exporter_proper_diagram_structure(tmp_path: Path) -> None:
 
     # White page background like reference diagrams.
     model = root.find(".//mxGraphModel")
-    assert model is not None and model.get("background") == "#ffffff"
+    assert model is not None
+    assert (model.get("background") or "").lower() == "#ffffff"
