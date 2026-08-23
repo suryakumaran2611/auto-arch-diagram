@@ -13,12 +13,14 @@ peer private (Private)]
 peer public (Public)]
       tf_aws_subnet_peer_public["aws_subnet.peer_public"]
     end
+    tf_aws_security_group_peer_app["aws_security_group.peer_app"]
+    tf_aws_security_group_primary_app["aws_security_group.primary_app"]
   end
   subgraph vpc_aws_vpc_primary[VPC
 primary]
     tf_aws_vpc_primary["aws_vpc.primary"]
     subgraph subnet_aws_subnet_primary_private[Subnet
-primary… (Private)]
+primary private (Private)]
       tf_aws_subnet_primary_private["aws_subnet.primary_private"]
       tf_aws_instance_primary_app["aws_instance.primary_app"]
       tf_aws_route_table_association_primary_private_assoc["aws_route_table_association.primary_private_assoc"]
@@ -30,31 +32,12 @@ primary public (Public)]
   end
   tf_aws_route_table_peer_rt["aws_route_table.peer_rt"]
   tf_aws_route_table_primary_rt["aws_route_table.primary_rt"]
-  tf_aws_security_group_peer_app["aws_security_group.peer_app"]
-  tf_aws_security_group_primary_app["aws_security_group.primary_app"]
   tf_aws_vpc_peering_connection_primary_to_peer["aws_vpc_peering_connection.primary_to_peer"]
 end
 tf_aws_route_table_peer_rt --> tf_aws_route_table_association_peer_private_assoc
-tf_aws_route_table_primary_rt --> tf_aws_route_table_association_primary_private_assoc
 tf_aws_security_group_peer_app --> tf_aws_instance_peer_app
 tf_aws_security_group_primary_app --> tf_aws_instance_primary_app
 tf_aws_subnet_peer_private --> tf_aws_instance_peer_app
-tf_aws_subnet_peer_private --> tf_aws_route_table_association_peer_private_assoc
 tf_aws_subnet_primary_private --> tf_aws_instance_primary_app
-tf_aws_subnet_primary_private --> tf_aws_route_table_association_primary_private_assoc
-tf_aws_vpc_peer --> tf_aws_route_table_peer_rt
-tf_aws_vpc_peer --> tf_aws_route_table_primary_rt
 tf_aws_vpc_peer --> tf_aws_security_group_peer_app
 tf_aws_vpc_peer --> tf_aws_security_group_primary_app
-tf_aws_vpc_peer --> tf_aws_subnet_peer_private
-tf_aws_vpc_peer --> tf_aws_subnet_peer_public
-tf_aws_vpc_peer --> tf_aws_vpc_peering_connection_primary_to_peer
-tf_aws_vpc_peering_connection_primary_to_peer --> tf_aws_route_table_peer_rt
-tf_aws_vpc_peering_connection_primary_to_peer --> tf_aws_route_table_primary_rt
-tf_aws_vpc_primary --> tf_aws_route_table_peer_rt
-tf_aws_vpc_primary --> tf_aws_route_table_primary_rt
-tf_aws_vpc_primary --> tf_aws_security_group_peer_app
-tf_aws_vpc_primary --> tf_aws_security_group_primary_app
-tf_aws_vpc_primary --> tf_aws_subnet_primary_private
-tf_aws_vpc_primary --> tf_aws_subnet_primary_public
-tf_aws_vpc_primary --> tf_aws_vpc_peering_connection_primary_to_peer

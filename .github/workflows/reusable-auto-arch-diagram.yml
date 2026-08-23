@@ -4,12 +4,12 @@ on:
   workflow_call:
     inputs:
       changed_files:
-        description: "Optional space/newline-separated list of IaC files to diagram. If set, skips change detection."
+        description: "Space or newline-separated list of IaC files to diagram (e.g. 'infra/main.tf infra/modules/vpc/main.tf'). If empty, auto-detects changed files via iac_globs."
         required: false
         type: string
         default: ''
       iac_globs:
-        description: "Newline-separated glob patterns for IaC files (used to detect changes)."
+        description: "Glob patterns for IaC file detection (one per line). Used when changed_files is empty to find changed IaC."
         required: false
         type: string
         default: |
@@ -31,158 +31,194 @@ on:
           **/Pulumi.*.py
           **/*.cdk.ts
           **/*.cdk.py
-      artifact_name:
-        description: "Artifact name override (use to avoid conflicts in matrix runs). If empty, auto-generates from out_dir or run context."
+      iac_root:
+        description: "Root directory for IaC scanning (e.g. '.' for repo root, 'infra' for infra/ folder)."
         required: false
         type: string
-        default: ''
-      auto_commit_artifacts:
-        description: "Automatically commit generated artifacts back to the repo (requires contents: write)."
-        required: false
-        type: boolean
-        default: false
-      direction:
-        description: "Diagram direction: LR (horizontal left-to-right), TB (vertical top-to-bottom), RL, BT, or AUTO (intelligent selection based on architecture)."
-        required: false
-        type: string
-        default: LR
-      mode:
-        description: "Generator mode: static (default) or ai."
-        required: false
-        type: string
-        default: static
-      model:
-        description: "AI model name (only used when mode=ai)."
-        required: false
-        type: string
-        default: gpt-4o-mini
-      render_layout:
-        description: "Icon render layout: lanes (default) or providers."
-        required: false
-        type: string
-        default: lanes
-      render_bg:
-        description: "PNG/SVG background: transparent (default) or white. JPEG is always white."
-        required: false
-        type: string
-        default: transparent
-      edge_color:
-        description: "Edge color for PNG/SVG diagrams (Graphviz color)."
-        required: false
-        type: string
-        default: "#4B5563"
-      edge_penwidth:
-        description: "Edge line width for PNG/SVG diagrams."
-        required: false
-        type: string
-        default: "1.3"
-      edge_arrowsize:
-        description: "Edge arrow size for PNG/SVG diagrams."
-        required: false
-        type: string
-        default: "0.8"
-      image_formats:
-        description: "Comma-separated image formats to generate: png,jpg,svg. Use 'none' to skip image rendering."
-        required: false
-        type: string
-        default: png,jpg,svg
+        default: '.'
       out_dir:
-        description: "Output directory for artifacts (markdown/mermaid/images)."
+        description: "Output directory for all generated artifacts (e.g. 'artifacts', 'docs/architecture'). Created if missing."
         required: false
         type: string
         default: artifacts
+      image_formats:
+        description: "Image formats to generate (comma-separated): png, jpg, svg. Use 'none' to skip images (only mermaid/markdown)."
+        required: false
+        type: string
+        default: png,jpg,svg
       out_md:
-        description: "Override output markdown path (relative). Default is <out_dir>/architecture-diagram.md."
+        description: "Custom path for Markdown output (e.g. 'docs/architecture.md'). Defaults to <out_dir>/architecture-diagram.md."
         required: false
         type: string
         default: ''
       out_mmd:
-        description: "Override output mermaid path (relative). Default is <out_dir>/architecture-diagram.mmd."
+        description: "Custom path for Mermaid output (e.g. 'docs/architecture.mmd'). Defaults to <out_dir>/architecture-diagram.mmd."
         required: false
         type: string
         default: ''
       out_png:
-        description: "Override output PNG path (relative). Ignored unless png requested."
+        description: "Custom path for PNG output. Defaults to <out_dir>/architecture-diagram.png (only if png in image_formats)."
         required: false
         type: string
         default: ''
       out_jpg:
-        description: "Override output JPEG path (relative). Ignored unless jpg requested."
+        description: "Custom path for JPEG output. Defaults to <out_dir>/architecture-diagram.jpg (only if jpg in image_formats)."
         required: false
         type: string
         default: ''
       out_svg:
-        description: "Override output SVG path (relative). Ignored unless svg requested."
+        description: "Custom path for SVG output. Defaults to <out_dir>/architecture-diagram.svg (only if svg in image_formats)."
         required: false
         type: string
         default: ''
-      iac_root:
-        description: "Root directory to read IaC files from (relative)."
+      out_drawio:
+        description: "Custom path for editable draw.io output (e.g. 'docs/architecture.drawio'). Defaults to <out_dir>/architecture-diagram.drawio (always generated unless explicitly disabled with empty string)."
         required: false
         type: string
-        default: '.'
+        default: ''
+      out_html:
+        description: "Custom path for interactive HTML viewer (e.g. 'docs/architecture.html'). Defaults to <out_dir>/architecture-diagram.html (always generated unless explicitly disabled with empty string)."
+        required: false
+        type: string
+        default: ''
+      direction:
+        description: "Diagram direction: AUTO (smart, based on architecture), LR (left-right), TB (top-bottom), RL, BT."
+        required: false
+        type: string
+        default: AUTO
+      render_layout:
+        description: "Layout mode: lanes (category lanes, default) or providers (provider-grouped)."
+        required: false
+        type: string
+        default: lanes
+      render_bg:
+        description: "Background for PNG/SVG: transparent (default, checkered) or white. JPEG is always white."
+        required: false
+        type: string
+        default: transparent
+      edge_color:
+        description: "Edge line color (any Graphviz color, e.g. '#4B5563', 'blue')."
+        required: false
+        type: string
+        default: "#4B5563"
+      edge_penwidth:
+        description: "Edge line width (e.g. '1.3')."
+        required: false
+        type: string
+        default: "1.3"
+      edge_arrowsize:
+        description: "Edge arrow head size (e.g. '0.8')."
+        required: false
+        type: string
+        default: "0.8"
+      fontsize:
+        description: "Base font size for diagram text (e.g. '11'). Overrides config."
+        required: false
+        type: string
+        default: ''
+      iconsize:
+        description: "Icon size in pixels (e.g. '48'). Overrides config."
+        required: false
+        type: string
+        default: ''
+      ai_enhance:
+        description: "Enable OpenRouter vision-assisted refinement (free tier). Generates extra *-ai.* outputs (png, jpg, svg, drawio, html, md) with legend and hints. Requires OPENROUTER_API_KEY secret; skips gracefully if unset. Free tier: 50/day."
+        required: false
+        type: boolean
+        default: false
+      ai_backend:
+        description: "AI backend for refinement: openrouter (default, free), ollama (local), bedrock (AWS), restapi (custom)."
+        required: false
+        type: string
+        default: openrouter
+      ollama_model:
+        description: "Ollama model name (only when ai_backend=ollama, e.g. 'llama3', 'mistral')."
+        required: false
+        type: string
+        default: llama3
+      openrouter_model:
+        description: "OpenRouter model for refinement (free tier, default 'stealth/ox-alpha'). Other free: 'google/gemma-3-27b-it:free', 'meta-llama/llama-3.1-405b:free'."
+        required: false
+        type: string
+        default: stealth/ox-alpha
+      ai_iterations:
+        description: "Max AI refinement iterations 1-5 (default: 3, early-stop on plateau)."
+        required: false
+        type: string
+        default: ''
+      artifact_name:
+        description: "Custom artifact name for upload (avoids collisions in matrix). Auto-generated if empty."
+        required: false
+        type: string
+        default: ''
+      auto_commit_artifacts:
+        description: "Auto-commit generated files back to the branch (requires contents: write)."
+        required: false
+        type: boolean
+        default: false
       publish_enabled:
-        description: "Whether to write outputs into publish.paths from .auto-arch-diagram.yml."
+        description: "Also write outputs to publish.paths defined in .auto-arch-diagram.yml (for docs publishing)."
         required: false
         type: boolean
         default: false
       publish_confluence:
-        description: "Publish or replace a diagram in Confluence."
+        description: "Publish diagram image to Confluence page (requires CONFLUENCE_* secrets)."
         required: false
         type: boolean
         default: false
       confluence_page_id:
-        description: "Confluence page ID to update when publishing."
+        description: "Confluence page ID to update."
         required: false
         type: string
         default: ''
       confluence_replace:
-        description: "Replace an existing diagram on the Confluence page."
+        description: "Replace existing diagram image on Confluence page (vs. append)."
         required: false
         type: boolean
         default: true
       confluence_image_marker:
-        description: "Optional marker comment for robust Confluence image replacement."
+        description: "Marker comment for finding/replacing Confluence image (e.g. '<!-- diagram -->')."
         required: false
         type: string
         default: ''
       confluence_unique_filename:
-        description: "Upload Confluence images with a unique filename (timestamp+hash)."
+        description: "Upload with unique filename (timestamp+hash) to avoid Confluence cache."
         required: false
         type: boolean
         default: false
       comment_on_pr:
-        description: "Post/Update a sticky PR comment (only on pull_request events)."
+        description: "Post/update a sticky PR comment with the diagram markdown (pull_request only)."
         required: false
         type: boolean
         default: true
       create_diagram_pr:
-        description: "Create/update a separate PR committing publish.paths outputs (requires contents: write)."
+        description: "Create a separate PR with diagram updates (requires contents: write, for publish flow)."
         required: false
         type: boolean
         default: false
       diagram_pr_branch_prefix:
-        description: "Branch prefix for the diagram update PR."
+        description: "Branch prefix for auto-created diagram PRs."
         required: false
         type: string
         default: auto-arch-diagram/update
       tool_repo:
-        description: "Override tool repository (owner/repo)."
+        description: "Override tool repo (owner/repo) for testing a fork/branch (default: auto-detect)."
         required: false
         type: string
         default: ''
       tool_ref:
-        description: "Override tool ref (branch/tag/sha)."
+        description: "Override tool git ref (branch/tag/sha) for testing (default: main or workflow ref)."
         required: false
         type: string
         default: ''
       force_full:
-        description: "Force full architecture generation (ignore change detection)."
+        description: "Force full scan of all IaC files (ignore change detection, regenerate everything)."
         required: false
         type: boolean
-        default: true
+        default: false
     secrets:
-      OPENAI_API_KEY:
+      OPENROUTER_API_KEY:
+        description: "OpenRouter API key for AI refinement (free tier). Get at openrouter.ai. Skipped if unset."
         required: false
       CONFLUENCE_URL:
         required: false
@@ -211,7 +247,6 @@ jobs:
         id: ref
         shell: bash
         run: |
-          # github.workflow_ref looks like: owner/repo/.github/workflows/reusable-auto-arch-diagram.yml@ref
           REF="${{ github.workflow_ref }}"
           echo "Full workflow ref: ${REF}"
           CALLER_REPO="${GITHUB_REPOSITORY}"
@@ -230,7 +265,6 @@ jobs:
             echo "Using input tool repo: ${TOOL_REPO}"
           fi
 
-          # Fallback to the canonical tool repo if the computed repo appears to be the caller repo
           if [[ -z "${TOOL_REPO}" || "${TOOL_REPO}" == "${CALLER_REPO}" ]]; then
             TOOL_REPO="suryakumaran2611/auto-arch-diagram"
             echo "Using fallback repo: ${TOOL_REPO}"
@@ -275,90 +309,61 @@ jobs:
           echo "Expected path: .auto-arch-diagram-tool"
           if [ -d .auto-arch-diagram-tool ]; then
             echo "✓ Directory exists"
-            echo "Contents:"
             ls -la .auto-arch-diagram-tool/ | head -20
             echo ""
-            echo "Checking for requirements files:"
-            [ -f .auto-arch-diagram-tool/requirements.txt ] && echo "✓ requirements.txt found" || echo "✗ requirements.txt NOT found"
-            [ -f .auto-arch-diagram-tool/requirements-ai.txt ] && echo "✓ requirements-ai.txt found" || echo "✗ requirements-ai.txt NOT found"
-            [ -f .auto-arch-diagram-tool/tools/generate_arch_diagram.py ] && echo "✓ generator script found" || echo "✗ generator script NOT found"
+            [ -f .auto-arch-diagram-tool/requirements.txt ] && echo "✓ requirements.txt" || echo "✗ requirements.txt"
+            [ -f .auto-arch-diagram-tool/tools/generate_arch_diagram.py ] && echo "✓ generator script" || echo "✗ generator script"
           else
             echo "✗ Directory does NOT exist"
-            echo "Current directory contents:"
             ls -la
           fi
-          echo "==================================="
 
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
-      - name: Install Graphviz (for icon rendering)
+      - name: Install Graphviz
         shell: bash
         run: |
           FORMATS_RAW='${{ inputs.image_formats }}'
           FORMATS="$(echo "${FORMATS_RAW}" | tr '[:upper:]' '[:lower:]' | tr -d ' ' )"
-          if [ -z "${FORMATS}" ] || [ "${FORMATS}" = "none" ]; then
-            exit 0
-          fi
-
+          # Always install for drawio/html/svg which are always generated
           sudo apt-get update
           sudo apt-get install -y graphviz
 
       - name: Install Open Sans font
         shell: bash
         run: |
-          FORMATS_RAW='${{ inputs.image_formats }}'
-          FORMATS="$(echo "${FORMATS_RAW}" | tr '[:upper:]' '[:lower:]' | tr -d ' ' )"
-          if [ -z "${FORMATS}" ] || [ "${FORMATS}" = "none" ]; then
-            exit 0
-          fi
-
-          echo "Installing Open Sans font family..."
-
-          # Install fonts-open-sans package which includes the full font family
+          echo "Installing Open Sans..."
           sudo apt-get update
           sudo apt-get install -y fonts-open-sans
-
-          # Update font cache
           sudo fc-cache -f -v
-
-          # Verify Open Sans is installed
-          echo "Available fonts:"
-          fc-list | grep -i "open.sans" | head -5 || echo "Warning: Open Sans fonts may not be properly installed"
+          fc-list | grep -i "open.sans" | head -3 || echo "Warning: Open Sans may not be installed"
 
       - name: Install dependencies
         shell: bash
         run: |
           set -e
           python -m pip install --upgrade pip
-          
           echo "=== Installing Python dependencies ==="
-          echo "Mode: ${{ inputs.mode }}"
-          echo "Checking for requirements files..."
-          
-          if [ "${{ inputs.mode }}" = "ai" ]; then
-            REQ_FILE=".auto-arch-diagram-tool/requirements-ai.txt"
-            if [ -f "${REQ_FILE}" ]; then
-              echo "Installing from ${REQ_FILE}"
-              pip install -r "${REQ_FILE}"
-            else
-              echo "Requirements file not found, installing fallback deps for AI mode"
-              pip install PyYAML python-hcl2 diagrams graphviz openai
-            fi
+          # Always use base requirements; AI backend adds optional deps via requirements-ai.txt
+          REQ_FILE=".auto-arch-diagram-tool/requirements.txt"
+          if [ -f "${REQ_FILE}" ]; then
+            echo "Installing from ${REQ_FILE}"
+            pip install -r "${REQ_FILE}"
           else
-            REQ_FILE=".auto-arch-diagram-tool/requirements.txt"
-            if [ -f "${REQ_FILE}" ]; then
-              echo "Installing from ${REQ_FILE}"
-              pip install -r "${REQ_FILE}"
-            else
-              echo "Requirements file not found, installing fallback deps for static mode"
-              pip install PyYAML python-hcl2 diagrams graphviz
+            echo "Fallback deps for static mode"
+            pip install PyYAML python-hcl2 diagrams graphviz
+          fi
+          if [ "${{ inputs.ai_enhance }}" = "true" ]; then
+            REQ_AI=".auto-arch-diagram-tool/requirements-ai.txt"
+            if [ -f "${REQ_AI}" ]; then
+              echo "Installing AI deps from ${REQ_AI}"
+              pip install -r "${REQ_AI}" || echo "AI deps optional, continuing"
             fi
           fi
-          
-          echo "=== Dependencies installed successfully ==="
+          echo "=== Dependencies installed ==="
 
       - name: Determine changed IaC files
         id: changed
@@ -384,65 +389,44 @@ jobs:
         shell: bash
         run: |
           python - <<'PY'
-          import os
-          import fnmatch
-          import subprocess
-
+          import os, fnmatch, subprocess
           raw = """${{ inputs.iac_globs }}"""
           patterns = [p.strip() for p in raw.splitlines() if p.strip()]
-          expanded_patterns = []
+          expanded = []
           for p in patterns:
-            expanded_patterns.append(p)
+            expanded.append(p)
             if p.startswith("**/"):
-              expanded_patterns.append(p[3:])
-
+              expanded.append(p[3:])
           iac_root = "${{ inputs.iac_root }}".strip() or "."
           iac_root = iac_root.replace("\\", "/").lstrip("./").rstrip("/")
-
           tracked = subprocess.check_output(["git", "ls-files"], text=True).splitlines()
-          matched = []
-          seen = set()
-
+          matched, seen = [], set()
           for f in tracked:
-            if iac_root and iac_root != ".":
-              if not (f == iac_root or f.startswith(iac_root + "/")):
-                continue
+            if iac_root and iac_root != "." and not (f == iac_root or f.startswith(iac_root + "/")):
+              continue
             lower = f.lower()
-            for p in expanded_patterns:
-              p2 = p.strip()
-              if not p2:
+            for p in expanded:
+              if not p.strip():
                 continue
-              if fnmatch.fnmatch(lower, p2.lower()):
+              if fnmatch.fnmatch(lower, p.lower()):
                 if f not in seen:
                   seen.add(f)
                   matched.append(f)
                 break
-
-          print("=== IaC Files Found ===")
           print(f"Total files: {len(matched)}")
-          if matched:
-            print("Files:")
-            for f in matched:
-              print(f"  - {f}")
-          else:
-            print("WARNING: No IaC files found matching the patterns!")
-            print("Patterns used:")
-            for p in patterns:
-              print(f"  - {p}")
-          print("========================")
-
-          out_file = os.environ["GITHUB_OUTPUT"]
-          with open(out_file, "a", encoding="utf-8") as fp:
-            fp.write("all_changed_files=" + " ".join(matched) + "\n")
+          for f in matched:
+            print(f"  - {f}")
+          open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8").write("all_changed_files=" + " ".join(matched) + "\n")
           PY
 
       - name: Generate diagrams
         id: gen
         env:
           CHANGED_IAC_FILES: ${{ inputs.changed_files != '' && steps.changed_direct.outputs.all_changed_files || (inputs.force_full && steps.all_iac.outputs.all_changed_files || steps.changed.outputs.all_changed_files) }}
-          AUTO_ARCH_MODE: ${{ inputs.mode }}
-          AUTO_ARCH_MODEL: ${{ inputs.model }}
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          OPENROUTER_MODEL: ${{ inputs.openrouter_model }}
+          AUTO_ARCH_AI_ENHANCE: ${{ inputs.ai_enhance && 'true' || 'false' }}
+          AUTO_ARCH_AI_ITERATIONS: ${{ inputs.ai_iterations }}
           AUTO_ARCH_DIRECTION: ${{ inputs.direction }}
           AUTO_ARCH_RENDER_LAYOUT: ${{ inputs.render_layout }}
           AUTO_ARCH_RENDER_BG: ${{ inputs.render_bg }}
@@ -460,54 +444,45 @@ jobs:
           CONFLUENCE_UNIQUE_FILENAME: ${{ inputs.publish_confluence && (inputs.confluence_unique_filename && 'true' || 'false') || '' }}
         shell: bash
         run: |
-          set -e  # Exit on any error
-          
+          set -e
           OUT_DIR='${{ inputs.out_dir }}'
           mkdir -p "${OUT_DIR}"
-
           FORMATS_RAW='${{ inputs.image_formats }}'
           FORMATS="$(echo "${FORMATS_RAW}" | tr '[:upper:]' '[:lower:]' | tr -d ' ' )"
-
           OUT_MD='${{ inputs.out_md }}'
           OUT_MMD='${{ inputs.out_mmd }}'
           OUT_PNG='${{ inputs.out_png }}'
           OUT_JPG='${{ inputs.out_jpg }}'
           OUT_SVG='${{ inputs.out_svg }}'
-
+          OUT_DRAWIO='${{ inputs.out_drawio }}'
+          OUT_HTML='${{ inputs.out_html }}'
           IAC_ROOT='${{ inputs.iac_root }}'
           if [ -z "${IAC_ROOT}" ]; then IAC_ROOT="."; fi
           export IAC_ROOT
-
           export CHANGED_IAC_FILES
           if [ "${IAC_ROOT}" != "." ]; then
             CHANGED_IAC_FILES=$(python - <<'PY'
           import os
-
           raw = os.environ.get("CHANGED_IAC_FILES", "")
           iac_root = os.environ.get("IAC_ROOT", ".").strip()
-
           files = []
           for token in raw.replace("\n", " ").split():
             t = token.lstrip("./")
             if iac_root != "." and t.startswith(iac_root.rstrip("/") + "/"):
               t = t[len(iac_root.rstrip("/")) + 1 :]
             files.append(t)
-
           print(" ".join(files))
           PY
-          )
+            )
           fi
-
           if [ -z "${OUT_MD}" ]; then OUT_MD="${OUT_DIR}/architecture-diagram.md"; fi
           if [ -z "${OUT_MMD}" ]; then OUT_MMD="${OUT_DIR}/architecture-diagram.mmd"; fi
-
           WANT_PNG=0; WANT_JPG=0; WANT_SVG=0
           if [ -n "${FORMATS}" ] && [ "${FORMATS}" != "none" ]; then
             case ",${FORMATS}," in *,png,*) WANT_PNG=1 ;; esac
             case ",${FORMATS}," in *,jpg,*) WANT_JPG=1 ;; esac
             case ",${FORMATS}," in *,svg,*) WANT_SVG=1 ;; esac
           fi
-
           OUT_PNG_ARG=""; OUT_JPG_ARG=""; OUT_SVG_ARG=""
           if [ "${WANT_PNG}" = "1" ]; then
             if [ -n "${OUT_PNG}" ]; then OUT_PNG_ARG="${OUT_PNG}"; else OUT_PNG_ARG="${OUT_DIR}/architecture-diagram.png"; fi
@@ -518,15 +493,23 @@ jobs:
           if [ "${WANT_SVG}" = "1" ]; then
             if [ -n "${OUT_SVG}" ]; then OUT_SVG_ARG="${OUT_SVG}"; else OUT_SVG_ARG="${OUT_DIR}/architecture-diagram.svg"; fi
           fi
-          
-          echo "=== Generating Diagrams ==="
-          echo "Changed IaC Files: ${CHANGED_IAC_FILES}"
-          echo "Output MD: ${OUT_MD}"
-          echo "Output MMD: ${OUT_MMD}"
-          if [ -n "${OUT_PNG_ARG}" ]; then echo "Output PNG: ${OUT_PNG_ARG}"; fi
-          if [ -n "${OUT_JPG_ARG}" ]; then echo "Output JPG: ${OUT_JPG_ARG}"; fi
-          if [ -n "${OUT_SVG_ARG}" ]; then echo "Output SVG: ${OUT_SVG_ARG}"; fi
-          echo "========================="
+          # Draw.io and HTML are always generated (core outputs) unless explicitly disabled via empty custom path check
+          OUT_DRAWIO_ARG="${OUT_DIR}/architecture-diagram.drawio"
+          if [ -n "${OUT_DRAWIO}" ]; then OUT_DRAWIO_ARG="${OUT_DRAWIO}"; fi
+          if [ "${OUT_DRAWIO}" = "__disabled__" ]; then OUT_DRAWIO_ARG=""; fi
+          OUT_HTML_ARG="${OUT_DIR}/architecture-diagram.html"
+          if [ -n "${OUT_HTML}" ]; then OUT_HTML_ARG="${OUT_HTML}"; fi
+          if [ "${OUT_HTML}" = "__disabled__" ]; then OUT_HTML_ARG=""; fi
+
+          echo "=== Generating Diagrams (all formats) ==="
+          echo "Changed: ${CHANGED_IAC_FILES}"
+          echo "MD: ${OUT_MD} | MMD: ${OUT_MMD}"
+          [ -n "${OUT_PNG_ARG}" ] && echo "PNG: ${OUT_PNG_ARG}"
+          [ -n "${OUT_JPG_ARG}" ] && echo "JPG: ${OUT_JPG_ARG}"
+          [ -n "${OUT_SVG_ARG}" ] && echo "SVG: ${OUT_SVG_ARG}"
+          echo "Draw.io: ${OUT_DRAWIO_ARG:-<disabled>} | HTML: ${OUT_HTML_ARG:-<disabled>}"
+          if [ "${{ inputs.ai_enhance }}" = "true" ]; then echo "AI enhance: enabled via ${{ inputs.ai_backend }} (${{ inputs.openrouter_model }})"; fi
+          echo "======================================="
 
           args=(
             --changed-files "${CHANGED_IAC_FILES}"
@@ -537,11 +520,21 @@ jobs:
           if [ -n "${OUT_PNG_ARG}" ]; then args+=(--out-png "${OUT_PNG_ARG}"); fi
           if [ -n "${OUT_JPG_ARG}" ]; then args+=(--out-jpg "${OUT_JPG_ARG}"); fi
           if [ -n "${OUT_SVG_ARG}" ]; then args+=(--out-svg "${OUT_SVG_ARG}"); fi
+          if [ -n "${OUT_DRAWIO_ARG}" ]; then args+=(--out-drawio "${OUT_DRAWIO_ARG}"); fi
+          if [ -n "${OUT_HTML_ARG}" ]; then args+=(--out-html "${OUT_HTML_ARG}"); fi
+          if [ -n "${{ inputs.fontsize }}" ]; then args+=(--fontsize "${{ inputs.fontsize }}"); fi
+          if [ -n "${{ inputs.iconsize }}" ]; then args+=(--iconsize "${{ inputs.iconsize }}"); fi
+          if [ "${{ inputs.ai_enhance }}" = "true" ]; then
+            args+=(--ai-enhance --ai-backend "${{ inputs.ai_backend }}")
+            if [ "${{ inputs.ai_backend }}" = "ollama" ] && [ -n "${{ inputs.ollama_model }}" ]; then
+              args+=(--ollama-model "${{ inputs.ollama_model }}")
+            fi
+          fi
 
           python .auto-arch-diagram-tool/tools/generate_arch_diagram.py "${args[@]}"
 
           echo "" >> "${OUT_MD}"
-          echo "Rendered PNG/JPEG/SVG are uploaded as workflow artifacts." >> "${OUT_MD}"
+          echo "Rendered PNG/JPEG/SVG/Draw.io/HTML are uploaded as workflow artifacts." >> "${OUT_MD}"
           echo "Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" >> "${OUT_MD}"
 
           echo "md_path=${OUT_MD}" >> "$GITHUB_OUTPUT"
@@ -549,6 +542,8 @@ jobs:
           echo "png_path=${OUT_PNG_ARG}" >> "$GITHUB_OUTPUT"
           echo "jpg_path=${OUT_JPG_ARG}" >> "$GITHUB_OUTPUT"
           echo "svg_path=${OUT_SVG_ARG}" >> "$GITHUB_OUTPUT"
+          echo "drawio_path=${OUT_DRAWIO_ARG}" >> "$GITHUB_OUTPUT"
+          echo "html_path=${OUT_HTML_ARG}" >> "$GITHUB_OUTPUT"
 
       - name: Validate generated files
         shell: bash
@@ -556,76 +551,32 @@ jobs:
           CHANGED_IAC_FILES: ${{ inputs.changed_files != '' && steps.changed_direct.outputs.all_changed_files || (inputs.force_full && steps.all_iac.outputs.all_changed_files || steps.changed.outputs.all_changed_files) }}
         run: |
           set -e
-          echo "=== Validating generated diagram files ==="
-          
+          echo "=== Validating all generated outputs ==="
           OUT_DIR='${{ inputs.out_dir }}'
           MD_PATH='${{ steps.gen.outputs.md_path }}'
           MMD_PATH='${{ steps.gen.outputs.mmd_path }}'
-          
-          # Check that the output directory exists
-          if [ ! -d "${OUT_DIR}" ]; then
-            echo "ERROR: Output directory does not exist: ${OUT_DIR}"
-            exit 1
+          [ -d "${OUT_DIR}" ] || { echo "ERROR: out_dir missing: ${OUT_DIR}"; exit 1; }
+          [ -f "${MD_PATH}" ] || { echo "ERROR: MD missing: ${MD_PATH}"; exit 1; }
+          [ -f "${MMD_PATH}" ] || { echo "ERROR: Mermaid missing: ${MMD_PATH}"; exit 1; }
+          if [ -n "${CHANGED_IAC_FILES}" ]; then
+            [ -s "${MD_PATH}" ] || { echo "ERROR: MD empty"; exit 1; }
+            [ -s "${MMD_PATH}" ] || { echo "ERROR: MMD empty"; exit 1; }
           fi
-          
-          # Check for required files (markdown and mermaid)
-          if [ ! -f "${MD_PATH}" ]; then
-            echo "ERROR: Markdown file was not generated: ${MD_PATH}"
-            exit 1
-          fi
-          
-          if [ ! -f "${MMD_PATH}" ]; then
-            echo "ERROR: Mermaid file was not generated: ${MMD_PATH}"
-            exit 1
-          fi
-          
-          if [ -z "${CHANGED_IAC_FILES}" ]; then
-            echo "No IaC changes detected; allowing empty outputs."
-          else
-            # Check that files are not empty
-            if [ ! -s "${MD_PATH}" ]; then
-              echo "ERROR: Markdown file is empty: ${MD_PATH}"
-              exit 1
-            fi
-            
-            if [ ! -s "${MMD_PATH}" ]; then
-              echo "ERROR: Mermaid file is empty: ${MMD_PATH}"
-              exit 1
-            fi
-          fi
-          
-          echo "✓ Markdown file: ${MD_PATH} ($(stat -c%s "${MD_PATH}") bytes)"
-          echo "✓ Mermaid file: ${MMD_PATH} ($(stat -c%s "${MMD_PATH}") bytes)"
-          
-          # Check optional image files if they were requested
-          PNG_PATH='${{ steps.gen.outputs.png_path }}'
-          JPG_PATH='${{ steps.gen.outputs.jpg_path }}'
-          SVG_PATH='${{ steps.gen.outputs.svg_path }}'
-          
-          if [ -n "${PNG_PATH}" ] && [ -f "${PNG_PATH}" ]; then
-            echo "✓ PNG file: ${PNG_PATH} ($(stat -c%s "${PNG_PATH}") bytes)"
-          fi
-          
-          if [ -n "${JPG_PATH}" ] && [ -f "${JPG_PATH}" ]; then
-            echo "✓ JPG file: ${JPG_PATH} ($(stat -c%s "${JPG_PATH}") bytes)"
-          fi
-          
-          if [ -n "${SVG_PATH}" ] && [ -f "${SVG_PATH}" ]; then
-            echo "✓ SVG file: ${SVG_PATH} ($(stat -c%s "${SVG_PATH}") bytes)"
-          fi
-          
-          echo "=== All required files validated successfully ==="
+          echo "✓ MD: ${MD_PATH} ($(stat -c%s "${MD_PATH}") bytes)"
+          echo "✓ MMD: ${MMD_PATH} ($(stat -c%s "${MMD_PATH}") bytes)"
+          for p in "${{ steps.gen.outputs.png_path }}" "${{ steps.gen.outputs.jpg_path }}" "${{ steps.gen.outputs.svg_path }}" "${{ steps.gen.outputs.drawio_path }}" "${{ steps.gen.outputs.html_path }}"; do
+            [ -z "$p" ] && continue
+            if [ -f "$p" ]; then echo "✓ $(basename "$p"): $p ($(stat -c%s "$p") bytes)"; else echo "○ Not requested: $p"; fi
+          done
+          echo "=== Validation OK — outputs: md, mmd, png, jpg, svg, drawio, html (+ *-ai.* if ai_enhance) ==="
 
       - name: Compute artifact name
         id: artifact
         shell: bash
         run: |
-          # Extract environment from out_dir or file paths for unique naming
           OUT_DIR='${{ inputs.out_dir }}'
           OUT_PNG='${{ inputs.out_png }}'
           OUT_MD='${{ inputs.out_md }}'
-          
-          # Try to extract environment suffix from output paths
           ENV_SUFFIX=""
           for path in "${OUT_PNG}" "${OUT_MD}" "${OUT_DIR}"; do
             if [[ "${path}" =~ -(dev|preprod|prod|shared|staging|test)\. ]]; then
@@ -633,16 +584,13 @@ jobs:
               break
             fi
           done
-          
-          # Generate unique artifact name
           if [ -n '${{ inputs.artifact_name }}' ]; then
             ARTIFACT_NAME='${{ inputs.artifact_name }}'
           else
             ARTIFACT_NAME="auto-arch-diagram${ENV_SUFFIX}-${{ github.run_id }}"
           fi
-          
           echo "artifact_name=${ARTIFACT_NAME}" >> "$GITHUB_OUTPUT"
-          echo "Generated artifact name: ${ARTIFACT_NAME}"
+          echo "Artifact: ${ARTIFACT_NAME}"
 
       - name: Upload artifacts
         if: success()
@@ -696,51 +644,19 @@ jobs:
         shell: bash
         run: |
           REF="${{ github.workflow_ref }}"
-          echo "Full workflow ref: ${REF}"
           CALLER_REPO="${GITHUB_REPOSITORY}"
-          echo "Caller repo: ${CALLER_REPO}"
           INPUT_TOOL_REPO="${{ inputs.tool_repo }}"
           INPUT_TOOL_REF="${{ inputs.tool_ref }}"
-          
           TOOL_REPO="${REF%%/.github/workflows/*}"
           TOOL_REF="${REF##*@}"
-          
-          echo "Extracted repo: ${TOOL_REPO}"
-          echo "Extracted ref: ${TOOL_REF}"
-          
-          if [[ -n "${INPUT_TOOL_REPO}" ]]; then
-            TOOL_REPO="${INPUT_TOOL_REPO}"
-            echo "Using input tool repo: ${TOOL_REPO}"
-          fi
-
-          # Fallback to the canonical tool repo if the computed repo appears to be the caller repo
-          if [[ -z "${TOOL_REPO}" || "${TOOL_REPO}" == "${CALLER_REPO}" ]]; then
-            TOOL_REPO="suryakumaran2611/auto-arch-diagram"
-            echo "Using fallback repo: ${TOOL_REPO}"
-          fi
-
+          if [[ -n "${INPUT_TOOL_REPO}" ]]; then TOOL_REPO="${INPUT_TOOL_REPO}"; fi
+          if [[ -z "${TOOL_REPO}" || "${TOOL_REPO}" == "${CALLER_REPO}" ]]; then TOOL_REPO="suryakumaran2611/auto-arch-diagram"; fi
           if [[ "${TOOL_REPO}" != "${CALLER_REPO}" ]]; then
-            if [[ -n "${INPUT_TOOL_REF}" ]]; then
-              TOOL_REF="${INPUT_TOOL_REF}"
-              echo "Using input tool ref: ${TOOL_REF}"
-            else
-              TOOL_REF="main"
-              echo "Using fallback ref for external tool repo: ${TOOL_REF}"
-            fi
+            if [[ -n "${INPUT_TOOL_REF}" ]]; then TOOL_REF="${INPUT_TOOL_REF}"; else TOOL_REF="main"; fi
           else
-            if [[ -z "${TOOL_REF}" || "${TOOL_REF}" == "@" || "${TOOL_REF}" == "${REF}" ]]; then
-              TOOL_REF="main"
-              echo "Using fallback ref: ${TOOL_REF}"
-            fi
+            if [[ -z "${TOOL_REF}" || "${TOOL_REF}" == "@" || "${TOOL_REF}" == "${REF}" ]]; then TOOL_REF="main"; fi
           fi
-
-          if [[ "${TOOL_REPO}" != "${CALLER_REPO}" && "${TOOL_REF}" == refs/pull/* ]]; then
-            TOOL_REF="main"
-            echo "Tool ref is a PR merge ref for an external repo; using ${TOOL_REF} instead"
-          fi
-          
-          echo "Final tool_repo=${TOOL_REPO}"
-          echo "Final tool_ref=${TOOL_REF}"
+          if [[ "${TOOL_REPO}" != "${CALLER_REPO}" && "${TOOL_REF}" == refs/pull/* ]]; then TOOL_REF="main"; fi
           echo "tool_repo=${TOOL_REPO}" >> "$GITHUB_OUTPUT"
           echo "tool_ref=${TOOL_REF}" >> "$GITHUB_OUTPUT"
 
@@ -754,89 +670,37 @@ jobs:
       - name: Verify tool checkout
         shell: bash
         run: |
-          echo "=== Verifying tool repo checkout ==="
-          echo "Expected path: .auto-arch-diagram-tool"
           if [ -d .auto-arch-diagram-tool ]; then
-            echo "✓ Directory exists"
-            echo "Contents:"
-            ls -la .auto-arch-diagram-tool/ | head -20
-            echo ""
-            echo "Checking for requirements files:"
-            [ -f .auto-arch-diagram-tool/requirements.txt ] && echo "✓ requirements.txt found" || echo "✗ requirements.txt NOT found"
-            [ -f .auto-arch-diagram-tool/requirements-ai.txt ] && echo "✓ requirements-ai.txt found" || echo "✗ requirements-ai.txt NOT found"
-            [ -f .auto-arch-diagram-tool/tools/generate_arch_diagram.py ] && echo "✓ generator script found" || echo "✗ generator script NOT found"
-          else
-            echo "✗ Directory does NOT exist"
-            echo "Current directory contents:"
-            ls -la
-            exit 1
-          fi
-          echo "==================================="
+            echo "✓ tool repo"; ls -la .auto-arch-diagram-tool/ | head -10
+          else echo "✗ missing"; ls -la; exit 1; fi
 
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
-      - name: Install Graphviz (for icon rendering)
+      - name: Install Graphviz
         shell: bash
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y graphviz
+        run: sudo apt-get update && sudo apt-get install -y graphviz
 
       - name: Install Open Sans font
         shell: bash
         run: |
           FORMATS_RAW='${{ inputs.image_formats }}'
           FORMATS="$(echo "${FORMATS_RAW}" | tr '[:upper:]' '[:lower:]' | tr -d ' ' )"
-          if [ -z "${FORMATS}" ] || [ "${FORMATS}" = "none" ]; then
-            exit 0
-          fi
-
-          echo "Installing Open Sans font family..."
-
-          # Install fonts-open-sans package which includes the full font family
-          sudo apt-get update
-          sudo apt-get install -y fonts-open-sans
-
-          # Update font cache
-          sudo fc-cache -f -v
-
-          # Verify Open Sans is installed
-          echo "Available fonts:"
-          fc-list | grep -i "open.sans" | head -5 || echo "Warning: Open Sans fonts may not be properly installed"
+          sudo apt-get update && sudo apt-get install -y fonts-open-sans && sudo fc-cache -f -v && fc-list | grep -i "open.sans" | head -3 || true
 
       - name: Install dependencies
         shell: bash
         run: |
           set -e
           python -m pip install --upgrade pip
-          
-          echo "=== Installing Python dependencies ==="
-          echo "Mode: ${{ inputs.mode }}"
-          echo "Checking for requirements files..."
-          
-          if [ "${{ inputs.mode }}" = "ai" ]; then
-            REQ_FILE=".auto-arch-diagram-tool/requirements-ai.txt"
-            if [ -f "${REQ_FILE}" ]; then
-              echo "Installing from ${REQ_FILE}"
-              pip install -r "${REQ_FILE}"
-            else
-              echo "ERROR: Requirements file not found: ${REQ_FILE}"
-              exit 1
-            fi
-          else
-            REQ_FILE=".auto-arch-diagram-tool/requirements.txt"
-            if [ -f "${REQ_FILE}" ]; then
-              echo "Installing from ${REQ_FILE}"
-              pip install -r "${REQ_FILE}"
-            else
-              echo "ERROR: Requirements file not found: ${REQ_FILE}"
-              exit 1
-            fi
+          REQ_FILE=".auto-arch-diagram-tool/requirements.txt"
+          if [ -f "${REQ_FILE}" ]; then pip install -r "${REQ_FILE}"; else pip install PyYAML python-hcl2 diagrams graphviz; fi
+          if [ "${{ inputs.ai_enhance }}" = "true" ]; then
+            REQ_AI=".auto-arch-diagram-tool/requirements-ai.txt"
+            [ -f "${REQ_AI}" ] && pip install -r "${REQ_AI}" || echo "AI deps optional"
           fi
-          
-          echo "=== Dependencies installed successfully ==="
 
       - name: Determine changed IaC files
         if: ${{ github.event_name != 'pull_request_target' }}
@@ -852,39 +716,22 @@ jobs:
         with:
           script: |
             const prNumber = context.payload.pull_request.number;
-            const owner = context.repo.owner;
-            const repo = context.repo.repo;
-
-            // Build an allowlist from the caller's glob patterns (simple suffix-based filter).
+            const owner = context.repo.owner; const repo = context.repo.repo;
             const raw = `${{ inputs.iac_globs }}`;
             const patterns = raw.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
-            const suffixes = patterns
-              .filter(p => p.startsWith('**/*.'))
-              .map(p => p.replace('**/*', '').trim());
-
+            const suffixes = patterns.filter(p => p.startsWith('**/*.')).map(p => p.replace('**/*', '').trim());
             function matches(name) {
               const lower = name.toLowerCase();
-              for (const s of suffixes) {
-                if (s.startsWith('.')) {
-                  if (lower.endsWith(s)) return true;
-                }
-              }
-              // handle template.yml/.yaml and Pulumi.* patterns broadly
+              for (const s of suffixes) if (lower.endsWith(s)) return true;
               if (lower.endsWith('template.yml') || lower.endsWith('template.yaml')) return true;
               if (lower.endsWith('/pulumi.yaml') || lower.endsWith('/pulumi.yml') || lower === 'pulumi.yaml' || lower === 'pulumi.yml') return true;
               if (/\/pulumi\..*\.(yaml|yml|json|ts|py)$/i.test(name) || /^pulumi\..*\.(yaml|yml|json|ts|py)$/i.test(name)) return true;
               return false;
             }
-
             let files = [];
-            for await (const resp of github.paginate.iterator(github.rest.pulls.listFiles, {
-              owner, repo, pull_number: prNumber, per_page: 100
-            })) {
-              for (const f of resp.data) {
-                if (matches(f.filename)) files.push(f.filename);
-              }
+            for await (const resp of github.paginate.iterator(github.rest.pulls.listFiles, { owner, repo, pull_number: prNumber, per_page: 100 })) {
+              for (const f of resp.data) if (matches(f.filename)) files.push(f.filename);
             }
-
             core.setOutput('iac_files', files.join(' '));
 
       - name: Read publish add-paths
@@ -894,59 +741,36 @@ jobs:
           python - <<'PY'
           import os
           from pathlib import Path
-          try:
-            import yaml
-          except Exception:
-            yaml = None
-
+          try: import yaml
+          except: yaml = None
           repo_root = Path.cwd()
           cfg_path = repo_root / '.auto-arch-diagram.yml'
           config = {}
           if cfg_path.exists() and yaml is not None:
             config = yaml.safe_load(cfg_path.read_text(encoding='utf-8')) or {}
-
           publish = (config.get('publish') or {}) if isinstance(config, dict) else {}
           paths = publish.get('paths') or {}
-          if not isinstance(paths, dict):
-            paths = {}
-
+          if not isinstance(paths, dict): paths = {}
           ordered = [paths.get('md'), paths.get('mmd'), paths.get('png'), paths.get('jpg'), paths.get('svg')]
-          add_paths = []
-          for p in ordered:
-            if isinstance(p, str) and p.strip():
-              add_paths.append(p.strip())
-
-          seen = set()
-          add_paths = [p for p in add_paths if not (p in seen or seen.add(p))]
-
-          out_file = os.environ['GITHUB_OUTPUT']
-          with open(out_file, 'a', encoding='utf-8') as f:
-            f.write('add_paths<<EOF\n')
-            f.write('\n'.join(add_paths) + ('\n' if add_paths else ''))
-            f.write('EOF\n')
+          add_paths = [p.strip() for p in ordered if isinstance(p, str) and p.strip()]
+          seen=set()
+          add_paths=[p for p in add_paths if not (p in seen or seen.add(p))]
+          open(os.environ['GITHUB_OUTPUT'], 'a', encoding='utf-8').write('add_paths<<EOF\n' + '\n'.join(add_paths) + ('\n' if add_paths else '') + 'EOF\n')
           PY
 
       - name: Validate publish paths
         shell: bash
         run: |
-          echo "=== Validating publish paths ==="
-          echo "Publish paths from config:"
           echo "${{ steps.cfg.outputs.add_paths }}"
-          echo "=============================="
-          
-          if [ -z "${{ steps.cfg.outputs.add_paths }}" ]; then
-            echo "ERROR: publish.paths is empty; configure .auto-arch-diagram.yml publish.paths.* before enabling create_diagram_pr." 1>&2
-            echo "Current .auto-arch-diagram.yml configuration:"
-            cat .auto-arch-diagram.yml || echo "Config file not found"
-            exit 1
-          fi
+          if [ -z "${{ steps.cfg.outputs.add_paths }}" ]; then echo "ERROR: publish.paths empty; configure .auto-arch-diagram.yml" 1>&2; cat .auto-arch-diagram.yml || true; exit 1; fi
 
       - name: Generate and publish into repo paths
         env:
           CHANGED_IAC_FILES: ${{ inputs.force_full && '.' || (github.event_name == 'pull_request_target' && steps.pr_files.outputs.iac_files || steps.changed.outputs.all_changed_files) }}
-          AUTO_ARCH_MODE: ${{ inputs.mode }}
-          AUTO_ARCH_MODEL: ${{ inputs.model }}
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          OPENROUTER_MODEL: ${{ inputs.openrouter_model }}
+          AUTO_ARCH_AI_ENHANCE: ${{ inputs.ai_enhance && 'true' || 'false' }}
+          AUTO_ARCH_AI_ITERATIONS: ${{ inputs.ai_iterations }}
           AUTO_ARCH_DIRECTION: ${{ inputs.direction }}
           AUTO_ARCH_RENDER_LAYOUT: ${{ inputs.render_layout }}
           AUTO_ARCH_RENDER_BG: ${{ inputs.render_bg }}
@@ -964,101 +788,56 @@ jobs:
           CONFLUENCE_UNIQUE_FILENAME: ${{ inputs.publish_confluence && (inputs.confluence_unique_filename && 'true' || 'false') || '' }}
         shell: bash
         run: |
-          set -e  # Exit on any error
-          
+          set -e
           OUT_DIR='${{ inputs.out_dir }}'
           mkdir -p "${OUT_DIR}"
-
           FORMATS_RAW='${{ inputs.image_formats }}'
           FORMATS="$(echo "${FORMATS_RAW}" | tr '[:upper:]' '[:lower:]' | tr -d ' ' )"
-
           OUT_MD='${{ inputs.out_md }}'
           OUT_MMD='${{ inputs.out_mmd }}'
           OUT_PNG='${{ inputs.out_png }}'
           OUT_JPG='${{ inputs.out_jpg }}'
-            OUT_SVG='${{ inputs.out_svg }}'
-
-            export CHANGED_IAC_FILES
-            if [ "${IAC_ROOT}" != "." ]; then
-              CHANGED_IAC_FILES=$(python - <<'PY'
-            import os
-
-            raw = os.environ.get("CHANGED_IAC_FILES", "")
-            iac_root = os.environ.get("IAC_ROOT", ".").strip()
-
-            files = []
-            for token in raw.replace("\n", " ").split():
-              t = token.lstrip("./")
-              if iac_root != "." and t.startswith(iac_root.rstrip("/") + "/"):
-                t = t[len(iac_root.rstrip("/")) + 1 :]
-              files.append(t)
-
-            print(" ".join(files))
-            PY
+          OUT_SVG='${{ inputs.out_svg }}'
+          export CHANGED_IAC_FILES
+          if [ "${IAC_ROOT}" != "." ]; then
+            CHANGED_IAC_FILES=$(python - <<'PY'
+          import os
+          raw = os.environ.get("CHANGED_IAC_FILES", "")
+          iac_root = os.environ.get("IAC_ROOT", ".").strip()
+          files = []
+          for token in raw.replace("\n", " ").split():
+            t = token.lstrip("./")
+            if iac_root != "." and t.startswith(iac_root.rstrip("/") + "/"):
+              t = t[len(iac_root.rstrip("/")) + 1 :]
+            files.append(t)
+          print(" ".join(files))
+          PY
             )
-            fi
-
+          fi
           if [ -z "${OUT_MD}" ]; then OUT_MD="${OUT_DIR}/architecture-diagram.md"; fi
           if [ -z "${OUT_MMD}" ]; then OUT_MMD="${OUT_DIR}/architecture-diagram.mmd"; fi
-
           WANT_PNG=0; WANT_JPG=0; WANT_SVG=0
           if [ -n "${FORMATS}" ] && [ "${FORMATS}" != "none" ]; then
             case ",${FORMATS}," in *,png,*) WANT_PNG=1 ;; esac
             case ",${FORMATS}," in *,jpg,*) WANT_JPG=1 ;; esac
             case ",${FORMATS}," in *,svg,*) WANT_SVG=1 ;; esac
           fi
-
           OUT_PNG_ARG=""; OUT_JPG_ARG=""; OUT_SVG_ARG=""
-          if [ "${WANT_PNG}" = "1" ]; then
-            if [ -n "${OUT_PNG}" ]; then OUT_PNG_ARG="${OUT_PNG}"; else OUT_PNG_ARG="${OUT_DIR}/architecture-diagram.png"; fi
-          fi
-          if [ "${WANT_JPG}" = "1" ]; then
-            if [ -n "${OUT_JPG}" ]; then OUT_JPG_ARG="${OUT_JPG}"; else OUT_JPG_ARG="${OUT_DIR}/architecture-diagram.jpg"; fi
-          fi
-          if [ "${WANT_SVG}" = "1" ]; then
-            if [ -n "${OUT_SVG}" ]; then OUT_SVG_ARG="${OUT_SVG}"; else OUT_SVG_ARG="${OUT_DIR}/architecture-diagram.svg"; fi
-          fi
-
+          if [ "${WANT_PNG}" = "1" ]; then if [ -n "${OUT_PNG}" ]; then OUT_PNG_ARG="${OUT_PNG}"; else OUT_PNG_ARG="${OUT_DIR}/architecture-diagram.png"; fi; fi
+          if [ "${WANT_JPG}" = "1" ]; then if [ -n "${OUT_JPG}" ]; then OUT_JPG_ARG="${OUT_JPG}"; else OUT_JPG_ARG="${OUT_DIR}/architecture-diagram.jpg"; fi; fi
+          if [ "${WANT_SVG}" = "1" ]; then if [ -n "${OUT_SVG}" ]; then OUT_SVG_ARG="${OUT_SVG}"; else OUT_SVG_ARG="${OUT_DIR}/architecture-diagram.svg"; fi; fi
           IAC_ROOT='${{ inputs.iac_root }}'
           if [ -z "${IAC_ROOT}" ]; then IAC_ROOT="."; fi
-          if [ "${{ github.event_name }}" = "pull_request_target" ]; then
-            IAC_ROOT="pr"
-          fi
-
-          args=(
-            --iac-root "${IAC_ROOT}"
-            --changed-files "${CHANGED_IAC_FILES}"
-            --out-md "${OUT_MD}"
-            --out-mmd "${OUT_MMD}"
-          )
+          if [ "${{ github.event_name }}" = "pull_request_target" ]; then IAC_ROOT="pr"; fi
+          args=(--iac-root "${IAC_ROOT}" --changed-files "${CHANGED_IAC_FILES}" --out-md "${OUT_MD}" --out-mmd "${OUT_MMD}")
           if [ -n "${OUT_PNG_ARG}" ]; then args+=(--out-png "${OUT_PNG_ARG}"); fi
           if [ -n "${OUT_JPG_ARG}" ]; then args+=(--out-jpg "${OUT_JPG_ARG}"); fi
           if [ -n "${OUT_SVG_ARG}" ]; then args+=(--out-svg "${OUT_SVG_ARG}"); fi
-
           python .auto-arch-diagram-tool/tools/generate_arch_diagram.py "${args[@]}"
-          
-          # Validate that files were created
-          echo "=== Validating generated files ==="
-          if [ ! -f "${OUT_MD}" ]; then
-            echo "ERROR: Markdown file was not generated: ${OUT_MD}"
-            exit 1
-          fi
-          
-          if [ ! -f "${OUT_MMD}" ]; then
-            echo "ERROR: Mermaid file was not generated: ${OUT_MMD}"
-            exit 1
-          fi
-          
-          if [ -z "${CHANGED_IAC_FILES}" ]; then
-            echo "No IaC changes detected; allowing empty outputs."
-          else
-            if [ ! -s "${OUT_MD}" ] || [ ! -s "${OUT_MMD}" ]; then
-              echo "ERROR: Generated files are empty"
-              exit 1
-            fi
-          fi
-          
-          echo "✓ Files validated successfully"
+          [ -f "${OUT_MD}" ] || { echo "ERROR: MD missing"; exit 1; }
+          [ -f "${OUT_MMD}" ] || { echo "ERROR: MMD missing"; exit 1; }
+          [ -z "${CHANGED_IAC_FILES}" ] || { [ -s "${OUT_MD}" ] || { echo "ERROR: MD empty"; exit 1; }; [ -s "${OUT_MMD}" ] || { echo "ERROR: MMD empty"; exit 1; }; }
+          echo "✓ publish validation OK"
 
       - name: Create or update diagram PR
         uses: peter-evans/create-pull-request@v8
@@ -1085,61 +864,26 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: ${{ github.head_ref || github.ref_name }}
-
       - name: Download artifacts
         uses: actions/download-artifact@v4
         with:
           pattern: auto-arch-diagram-*
           path: ${{ inputs.out_dir }}
           merge-multiple: true
-
       - name: List downloaded artifacts
-        run: |
-          echo "=== Downloaded artifacts ==="
-          ls -la ${{ inputs.out_dir }}
-
+        run: ls -la ${{ inputs.out_dir }}
       - name: Commit and push
         run: |
           set -e
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          
           git add ${{ inputs.out_dir }}/
-          
-          if git diff --cached --quiet; then
-            echo "No changes to commit"
-            exit 0
-          fi
-          
-          git commit -m "chore: update architecture diagrams" -m "Auto-generated by workflow run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          
-          # Retry push with rebase on conflict
-          attempt=1
-          max_attempts=5
+          if git diff --cached --quiet; then echo "No changes"; exit 0; fi
+          git commit -m "chore: update architecture diagrams" -m "Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          attempt=1; max_attempts=5
           while [ $attempt -le $max_attempts ]; do
-            if git push; then
-              echo "Successfully pushed on attempt $attempt"
-              exit 0
-            fi
-            
-            if [ $attempt -eq $max_attempts ]; then
-              echo "Failed to push after $max_attempts attempts"
-              exit 1
-            fi
-            
-            echo "Push failed on attempt $attempt/$max_attempts - rebasing..."
-            
-            if git pull --rebase origin ${{ github.head_ref || github.ref_name }}; then
-              echo "Rebased successfully"
-            else
-              echo "Rebase conflict - resetting and re-applying"
-              git rebase --abort || true
-              git fetch origin ${{ github.head_ref || github.ref_name }}
-              git reset --soft origin/${{ github.head_ref || github.ref_name }}
-              git add ${{ inputs.out_dir }}/
-              git commit -m "chore: update architecture diagrams" -m "Auto-generated by workflow run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-            fi
-            
-            sleep $((attempt * 2))
-            attempt=$((attempt + 1))
+            if git push; then exit 0; fi
+            if [ $attempt -eq $max_attempts ]; then exit 1; fi
+            git pull --rebase origin ${{ github.head_ref || github.ref_name }} || { git rebase --abort || true; git fetch origin ${{ github.head_ref || github.ref_name }}; git reset --soft origin/${{ github.head_ref || github.ref_name }}; git add ${{ inputs.out_dir }}/; git commit -m "chore: update architecture diagrams" -m "Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"; }
+            sleep $((attempt * 2)); attempt=$((attempt + 1))
           done

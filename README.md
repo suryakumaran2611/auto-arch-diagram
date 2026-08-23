@@ -84,17 +84,16 @@
 
 ## ✨ Key Features
 
-- 🎯 **VPC/Network Grouping** - Automatic VPC organization with subnet distinction
-- 🧠 **AUTO Layout** - Intelligent orientation selection (6-factor analysis)
-- 🏗️ **Multi-Cloud** - 100+ services supported across AWS (38), Azure (13), GCP (12)
-- 📤 **Multiple Formats** - Mermaid, PNG, SVG, JPEG with embedded icons
-- 🎨 **Open Sans Bold Typography** - Enhanced readability with professional bold fonts
-- 🏷️ **Network-Aware Labels** - Diagrams show network segregation (aws-network, global, etc.)
-- ☁️ **Enhanced CloudFormation** - Production-ready templates with monitoring and security
-- 🔧 **Automated Updates** - Scripts for keeping documentation synchronized
-- 🚀 **GitHub Actions** - One-line workflow integration with PR comments
-- 🔒 **Security-First** - Secret scanning, redaction, minimal permissions
-- 📚 **Comprehensive Docs** - Detailed [User Guide](docs/USER_GUIDE.md) and [Update Scripts](UPDATE_GITHUB_PAGES_README.md)
+- 🌐 **Interactive HTML Architecture Studio** - Standalone, zero-CDN offline studio with **Live Path Tracing & Impact Analysis**, **Tier Filter Matrix**, **One-Click PNG/JSON Export Studio**, **Radar Mini-Map**, and **Resource Inspector Drawer**.
+- 📊 **Native draw.io Vector Export** - Fully editable `.drawio` files using official native shape packs (AWS 2026 `mxgraph.aws4.*`, Azure `azure2` SVGs, GCP `mxgraph.gcp2.*`) with AWS group frames and bottom-centered legend card.
+- 🏛️ **Structured Architectural Tiering** - Automatic category subclusters (`Security`, `Compute`, `Storage`, `Integration`, `Management`) establishing clean, professional Left-to-Right directional flows without line crossing.
+- 🎯 **100% Bottom-Centered Legend** - Guaranteed centered legend & connectors footer across all PNG, SVG, JPG, HTML, and draw.io exports.
+- 🤖 **Overhauled AI Vision Enhancement** - OpenRouter free vision models analyze and refine layouts, generating dedicated multi-format assets (`*-ai.png`, `*-ai.svg`, `*-ai.html`, `*-ai.drawio`, `*-ai.md`) with executive titles, numbered flow steps, operational tooltips, and context hints.
+- 🏗️ **True Multi-Cloud in Unified Canvas** - Simultaneous support for AWS, Azure, GCP, OCI, and IBM with official provider brand accents and ultra-light tint fills.
+- 🎯 **VPC/Network Containment** - Automatic VPC, Subnet, and Multi-Region side-by-side widescreen organization.
+- 🧠 **AUTO Dynamic Layout** - Intelligent orientation selection with multi-factor graph complexity analysis.
+- 📤 **Complete Format Matrix** - Mermaid `.mmd`, Markdown embed, PNG, SVG, JPG, native `.drawio`, and interactive `.html` in a single run.
+- 🚀 **One-Line GitHub Actions Integration** - Reusable workflow with automatic PR comments and artifact publishing.
 
 ### 🎨 Recent Improvements
 
@@ -111,6 +110,24 @@
 **Typography Enhancement**: Upgraded to **Open Sans Bold** font for enhanced readability and professional appearance across all diagram formats.
 
 **SVG Icon Embedding**: Fixed SVG diagrams to properly embed icons as base64 data URIs, ensuring portability and correct display in all viewers.
+
+**AI-Assisted Refinement (`--ai-enhance`)**: Optional OpenRouter vision loop (free models only, strict $0 budget) critiques each render and applies spacing/direction/font refinements, contextual label overrides, and IaC-grounded review hints. Refined outputs are written to separate `*-ai.*` files with a standalone legend + hints guide stitched below the diagram - the deterministic base outputs are never modified.
+
+**Official Cloud-Provider Palette**: Cluster borders now follow official brand accents (AWS `#FF9900`, Azure `#0078D4`, GCP `#4285F4`, OCI `#C74634`, IBM `#0F62FE`) over a white canvas, with ultra-light brand tints for fills. Single-provider category lanes inherit the provider accent; the same palette is mirrored in the draw.io exporter.
+
+## 🤖 AI Enhancement (OpenRouter)
+
+Run locally:
+
+```bash
+python tools/generate_arch_diagram.py --changed-files path/to/main.tf \
+  --out-png out/architecture.png --ai-enhance
+```
+
+- **Key resolution**: `OPENROUTER_API_KEY` env var, else `~/.config/auto-arch-diagram/openrouter_key` (chmod 600). Missing key = enhancement silently skipped.
+- **Free-model enforcement**: the live `/models` catalog is filtered to $0-input/$0-output vision-capable models; any `OPENROUTER_MODEL` override must pass the same checks or the run is refused. Rate-limited (429/5xx) calls fall through the ranked candidates automatically.
+- **Outputs**: `architecture-diagram-ai.png/.jpg/.svg` next to the base outputs (AI-refined layout + legend + review-hints guide), plus an *AI Architecture Insights* section in the markdown report.
+- **CI**: dispatch the **AI-Assisted Architecture Diagrams** workflow (`.github/workflows/ai-generate.yml`) with the `OPENROUTER_API_KEY` repository secret; iterations are capped with plateau early-stop to bound runtime.
 
 ## 🎯 Quick Start
 

@@ -26,14 +26,15 @@ The Auto Architecture Diagram action automatically:
 
 ### Key Features
 
-- **Multi-format Support**: Terraform, CloudFormation, Bicep, Pulumi, AWS CDK
-- **Flexible Output**: Mermaid markdown, rendered images (PNG/SVG/JPEG)
-- **Typography**: Open Sans font family for professional, readable diagrams
-- **CloudFormation Excellence**: Full icon support with intelligent arrow styling
-- **SVG Portability**: Embedded icons ensure SVGs work in any viewer
-- **AI-Powered**: Optional AI mode for enhanced diagram generation
-- **PR Integration**: Automatic commenting and diagram PR creation
-- **Highly Configurable**: Extensive customization options
+- **3-Stage Layout Engine**: Compute geometry (`dot -Tdot`), refine with post-processing (`layout_postprocess.gvpr` / Python), and re-render with `neato -n2` for alignment without overlap.
+- **Interactive Offline HTML**: Standalone zero-dependency HTML viewer with smooth pan/zoom, clickable resource metadata drawer, search/filtering, and dark/light themes (`--out-html`).
+- **Multi-Format Matrix**: Mermaid markdown, PNG, SVG, JPEG, native editable `.drawio`, and interactive HTML from a single CLI command.
+- **Pre-Generated Plan Support**: Diagram directly from `terraform show -json` plan and `terraform graph` DOT outputs without cloud credentials or Terraform runtime (`--planfile`, `--graphfile`).
+- **Simplified Executive View**: Strip network plumbing while preserving compute-to-gateway relations (`--simplified`).
+- **MCP Server Mode**: Stdio Model Context Protocol server (`tools/mcp_server.py`) for direct integration with AI coding assistants.
+- **Multi-Cloud Mastery**: Single-canvas multi-cloud architectures (AWS, Azure, GCP, OCI, IBM) with brand accents and tint fills.
+- **Multi-format Support**: Terraform, CloudFormation, Bicep, Pulumi, AWS CDK.
+- **SVG Portability**: Embedded icons ensure SVGs work in any viewer.
 
 ## Quick Start
 
@@ -321,6 +322,51 @@ Uses OpenAI's models to analyze and generate more intelligent diagrams.
 - API costs can accumulate quickly
 - Not recommended for production environments
 - Generated diagrams should be reviewed manually
+
+### AI-Assisted Refinement (`--ai-enhance`)
+
+A separate, budget-safe enhancement pass (distinct from AI mode above): a free
+OpenRouter vision model critiques the rendered diagram and the generator keeps
+the best-scoring render configuration.
+
+```bash
+# CLI flag or environment variable (workflow-friendly)
+python tools/generate_arch_diagram.py --changed-files main.tf --out-png arch.png --ai-enhance
+AUTO_ARCH_AI_ENHANCE=true python tools/generate_arch_diagram.py ...
+```
+
+**How it works**
+
+1. Renders the diagram, sends it to a vision model for critique (score 0-10) and platform summarization.
+2. Applies mapped suggestions (spacing, direction, splines, fonts, edge noise) and re-renders; iterations cap at 5 with plateau early-stop.
+3. Generates dedicated AI-enhanced multi-format outputs (`*-ai.png`, `*-ai.svg`, `*-ai.jpg`, `*-ai.html`, `*-ai.drawio`, `*-ai.md`).
+4. **Native AI Architectural Card**: Integrates AI platform titles, subtitles, and operational context hints directly into the bottom-centered HTML legend table on vector SVG and raster renders without raster stitching artifacts.
+5. **Interactive AI HTML Studio (`*-ai.html`)**: Embeds AI executive summaries, contextual tooltips, and interactive impact analysis.
+6. **Native draw.io Export (`*-ai.drawio`)**: Populates native cloud icons with AI contextual tooltips and operational summaries.
+7. **Executive Architecture Insights (`*-ai.md`)**: Detailed report detailing scalability, security posture, and numbered step-by-step dataflow stages.
+
+**Key guarantees**
+
+- **$0 budget**: only models whose catalog pricing is exactly 0 for prompt and
+  completion AND that accept image input are used; explicit `OPENROUTER_MODEL`
+  overrides must pass the same checks or generation is refused.
+- **Base outputs untouched**: deterministic `architecture-diagram.*` files are
+  never modified by the AI pass.
+- **Never breaks generation**: missing key, rate limits, or API failures simply
+  skip enhancement (429/5xx fall through ranked candidate models).
+
+**Configuration**
+
+| Env var | Purpose |
+| --- | --- |
+| `OPENROUTER_API_KEY` | API key (else `~/.config/auto-arch-diagram/openrouter_key`, chmod 600) |
+| `AUTO_ARCH_AI_ENHANCE` | `true`/`false` equivalent of `--ai-enhance` |
+| `AUTO_ARCH_AI_ITERATIONS` | Max feedback iterations, 1-5 (default 5 with plateau stop) |
+| `OPENROUTER_MODEL` | Optional model override (must be free + vision-capable) |
+
+In CI, dispatch the **AI-Assisted Architecture Diagrams** workflow
+(`.github/workflows/ai-generate.yml`) or set the reusable workflow input
+`ai_enhance: true` (plus `ai_iterations`) with the `OPENROUTER_API_KEY` secret.
 
 ## PR Creation and Updates
 

@@ -1,0 +1,101 @@
+name: Test Static Example Generation
+
+on:
+  push:
+    branches:
+      - '**'
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  generate-examples:
+    name: Generate and validate example diagrams
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: requirements.txt
+
+      - name: Install Graphviz
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y graphviz
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+
+      - name: Generate all static example outputs
+        run: python tools/regenerate_examples.py
+
+      - name: Validate all static example outputs
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          examples_root = Path('examples')
+          entry_names = {
+              'main.tf',
+              'main.bicep',
+              'template.yml',
+              'template.yaml',
+              'Pulumi.yaml',
+              'Pulumi.yml',
+          }
+          output_names = {
+              'architecture-diagram.md',
+              'architecture-diagram.mmd',
+              'architecture-diagram.png',
+              'architecture-diagram.jpg',
+              'architecture-diagram.svg',
+              'architecture-diagram.drawio',
+              'architecture-diagram.html',
+          }
+
+          entries = sorted(
+              path
+              for path in examples_root.rglob('*')
+              if path.is_file() and path.name in entry_names
+          )
+          if not entries:
+              raise SystemExit('No static example entry files were found.')
+
+          failures = []
+          for entry in entries:
+              missing = sorted(
+                  name for name in output_names if not (entry.parent / name).is_file()
+              )
+              if missing:
+                  failures.append(f'{entry}: missing {", ".join(missing)}')
+
+          print(f'Validated {len(entries)} static example entries.')
+          if failures:
+              raise SystemExit('\n'.join(failures))
+          PY
+
+      - name: Upload generated example diagrams
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: static-example-diagrams-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            examples/**/architecture-diagram.md
+            examples/**/architecture-diagram.mmd
+            examples/**/architecture-diagram.png
+            examples/**/architecture-diagram.jpg
+            examples/**/architecture-diagram.svg
+            examples/**/architecture-diagram.drawio
+            examples/**/architecture-diagram.html
+          if-no-files-found: error
+          retention-days: 7

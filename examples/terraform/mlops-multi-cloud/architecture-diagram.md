@@ -8,10 +8,10 @@ Summary: Generated a dependency-oriented Terraform diagram from changed resource
 flowchart LR
 subgraph all_AWS[AWS]
   subgraph vpc_aws_vpc_vpc_aws_network[VPC
-vpc aws…]
+vpc aws network]
     tf_aws_vpc_vpc_aws_network["aws_vpc.vpc_aws_network"]
     subgraph subnet_aws_subnet_subnet_aws_network[Subnet
-subnet aws… (Private)]
+subnet aws network (Private)]
       tf_aws_subnet_subnet_aws_network["aws_subnet.subnet_aws_network"]
     end
   end

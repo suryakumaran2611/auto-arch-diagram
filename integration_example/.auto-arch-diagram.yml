@@ -1,0 +1,15 @@
+# Keep diagrams updated in GitHub (PR comments) and Confluence.
+generator:
+  mode: static
+publish:
+  enabled: true
+  paths:
+    md: integration_example/docs/architecture.md
+    mmd: integration_example/docs/architecture.mmd
+    png: integration_example/docs/architecture.png
+    jpg: integration_example/docs/architecture.jpg
+    svg: integration_example/docs/architecture.svg
+    # draw.io + interactive HTML are always generated alongside the above
+limits:
+  max_files: 50
+  max_bytes_per_file: 40000

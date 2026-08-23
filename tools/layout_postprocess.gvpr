@@ -1,0 +1,253 @@
+BEGIN{
+  double bbMinX, bbMinY, bbMaxX, bbMaxY, lpX, lpY, lpMinX, lpMaxY, newX, newY, centerX;
+  double fudgeX, fudgeY;
+  double cloudMinX, cloudMinY, cloudMaxX, cloudMaxY, cloudCenterX;
+  double clusterMinX, clusterMinY, clusterMaxX, clusterMaxY, clusterCenterX;
+  double labelX, labelY, labelHalfW, labelPad;
+  double kidMinX, kidMinY, kidMaxX, kidMaxY;
+  // gap kept between a child cluster border and its parent border
+  double childGap = 30.0;
+  graph_t kidG, otherG;
+  double othMinX, othMinY, othMaxX, othMaxY;
+  double topMostY, bottomMostY, topEdgeY, nodeTop;
+  int hasLegend;
+  string fld[int];
+  node_t n;
+  // $G is not addressable inside BEGIN, so BEG_G hands the root graph over
+  graph_t rootG;
+
+  hasLegend = 0;
+
+  // recursive routine, processing from the top (root) down
+  graph_t labelShift (graph_t Gr) {
+    graph_t thisG;
+
+    // First recurse into subgraphs
+    for (thisG = fstsubg(Gr); thisG; thisG=nxtsubg(thisG)) {
+      thisG = labelShift(thisG);
+    }
+
+    if (match(Gr.name,"cluster")==0 ){
+      // Check for main cloud provider group using _cloudgroup flag or top-level provider cluster
+      if ((hasAttr(Gr, "_cloudgroup") && Gr._cloudgroup=="1") || match(Gr.name, "cluster_provider_")==0 || Gr.name=="cluster_cloud"){
+        sscanf (Gr.bb, "%lf,%lf,%lf,%lf", &cloudMinX, &cloudMinY, &cloudMaxX, &cloudMaxY);
+        cloudCenterX = (cloudMinX + cloudMaxX) / 2.0;
+      }
+
+      // Position cluster label nodes within this cluster
+      sscanf (Gr.bb, "%lf,%lf,%lf,%lf", &clusterMinX, &clusterMinY, &clusterMaxX, &clusterMaxY);
+
+      // Children are processed first (see recursion above) and may have grown to fit their own labels.
+      // Grow cluster box now to contain children.
+      for (kidG = fstsubg(Gr); kidG; kidG = nxtsubg(kidG)) {
+        if (match(kidG.name, "cluster") == 0) {
+          sscanf (kidG.bb, "%lf,%lf,%lf,%lf", &kidMinX, &kidMinY, &kidMaxX, &kidMaxY);
+          if (kidMinX - childGap < clusterMinX) clusterMinX = kidMinX - childGap;
+          if (kidMinY - childGap < clusterMinY) clusterMinY = kidMinY - childGap;
+          if (kidMaxX + childGap > clusterMaxX) clusterMaxX = kidMaxX + childGap;
+          if (kidMaxY + childGap > clusterMaxY) clusterMaxY = kidMaxY + childGap;
+        }
+      }
+      Gr.bb = sprintf("%.1f,%.1f,%.1f,%.1f",
+                      clusterMinX, clusterMinY, clusterMaxX, clusterMaxY);
+
+      // Sibling collision resolution: pull the left one back to maintain childGap
+      for (kidG = fstsubg(Gr); kidG; kidG = nxtsubg(kidG)) {
+        if (match(kidG.name, "cluster") != 0) continue;
+        sscanf (kidG.bb, "%lf,%lf,%lf,%lf", &kidMinX, &kidMinY, &kidMaxX, &kidMaxY);
+        for (otherG = fstsubg(Gr); otherG; otherG = nxtsubg(otherG)) {
+          if (match(otherG.name, "cluster") != 0) continue;
+          if (otherG.name == kidG.name) continue;
+          sscanf (otherG.bb, "%lf,%lf,%lf,%lf", &othMinX, &othMinY, &othMaxX, &othMaxY);
+          // only siblings that share vertical space can collide
+          if (kidMinY < othMaxY && othMinY < kidMaxY) {
+            if (othMinX > kidMinX && othMinX < kidMaxX + childGap) {
+              kidMaxX = othMinX - childGap;
+              kidG.bb = sprintf("%.1f,%.1f,%.1f,%.1f",
+                                kidMinX, kidMinY, kidMaxX, kidMaxY);
+            }
+          }
+        }
+      }
+
+      clusterCenterX = (clusterMinX + clusterMaxX) / 2.0;
+
+      // Scan root graph for label node belonging to THIS cluster
+      for (n = fstnode(rootG); n; n = nxtnode(n)) {
+        if (hasAttr(n, "_clusterlabel") && n._clusterlabel == "1") {
+          if (hasAttr(n, "_clusterid") && hasAttr(n, "_labelposition")) {
+            if (n._clusterid == Gr.name) {
+              labelHalfW = 0.0;
+              if (hasAttr(n, "width")) {
+                sscanf (n.width, "%lf", &labelHalfW);
+                labelHalfW = (labelHalfW * 72.0) / 2.0;
+              }
+
+              // Grow box downwards by labelPad to accommodate label cleanly
+              labelPad = 95.0;
+              clusterMinY = clusterMinY - labelPad;
+              if (clusterMaxX - clusterMinX < (labelHalfW * 2.0) + 24.0) {
+                clusterMaxX = clusterMinX + (labelHalfW * 2.0) + 24.0;
+              }
+              Gr.bb = sprintf("%.1f,%.1f,%.1f,%.1f",
+                              clusterMinX, clusterMinY, clusterMaxX, clusterMaxY);
+
+              if (n._labelposition == "bottom-left") {
+                labelY = clusterMinY + (labelPad / 2.0);
+                labelX = clusterMinX + labelHalfW + 20.0;
+              } else if (n._labelposition == "bottom-right") {
+                labelX = clusterMaxX - labelHalfW - 20.0;
+                labelY = clusterMinY + (labelPad / 2.0);
+              } else if (n._labelposition == "bottom-center") {
+                labelX = clusterCenterX;
+                labelY = clusterMinY + (labelPad / 2.0);
+              } else {
+                labelY = clusterMinY + (labelPad / 2.0);
+                labelX = clusterMinX + labelHalfW + 20.0;
+              }
+
+              // Pin node center
+              n.pos = sprintf("%.1f,%.1f!", labelX, labelY);
+            }
+          }
+        }
+      }
+
+      // Handle top positioning when specified
+      if (hasAttr(Gr, "_shift") && Gr._shift!="" && Gr._shift!="0"){
+        fudgeX=2.0;
+        fudgeY=1.0;
+        if (index(Gr._shift,",")>0){
+          split(Gr._shift,fld,",");
+          fudgeX=(double)fld[0];
+          fudgeY=(double)fld[1];
+        }
+        sscanf (Gr.bb, "%lf,%lf,%lf,%lf", &bbMinX, &bbMinY, &bbMaxX, &bbMaxY);
+        lpX=xOf(Gr.lp);
+        lpY=yOf(Gr.lp);
+        lpMinX=lpX-((Gr.lwidth*72.0)/2.0);
+        lpMaxY=lpY+((Gr.lheight*72.0)/2.0);
+        Gr._oldlp=Gr.lp;
+        newX=lpX-(lpMinX-bbMinX)-fudgeX;
+        newY=lpY+(bbMaxY-lpMaxY)+fudgeY;
+        Gr.lp=sprintf("%.1f,%.1f", newX, newY);
+      }
+    }
+    return Gr;
+  }
+}
+BEG_G{
+  double nodeY;
+  topMostY = 0;
+  topEdgeY = 0;
+  bottomMostY = 999999.0;
+
+  rootG = $G;
+  labelShift($G);
+
+  // Center high-fanout edge nodes (CDN, API Gateway, ALB, IGW)
+  edge_t e;
+  node_t src, tgt;
+  int fanoutCount;
+  double sumX, avgX, srcX, srcY;
+  int centeredCount;
+  centeredCount = 0;
+
+  for (src = fstnode($G); src; src = nxtnode(src)) {
+    if (!hasAttr(src, "_edgenode") || src._edgenode != "1") continue;
+
+    fanoutCount = 0;
+    sumX = 0.0;
+    for (e = fstout(src); e; e = nxtout(e)) {
+      tgt = e.head;
+      if (hasAttr(tgt, "_titlenode") && tgt._titlenode == "1") continue;
+      if (hasAttr(tgt, "_footernode") && tgt._footernode == "1") continue;
+      if (hasAttr(tgt, "_legendnode") && tgt._legendnode == "1") continue;
+      if (hasAttr(tgt, "_clusterlabel") && tgt._clusterlabel == "1") continue;
+      sumX = sumX + xOf(tgt.pos);
+      fanoutCount = fanoutCount + 1;
+    }
+
+    if (fanoutCount > 3) {
+      avgX = sumX / (double)fanoutCount;
+      srcX = xOf(src.pos);
+      srcY = yOf(src.pos);
+      double xDist = srcX - avgX;
+      if (xDist < 0) xDist = -xDist;
+      if (xDist > 800.0) {
+        if (cloudMaxX > 0) {
+          if (avgX < cloudMinX + 50.0) avgX = cloudMinX + 50.0;
+          if (avgX > cloudMaxX - 50.0) avgX = cloudMaxX - 50.0;
+        }
+        src.pos = sprintf("%.1f,%.1f!", avgX, cloudMaxY - 60.0);
+        edge_t oe;
+        for (oe = fstout(src); oe; oe = nxtout(oe)) {
+          oe.pos = "";
+        }
+        for (oe = fstin(src); oe; oe = nxtin(oe)) {
+          oe.pos = "";
+        }
+        centeredCount = centeredCount + 1;
+      }
+    }
+  }
+
+  // Pin Security Group / Firewall shield badges to top-right corner of card
+  double badgeW, badgeH, shiftX;
+  for (n = fstnode($G); n; n = nxtnode(n)) {
+    if (!hasAttr(n, "_badgenode") || n._badgenode != "1") continue;
+    if (!hasAttr(n, "xlp")) continue;
+    badgeW = 2.8; badgeH = 2.8;
+    if (hasAttr(n, "width"))  sscanf (n.width,  "%lf", &badgeW);
+    if (hasAttr(n, "height")) sscanf (n.height, "%lf", &badgeH);
+    shiftX = 0.0;
+    if (hasAttr(n, "_badgewidth")) {
+      sscanf (n._badgewidth, "%lf", &shiftX);
+      shiftX = (shiftX / 2.0) - 32.0;
+    }
+    n.xlp = sprintf("%.1f,%.1f",
+                    xOf(n.pos) + (badgeW * 72.0) / 2.0 + shiftX,
+                    yOf(n.pos) + (badgeH * 72.0) / 2.0 - 24.0);
+  }
+
+  // Find topmost and bottommost node bounds
+  for (n = fstnode($G); n; n = nxtnode(n)) {
+    if (hasAttr(n, "_titlenode") && n._titlenode == "1") continue;
+    if (hasAttr(n, "_footernode") && n._footernode == "1") continue;
+    if (hasAttr(n, "_legendnode") && n._legendnode == "1") { hasLegend = 1; continue; }
+    nodeY = yOf(n.pos);
+    if (nodeY > topMostY) topMostY = nodeY;
+    if (nodeY < bottomMostY) bottomMostY = nodeY;
+    nodeTop = nodeY + (atof(n.height) * 72.0) / 2.0;
+    if (nodeTop > topEdgeY) topEdgeY = nodeTop;
+  }
+
+  if (cloudMaxY > topMostY) topMostY = cloudMaxY;
+  if (cloudMaxY > topEdgeY) topEdgeY = cloudMaxY;
+  if (cloudMinY < bottomMostY) bottomMostY = cloudMinY;
+  if (cloudCenterX == 0.0) {
+    double gbb0, gbb1, gbb2, gbb3;
+    sscanf($G.bb, "%lf,%lf,%lf,%lf", &gbb0, &gbb1, &gbb2, &gbb3);
+    cloudCenterX = (gbb0 + gbb2) / 2.0;
+  }
+}
+END_G{
+  double gbbMinX, gbbMinY, gbbMaxX, gbbMaxY, gcenterX, glpY;
+  sscanf ($G.bb, "%lf,%lf,%lf,%lf", &gbbMinX, &gbbMinY, &gbbMaxX, &gbbMaxY);
+  gcenterX = (gbbMinX + gbbMaxX) / 2.0;
+  glpY = yOf($G.lp);
+  $G.lp = sprintf("%.1f,%.1f", gcenterX, glpY);
+}
+N[_titlenode=="1"]{
+  pos=sprintf("%.0f,%.0f!", cloudCenterX, topEdgeY + 120);
+}
+N[_footernode=="1"]{
+  if (hasLegend) {
+    pos=sprintf("%.0f,%.0f!", cloudCenterX - 650, bottomMostY - 320);
+  } else {
+    pos=sprintf("%.0f,%.0f!", cloudCenterX, bottomMostY - 320);
+  }
+}
+N[_legendnode=="1"]{
+  pos=sprintf("%.0f,%.0f!", cloudCenterX + 650, bottomMostY - 320);
+}
