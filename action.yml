@@ -76,6 +76,26 @@ inputs:
     description: Output path for interactive HTML diagram (relative to repo root).
     required: false
     default: ''
+  ai_enhance:
+    description: Enable vision-assisted layout critique (Gemini or OpenRouter free models).
+    required: false
+    default: 'false'
+  ai_backend:
+    description: AI backend for vision refinement (auto|gemini|openrouter).
+    required: false
+    default: auto
+  gemini_model:
+    description: Google Gemini model name (default gemini-1.5-flash).
+    required: false
+    default: gemini-1.5-flash
+  gemini_api_key:
+    description: Google Gemini API key.
+    required: false
+    default: ''
+  openrouter_api_key:
+    description: OpenRouter API key.
+    required: false
+    default: ''
 
 outputs:
   md_path:
@@ -141,6 +161,8 @@ runs:
         AUTO_ARCH_RENDER_LAYOUT: ${{ inputs.render_layout }}
         AUTO_ARCH_RENDER_BG: ${{ inputs.render_bg }}
         AUTO_ARCH_PUBLISH_ENABLED: ${{ inputs.publish_enabled }}
+        GEMINI_API_KEY: ${{ inputs.gemini_api_key }}
+        OPENROUTER_API_KEY: ${{ inputs.openrouter_api_key }}
       run: |
         OUT_DIR="${{ inputs.out_dir }}"
         mkdir -p "${OUT_DIR}"
@@ -186,6 +208,12 @@ runs:
           if [ -n "${OUT_SVG}" ]; then OUT_SVG_ARG="${OUT_SVG}"; else OUT_SVG_ARG="${OUT_DIR}/architecture-diagram.svg"; fi
         fi
 
+        extra_args=()
+        if [ "${{ inputs.ai_enhance }}" = "true" ]; then
+          extra_args+=(--ai-enhance --ai-backend "${{ inputs.ai_backend }}")
+          if [ -n "${{ inputs.gemini_model }}" ]; then extra_args+=(--gemini-model "${{ inputs.gemini_model }}"); fi
+        fi
+
         python "${GITHUB_ACTION_PATH}/tools/generate_arch_diagram.py" \
           --iac-root "${{ inputs.iac_root }}" \
           --changed-files "${{ inputs.changed_files }}" \
@@ -195,7 +223,8 @@ runs:
           --out-jpg "${OUT_JPG_ARG}" \
           --out-svg "${OUT_SVG_ARG}" \
           --out-drawio "${OUT_DRAWIO}" \
-          --out-html "${OUT_HTML}"
+          --out-html "${OUT_HTML}" \
+          "${extra_args[@]}"
 
     - name: Export outputs
       id: out

@@ -5844,6 +5844,9 @@ def _static_markdown(
     out_html: Path | None = None,
     render: RenderConfig,
     ai_enhance: bool = False,
+    ai_backend: str = "auto",
+    gemini_model: str | None = None,
+    openrouter_model: str | None = None,
 ) -> tuple[str, str]:
     # Prefer Terraform first, then CloudFormation, then Bicep, then Pulumi YAML.
     mermaid = None
@@ -6010,6 +6013,9 @@ def _static_markdown(
                 direction=direction,
                 render=render,
                 title="Architecture (Terraform)",
+                backend=ai_backend,
+                gemini_model=gemini_model,
+                openrouter_model=openrouter_model,
             )
             if ai_critique:
                 ai_model_id = str(
@@ -6493,9 +6499,19 @@ def main() -> int:
     )
     parser.add_argument(
         "--ai-backend",
-        default="openrouter",
-        choices=["openrouter", "ollama", "bedrock", "restapi"],
-        help="AI backend for architectural refinement and annotations",
+        default="auto",
+        choices=["auto", "gemini", "openrouter", "ollama", "bedrock", "restapi"],
+        help="AI vision enhancement backend (auto, gemini, openrouter)",
+    )
+    parser.add_argument(
+        "--gemini-model",
+        default="gemini-1.5-flash",
+        help="Google Gemini vision model name (default: gemini-1.5-flash)",
+    )
+    parser.add_argument(
+        "--openrouter-model",
+        default=None,
+        help="OpenRouter vision model override",
     )
     parser.add_argument(
         "--ollama-model",
@@ -6505,7 +6521,7 @@ def main() -> int:
     parser.add_argument(
         "--ai-enhance",
         action="store_true",
-        help="Enable OpenRouter vision-assisted refinement (free models only)",
+        help="Enable vision-assisted refinement (Gemini or OpenRouter free models)",
     )
     args = parser.parse_args()
 
@@ -6691,6 +6707,9 @@ def main() -> int:
             out_html=out_html,
             render=render,
             ai_enhance=ai_enhance_enabled,
+            ai_backend=args.ai_backend,
+            gemini_model=args.gemini_model,
+            openrouter_model=args.openrouter_model,
         )
         out_md.write_text(md, encoding="utf-8")
         out_mmd.write_text(mermaid, encoding="utf-8")

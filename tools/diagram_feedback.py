@@ -1,6 +1,6 @@
 """Vision-assisted feedback loop for diagram quality.
 
-Loop: render -> OpenRouter vision critique (score + suggestions) ->
+Loop: render -> Vision critique (score + suggestions via Gemini or OpenRouter) ->
 apply mapped render adjustments -> re-render -> keep the best-scoring
 configuration. All adjustments map onto existing RenderConfig knobs;
 nothing about a specific architecture is hardcoded.
@@ -86,9 +86,6 @@ def build_inventory(resources: dict[str, dict[str, Any]]) -> str:
     return text[:1800]
 
 
-# Hard cap on refinement iterations: the best achievable configuration is
-# expected on or before the 5th attempt; beyond that, extra loops only add
-# latency without quality gains. Plateau detection usually finishes earlier.
 MAX_FEEDBACK_ITERATIONS = 5
 
 
@@ -99,10 +96,13 @@ def run_feedback_loop(
     direction: str,
     render: Any,
     title: str,
+    backend: str = "auto",
+    gemini_model: str | None = None,
+    openrouter_model: str | None = None,
     max_iterations: int | None = None,
     target_score: int = 9,
 ) -> tuple[Any, str, dict[str, Any], list[dict[str, Any]]]:
-    """Render, critique with a free vision model, refine, keep the best.
+    """Render, critique with a vision model (Gemini or OpenRouter), refine, keep the best.
 
     Returns (best_render, best_direction, best_critique, history).
     Iterations are capped at MAX_FEEDBACK_ITERATIONS and stop early on
@@ -111,34 +111,62 @@ def run_feedback_loop(
     or any iteration fails - diagram generation must never break over AI.
     """
     from generate_arch_diagram import _render_icon_diagram_from_terraform  # noqa: PLC0415
+    from gemini_client import (  # noqa: PLC0415
+        GeminiError,
+        critique_diagram_gemini,
+        load_gemini_key,
+        DEFAULT_GEMINI_MODEL,
+    )
     from openrouter_client import (  # noqa: PLC0415
         OpenRouterError,
-        critique_diagram,
-        load_api_key,
+        critique_diagram as critique_diagram_openrouter,
+        load_api_key as load_openrouter_key,
         ranked_free_vision_models,
     )
 
     requested = max_iterations or int(os.getenv("AUTO_ARCH_AI_ITERATIONS", str(MAX_FEEDBACK_ITERATIONS)))
     max_iterations = max(1, min(int(requested), MAX_FEEDBACK_ITERATIONS))
 
-    if not load_api_key():
-        print("[ai-enhance] No OpenRouter key configured; skipping enhancement.")
+    selected_backend = (backend or os.getenv("AUTO_ARCH_AI_BACKEND") or "auto").lower()
+
+    # Determine backend if set to "auto"
+    gemini_key = load_gemini_key()
+    openrouter_key = load_openrouter_key()
+
+    if selected_backend == "auto":
+        if gemini_key:
+            selected_backend = "gemini"
+        elif openrouter_key:
+            selected_backend = "openrouter"
+        else:
+            print("[ai-enhance] No Gemini or OpenRouter key configured; skipping enhancement.")
+            return render, direction, {}, []
+
+    if selected_backend == "gemini" and not gemini_key:
+        print("[ai-enhance] No Gemini API key found (set GEMINI_API_KEY); skipping enhancement.")
+        return render, direction, {}, []
+    elif selected_backend == "openrouter" and not openrouter_key:
+        print("[ai-enhance] No OpenRouter API key found (set OPENROUTER_API_KEY); skipping enhancement.")
         return render, direction, {}, []
 
-    try:
-        candidates = ranked_free_vision_models(
-            override_model=os.getenv("OPENROUTER_MODEL")
-        )
-    except OpenRouterError as exc:
-        print(f"[ai-enhance] Skipping enhancement: {exc}")
-        return render, direction, {}, []
-
-    model_ids = [m["id"] for m in candidates]
-    print(
-        f"[ai-enhance] Free vision models (ranked, {len(model_ids)} total): "
-        + ", ".join(model_ids[:10])
-        + (" ..." if len(model_ids) > 10 else "")
-    )
+    # Prepare model candidates for OpenRouter if needed
+    openrouter_model_ids: list[str] = []
+    if selected_backend == "openrouter":
+        try:
+            candidates = ranked_free_vision_models(
+                override_model=openrouter_model or os.getenv("OPENROUTER_MODEL")
+            )
+            openrouter_model_ids = [m["id"] for m in candidates]
+            print(
+                f"[ai-enhance:openrouter] Free vision models (ranked, {len(openrouter_model_ids)} total): "
+                + ", ".join(openrouter_model_ids[:8])
+            )
+        except OpenRouterError as exc:
+            print(f"[ai-enhance:openrouter] Skipping enhancement: {exc}")
+            return render, direction, {}, []
+    elif selected_backend == "gemini":
+        target_gemini_model = gemini_model or os.getenv("GEMINI_MODEL") or DEFAULT_GEMINI_MODEL
+        print(f"[ai-enhance:gemini] Using Google Gemini vision model '{target_gemini_model}'")
 
     mermaid_context = graph_to_mermaid(resources, edges)
     inventory = (
@@ -168,9 +196,20 @@ def run_feedback_loop(
                     direction=current_direction,
                     render=current_render,
                 )
-                critique, model_id = critique_diagram(
-                    tmp_png, mermaid_context, inventory, model_ids
-                )
+
+                if selected_backend == "gemini":
+                    critique, model_id = critique_diagram_gemini(
+                        tmp_png,
+                        mermaid_context,
+                        inventory,
+                        model_id=gemini_model,
+                        api_key=gemini_key,
+                    )
+                else:
+                    critique, model_id = critique_diagram_openrouter(
+                        tmp_png, mermaid_context, inventory, openrouter_model_ids
+                    )
+
             score = int(critique.get("score", 0) or 0)
             history.append({"iteration": iteration, "score": score, "model": model_id})
             print(f"[ai-enhance] Iteration {iteration}: score={score}/10 (via {model_id})")
@@ -184,8 +223,7 @@ def run_feedback_loop(
                 stagnation = 0
             else:
                 stagnation += 1
-            # Stop conditions: target reached, or plateau (two consecutive
-            # non-improving iterations) - further loops only add delay.
+
             if best["score"] >= target_score:
                 break
             if stagnation >= 2:
@@ -211,9 +249,9 @@ def run_feedback_loop(
             if not applied:
                 print("[ai-enhance] No actionable suggestions remained; stopping.")
                 break
-    except OpenRouterError as exc:
+    except (OpenRouterError, GeminiError) as exc:
         print(f"[ai-enhance] Stopped early: {exc}")
-    except Exception as exc:  # enhancement must never fail generation
+    except Exception as exc:
         print(f"[ai-enhance] Unexpected error; keeping best result so far: {exc}")
 
     return best["render"], best["direction"], best.get("critique", {}), history
@@ -229,7 +267,7 @@ def format_insights_markdown(
         "",
         "## AI Architecture Insights",
         "",
-        f"*Reviewed by OpenRouter free vision model `{model_id}` "
+        f"*Reviewed by `{model_id}` "
         f"(quality score: {critique.get('score', 'n/a')}/10).*",
         "",
     ]

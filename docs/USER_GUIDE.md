@@ -163,16 +163,27 @@ Generates native `.drawio` files using official vector shape packs that can be e
 ---
 
 ### 3. 🤖 AI-Enhanced Multi-Format Suite (`--ai-enhance`)
-Runs an optional OpenRouter free-model vision loop (strict $0 budget) that critiques render layout density and enriches the diagram.
+Runs an optional vision critique loop using **Google Gemini** or **OpenRouter free models** to critique layout density, generate executive subtitles, and add operational context.
 
-- **Vision-Assisted Layout Refinement**: OpenRouter free vision models analyze diagram layout, spacing, and label placement to eliminate visual overlaps.
+- **Dual Provider Support**:
+  - **Google Gemini Vision** (`--ai-backend gemini`): Uses Google's fast, free-tier vision models (`gemini-1.5-flash` by default, or `gemini-2.0-flash`, `gemini-1.5-flash-8b`, `gemini-1.5-pro`). Get your free API key at [Google AI Studio](https://aistudio.google.com).
+  - **OpenRouter Free Tier** (`--ai-backend openrouter`): Strict $0 budget ranking that loops through active free vision models.
+- **Vision-Assisted Layout Refinement**: Vision models inspect diagram density and suggest ranksep/nodesep adjustments to eliminate visual clutter.
 - **Executive Titles & Numbered Flows**: Enriches diagrams with executive subtitles, numbered operational flow badges, and IaC review hints.
 - **Dedicated Output Suite**: Emits `*-ai.png`, `*-ai.svg`, `*-ai.html`, `*-ai.drawio`, and `*-ai.md` alongside deterministic base outputs.
 
 ```bash
-# Run with AI Enhancement:
+# Run with Google Gemini Vision:
+export GEMINI_API_KEY="your-gemini-api-key"
 python tools/generate_arch_diagram.py --changed-files path/to/main.tf \
-  --out-png out/architecture.png --out-html out/architecture.html --out-drawio out/architecture.drawio --ai-enhance
+  --out-png out/architecture.png --out-html out/architecture.html --out-drawio out/architecture.drawio \
+  --ai-enhance --ai-backend gemini --gemini-model gemini-1.5-flash
+
+# Run with OpenRouter:
+export OPENROUTER_API_KEY="your-openrouter-key"
+python tools/generate_arch_diagram.py --changed-files path/to/main.tf \
+  --out-png out/architecture.png --out-html out/architecture.html --out-drawio out/architecture.drawio \
+  --ai-enhance --ai-backend openrouter
 ```
 
 ---
@@ -376,11 +387,10 @@ usage: generate_arch_diagram.py [-h] [--changed-files FILES] [--iac-root DIR]
 - `--changed-files <files>`: Space/newline-separated list of changed IaC files.
 - `--out-html <file>`: Output path for the Interactive HTML Architecture Studio.
 - `--out-drawio <file>`: Output path for native editable draw.io diagrams.
-- `--simplified`: Executive view stripping network plumbing while preserving compute-to-gateway relations.
-- `--expand-badges`: Expand security group shield badges into standalone nodes.
-- `--planfile <plan.json>`: Diagram directly from `terraform show -json` output without requiring a Terraform workspace or cloud credentials.
-- `--graphfile <graph.dot>`: Diagram directly from `terraform graph` DOT output.
-- `--ai-enhance`: Enable OpenRouter vision-assisted layout critique loop ($0 budget, free models only).
+- `--ai-enhance`: Enable vision-assisted layout critique loop (Gemini or OpenRouter free models).
+- `--ai-backend <auto|gemini|openrouter|ollama|bedrock>`: Vision provider backend (default `auto`).
+- `--gemini-model <model>`: Google Gemini vision model name (default: `gemini-1.5-flash`).
+- `--openrouter-model <model>`: OpenRouter vision model override.
 
 ---
 

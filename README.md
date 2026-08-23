@@ -85,7 +85,7 @@
 - **AWS Group Frames & Centered Legend**: Official `mxgraph.aws4.group` containers with bottom-centered legend cards.
 
 ### 🤖 3. AI-Enhanced Multi-Format Suite (`--ai-enhance`)
-- **Vision-Assisted Layout Refinement**: OpenRouter free-model vision loop analyzes diagram layout, spacing, and label placement to eliminate visual overlaps.
+- **Vision-Assisted Layout Refinement**: Evaluates diagram layout and density using **Google Gemini Vision** (`gemini-1.5-flash`, `gemini-2.0-flash`) or **OpenRouter Free Models** to eliminate visual clutter.
 - **Executive Titles & Numbered Flows**: Enriches diagrams with executive subtitles, numbered operational flow badges, and IaC review hints.
 - **Dedicated Output Suite**: Emits `*-ai.png`, `*-ai.svg`, `*-ai.html`, `*-ai.drawio`, and `*-ai.md` alongside deterministic base outputs.
 
@@ -123,18 +123,27 @@ Now you can ask your AI assistant:
 
 ---
 
-## 🤖 AI Vision Enhancement (OpenRouter)
+## 🤖 AI Vision Enhancement (Google Gemini & OpenRouter)
 
-Run locally:
+Run locally with your preferred vision provider:
 
 ```bash
+# With Google Gemini (Default: gemini-1.5-flash):
+export GEMINI_API_KEY="your-gemini-key"
 python tools/generate_arch_diagram.py --changed-files path/to/main.tf \
-  --out-png out/architecture.png --out-html out/architecture.html --out-drawio out/architecture.drawio --ai-enhance
+  --out-png out/architecture.png --out-html out/architecture.html --out-drawio out/architecture.drawio \
+  --ai-enhance --ai-backend gemini
+
+# With OpenRouter Free Models:
+export OPENROUTER_API_KEY="your-openrouter-key"
+python tools/generate_arch_diagram.py --changed-files path/to/main.tf \
+  --out-png out/architecture.png --out-html out/architecture.html --out-drawio out/architecture.drawio \
+  --ai-enhance --ai-backend openrouter
 ```
 
-- **Key resolution**: `OPENROUTER_API_KEY` env var, else `~/.config/auto-arch-diagram/openrouter_key` (chmod 600). Missing key = enhancement silently skipped.
-- **Free-model enforcement**: Filtered to $0-input/$0-output vision-capable models (e.g. `google/gemini-2.0-flash-exp:free`, `meta-llama/llama-3.2-11b-vision-instruct:free`).
-- **Outputs**: `*-ai.png`, `*-ai.svg`, `*-ai.html`, `*-ai.drawio`, `*-ai.md` with operational step annotations and review insights.
+- **Google Gemini**: Get free keys from [Google AI Studio](https://aistudio.google.com). Fast, high-throughput multimodal analysis defaulting to `gemini-1.5-flash` with fallback to `gemini-2.0-flash` and `gemini-1.5-flash-8b`.
+- **OpenRouter Free Tier**: $0 budget model ranking filter (`OPENROUTER_API_KEY`).
+- **Outputs**: Generates dedicated `*-ai.png`, `*-ai.svg`, `*-ai.html`, `*-ai.drawio`, `*-ai.md` with operational step annotations and review insights.
 
 ## 🎯 Quick Start
 

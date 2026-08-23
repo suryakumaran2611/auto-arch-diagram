@@ -127,20 +127,25 @@ on:
         type: boolean
         default: false
       ai_backend:
-        description: "AI backend for refinement: openrouter (default, free), ollama (local), bedrock (AWS), restapi (custom)."
+        description: "AI vision backend for refinement: auto (default), gemini (Google Gemini), openrouter (OpenRouter free models), ollama, bedrock."
         required: false
         type: string
-        default: openrouter
+        default: auto
+      gemini_model:
+        description: "Google Gemini vision model name (default: gemini-1.5-flash)."
+        required: false
+        type: string
+        default: gemini-1.5-flash
       ollama_model:
         description: "Ollama model name (only when ai_backend=ollama, e.g. 'llama3', 'mistral')."
         required: false
         type: string
         default: llama3
       openrouter_model:
-        description: "OpenRouter model for refinement (free tier, default 'stealth/ox-alpha'). Other free: 'google/gemma-3-27b-it:free', 'meta-llama/llama-3.1-405b:free'."
+        description: "OpenRouter model override for refinement (free tier)."
         required: false
         type: string
-        default: stealth/ox-alpha
+        default: ''
       ai_iterations:
         description: "Max AI refinement iterations 1-5 (default: 3, early-stop on plateau)."
         required: false
@@ -217,6 +222,9 @@ on:
         type: boolean
         default: false
     secrets:
+      GEMINI_API_KEY:
+        description: "Google Gemini API key for AI vision refinement. Get at aistudio.google.com. Skipped if unset."
+        required: false
       OPENROUTER_API_KEY:
         description: "OpenRouter API key for AI refinement (free tier). Get at openrouter.ai. Skipped if unset."
         required: false
@@ -423,8 +431,11 @@ jobs:
         id: gen
         env:
           CHANGED_IAC_FILES: ${{ inputs.changed_files != '' && steps.changed_direct.outputs.all_changed_files || (inputs.force_full && steps.all_iac.outputs.all_changed_files || steps.changed.outputs.all_changed_files) }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_MODEL: ${{ inputs.gemini_model }}
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
           OPENROUTER_MODEL: ${{ inputs.openrouter_model }}
+          AUTO_ARCH_AI_BACKEND: ${{ inputs.ai_backend }}
           AUTO_ARCH_AI_ENHANCE: ${{ inputs.ai_enhance && 'true' || 'false' }}
           AUTO_ARCH_AI_ITERATIONS: ${{ inputs.ai_iterations }}
           AUTO_ARCH_DIRECTION: ${{ inputs.direction }}
@@ -508,7 +519,7 @@ jobs:
           [ -n "${OUT_JPG_ARG}" ] && echo "JPG: ${OUT_JPG_ARG}"
           [ -n "${OUT_SVG_ARG}" ] && echo "SVG: ${OUT_SVG_ARG}"
           echo "Draw.io: ${OUT_DRAWIO_ARG:-<disabled>} | HTML: ${OUT_HTML_ARG:-<disabled>}"
-          if [ "${{ inputs.ai_enhance }}" = "true" ]; then echo "AI enhance: enabled via ${{ inputs.ai_backend }} (${{ inputs.openrouter_model }})"; fi
+          if [ "${{ inputs.ai_enhance }}" = "true" ]; then echo "AI enhance: enabled via ${{ inputs.ai_backend }} (model: ${{ inputs.gemini_model || inputs.openrouter_model }})"; fi
           echo "======================================="
 
           args=(
@@ -526,6 +537,12 @@ jobs:
           if [ -n "${{ inputs.iconsize }}" ]; then args+=(--iconsize "${{ inputs.iconsize }}"); fi
           if [ "${{ inputs.ai_enhance }}" = "true" ]; then
             args+=(--ai-enhance --ai-backend "${{ inputs.ai_backend }}")
+            if [ -n "${{ inputs.gemini_model }}" ]; then
+              args+=(--gemini-model "${{ inputs.gemini_model }}")
+            fi
+            if [ -n "${{ inputs.openrouter_model }}" ]; then
+              args+=(--openrouter-model "${{ inputs.openrouter_model }}")
+            fi
             if [ "${{ inputs.ai_backend }}" = "ollama" ] && [ -n "${{ inputs.ollama_model }}" ]; then
               args+=(--ollama-model "${{ inputs.ollama_model }}")
             fi

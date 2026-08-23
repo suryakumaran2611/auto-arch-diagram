@@ -213,14 +213,18 @@ When working on this project, ALWAYS:
   - `--annotate <flows.yaml>`: Custom numbered flow annotations
   - `--expand-badges`: Expand security group shield badges into standalone nodes
   - `--no-consolidate`: Disable automatic resource instance consolidation
-  - `--ai-backend <openrouter|ollama|bedrock|restapi>`: AI refinement backend
+  - `--ai-backend <auto|gemini|openrouter|ollama|bedrock|restapi>`: AI refinement backend (default `auto`)
+  - `--gemini-model <model>`: Gemini vision model (default `gemini-1.5-flash`)
+  - `--openrouter-model <model>`: OpenRouter vision model override
   - `--ollama-model <model>`: Model name when using `--ai-backend ollama`
-  - `--ai-enhance`: OpenRouter vision-assisted refinement (free models only); writes `*-ai.*` outputs
+  - `--ai-enhance`: Vision-assisted refinement (Gemini or OpenRouter free models); writes `*-ai.*` outputs
 - **AI enhancement environment variables:**
-  - `OPENROUTER_API_KEY` or key file `~/.config/auto-arch-diagram/openrouter_key` (chmod 600) - missing key skips enhancement silently
+  - `GEMINI_API_KEY` or key file `~/.config/auto-arch-diagram/gemini_key` (chmod 600)
+  - `OPENROUTER_API_KEY` or key file `~/.config/auto-arch-diagram/openrouter_key` (chmod 600)
   - `AUTO_ARCH_AI_ENHANCE=true` - env equivalent of `--ai-enhance`
+  - `AUTO_ARCH_AI_BACKEND=gemini` - env equivalent of `--ai-backend`
+  - `GEMINI_MODEL=gemini-1.5-flash` - Gemini model override
   - `AUTO_ARCH_AI_ITERATIONS` - max feedback iterations 1-5 (plateau early-stop built in)
-  - `OPENROUTER_MODEL` - optional override; must pass free+vision catalog checks or generation is refused
 - **Example:**
   ```bash
   python tools/generate_arch_diagram.py --changed-files examples/terraform/custom-icons-demo/main.tf --out-png artifacts/architecture-diagram.png --out-html artifacts/architecture-diagram.html --direction AUTO
