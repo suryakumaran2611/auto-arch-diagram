@@ -83,3 +83,33 @@ tf_aws_vpc_serverless_vpc --> tf_aws_security_group_lambda_sg
 Assumptions: Connections represent inferred references (including depends_on and attribute references).
 
 Rendered diagram: available as workflow artifact
+
+## AI Architecture Insights
+
+*Reviewed by OpenRouter free vision model `stealth/ox-alpha` (quality score: 6/10).*
+
+**Architecture.** Event-driven serverless data lake on AWS: API Gateway ingests payloads, Kinesis buffers events, and six Lambda functions perform ingestion, stream, and batch processing inside private subnets.
+**Dataflow.** (1) POST via data_api writes events to Kinesis and DynamoDB metadata; (2) event source mappings invoke stream and DynamoDB handlers; (3) scheduled batch_processor transforms raw S3 objects; (4) processed_data notifications trigger s3_event_handler while Glue crawls schema into data_catalog; (5) Athena analytics write output to query_results.
+**Security.** Dedicated lambda_role and glue_role with least-privilege policy attachments; private-subnet isolation plus lambda_sg guard Elasticsearch; DLQ, lambda_errors alarm, and SNS email alerts close the failure-handling loop.
+**Scaling.** Fully serverless compute (Lambda, Glue, Athena) scales on demand; Kinesis shard count and DynamoDB capacity are the throughput ceilings to monitor.
+
+**Context hints**
+- `[GENERAL]` Legend maps blue data flow, gray dependency, red security edges
+- `[DATA]` Kinesis and DynamoDB streams drive event-driven Lambda processing
+- `[S3]` Three-bucket lake pattern: raw landing, processed curation, query results
+- `[IAM]` Separate Lambda and Glue roles enforce least-privilege access
+- `[COMPUTE]` Six Lambda functions; two run in private subnets for Elasticsearch access
+- `[NETWORK]` API Gateway POST endpoint is the sole public ingress
+
+**Contextual labels applied:** `data_api` → Data Ingestion REST API, `post_data` → POST Ingest Endpoint, `data_stream` → Kinesis Ingest Stream, `data_ingestion` → Event Ingestion Function, `stream_processor` → Stream Processor Function, `batch_processor` → Scheduled Batch Processor (+6 more)
+
+**Review notes**
+- [labeling] Truncated labels: 'Cloudwatch Metric...', 'Api Gateway Rest Ap...', 'Lambda Function dynamodb stream...', 'S3 Bucket... bucket notification' obscure resource identity.
+- [grouping] 'Other' is a catch-all group mixing streaming (Kinesis), messaging (SNS), queueing (SQS), and monitoring (CloudWatch) resources.
+- [edge-routing] Blue data-flow edges traverse three containers vertically (Kinesis to data_ingestion), crossing Storage and Data groups.
+- [edge-routing] Red security/access edges (VPC, lambda_sg, glue_role) span the full canvas, adding visual noise.
+- [layout] Declared LR flow renders effectively top-down; public subnet holds only a duplicate subnet node, wasting prime space.
+
+Feedback iterations: iter0: 6/10, iter1: 5/10, iter2: 4/10
+
+**AI-refined diagram files** (include legend and review hints): architecture-diagram-ai.png, architecture-diagram-ai.jpg, architecture-diagram-ai.svg, architecture-diagram-ai.html, architecture-diagram-ai.drawio
