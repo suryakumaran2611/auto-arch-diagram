@@ -3,25 +3,32 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Auto Architecture Diagram - Generate Cloud Diagrams from IaC</title>
-    <meta name="description" content="Automatically generate professional architecture diagrams from Terraform, CloudFormation, and other IaC files. Perfect for CI/CD pipelines.">
+    <title>Auto Architecture Diagram - Next-Gen Cloud Architecture Visualization from IaC</title>
+    <meta name="description" content="Transform Terraform, CloudFormation, Bicep, and Pulumi into stunning interactive HTML studios, native editable draw.io diagrams, and AI-enhanced architecture artifacts.">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
     <style>
         :root {
-            --primary: #2563eb;
-            --primary-dark: #1d4ed8;
-            --secondary: #7c3aed;
-            --bg-dark: #0f172a;
-            --bg-card: #1e293b;
-            --text: #f8fafc;
-            --text-muted: #94a3b8;
-            --border: #334155;
+            --primary: #3b82f6;
+            --primary-hover: #2563eb;
+            --secondary: #8b5cf6;
+            --accent: #06b6d4;
             --aws: #ff9900;
-            --azure: #0089d6;
+            --azure: #0078d4;
             --gcp: #4285f4;
-            --gradient: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            --oci: #c74634;
+            --ibm: #0f62fe;
+            --bg-dark: #090d16;
+            --bg-card: #111827;
+            --bg-card-hover: #172033;
+            --bg-glass: rgba(17, 24, 39, 0.85);
+            --border: #1f2937;
+            --border-hover: #374151;
+            --text: #f9fafb;
+            --text-muted: #9ca3af;
+            --text-dim: #6b7280;
+            --glow: radial-gradient(circle, rgba(59, 130, 246, 0.15) 0%, rgba(139, 92, 246, 0.05) 50%, transparent 70%);
         }
 
         * {
@@ -32,28 +39,40 @@
 
         body {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-            background: var(--bg-dark);
+            background-color: var(--bg-dark);
             color: var(--text);
             line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        h1, h2, h3, h4, .brand-font {
+            font-family: 'Outfit', sans-serif;
+            letter-spacing: -0.02em;
+        }
+
+        code, pre {
+            font-family: 'JetBrains Mono', monospace;
         }
 
         .container {
-            max-width: 1200px;
+            max-width: 1240px;
             margin: 0 auto;
             padding: 0 24px;
         }
 
-        /* Navigation */
+        /* Glass Header */
         nav {
             position: fixed;
             top: 0;
             left: 0;
             right: 0;
-            background: rgba(15, 23, 42, 0.9);
-            backdrop-filter: blur(10px);
+            background: var(--bg-glass);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
             border-bottom: 1px solid var(--border);
-            z-index: 100;
+            z-index: 1000;
             padding: 16px 0;
+            transition: all 0.3s ease;
         }
 
         nav .container {
@@ -63,9 +82,21 @@
         }
 
         .logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
             font-size: 1.25rem;
             font-weight: 700;
-            background: var(--gradient);
+            color: var(--text);
+            text-decoration: none;
+        }
+
+        .logo-icon {
+            font-size: 1.5rem;
+        }
+
+        .logo-gradient {
+            background: linear-gradient(135deg, #60a5fa 0%, #c084fc 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
@@ -73,14 +104,16 @@
 
         .nav-links {
             display: flex;
-            gap: 32px;
+            gap: 28px;
             list-style: none;
+            align-items: center;
         }
 
         .nav-links a {
             color: var(--text-muted);
             text-decoration: none;
             font-weight: 500;
+            font-size: 0.95rem;
             transition: color 0.2s;
         }
 
@@ -88,25 +121,38 @@
             color: var(--text);
         }
 
+        .nav-cta {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        /* Buttons */
         .btn {
             display: inline-flex;
             align-items: center;
+            justify-content: center;
             gap: 8px;
-            padding: 10px 20px;
-            border-radius: 8px;
+            padding: 10px 22px;
+            border-radius: 10px;
             font-weight: 600;
+            font-size: 0.95rem;
             text-decoration: none;
-            transition: all 0.2s;
+            transition: all 0.25s ease;
+            cursor: pointer;
+            border: 1px solid transparent;
         }
 
         .btn-primary {
-            background: var(--gradient);
+            background: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%);
             color: white;
+            box-shadow: 0 4px 18px rgba(37, 99, 235, 0.35);
         }
 
         .btn-primary:hover {
             transform: translateY(-2px);
-            box-shadow: 0 10px 40px rgba(37, 99, 235, 0.3);
+            box-shadow: 0 8px 26px rgba(37, 99, 235, 0.5);
+            background: linear-gradient(135deg, #1d4ed8 0%, #6d28d9 100%);
         }
 
         .btn-secondary {
@@ -116,51 +162,76 @@
         }
 
         .btn-secondary:hover {
-            background: var(--border);
+            background: var(--bg-card-hover);
+            border-color: var(--border-hover);
+            transform: translateY(-2px);
+        }
+
+        .btn-sm {
+            padding: 6px 14px;
+            font-size: 0.825rem;
+            border-radius: 8px;
         }
 
         /* Hero Section */
         .hero {
-            padding: 160px 0 100px;
+            padding: 160px 0 90px;
             text-align: center;
             position: relative;
-            overflow: hidden;
+            background: radial-gradient(circle at 50% 10%, rgba(59, 130, 246, 0.12) 0%, transparent 60%);
         }
 
-        .hero::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 800px;
-            height: 800px;
-            background: radial-gradient(circle, rgba(37, 99, 235, 0.15) 0%, transparent 70%);
-            pointer-events: none;
+        .badge-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 16px;
+            background: rgba(31, 41, 55, 0.7);
+            border: 1px solid rgba(55, 65, 81, 0.8);
+            border-radius: 9999px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: #93c5fd;
+            margin-bottom: 24px;
+            backdrop-filter: blur(8px);
+        }
+
+        .badge-pill .pulse {
+            width: 8px;
+            height: 8px;
+            background: #3b82f6;
+            border-radius: 50%;
+            box-shadow: 0 0 10px #3b82f6;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(0.95); opacity: 0.8; }
+            50% { transform: scale(1.2); opacity: 1; }
+            100% { transform: scale(0.95); opacity: 0.8; }
         }
 
         .hero h1 {
-            font-size: 3.5rem;
-            font-weight: 700;
+            font-size: 3.8rem;
+            font-weight: 800;
+            line-height: 1.15;
             margin-bottom: 24px;
-            background: linear-gradient(135deg, var(--text) 0%, var(--text-muted) 100%);
+            color: #ffffff;
+        }
+
+        .hero h1 span.gradient-text {
+            background: linear-gradient(135deg, #60a5fa 0%, #a78bfa 50%, #f472b6 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
         }
 
-        .hero h1 span {
-            background: var(--gradient);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-
-        .hero p {
+        .hero p.lead {
             font-size: 1.25rem;
             color: var(--text-muted);
-            max-width: 700px;
-            margin: 0 auto 40px;
+            max-width: 780px;
+            margin: 0 auto 36px;
+            line-height: 1.7;
         }
 
         .hero-buttons {
@@ -168,242 +239,347 @@
             gap: 16px;
             justify-content: center;
             flex-wrap: wrap;
+            margin-bottom: 48px;
         }
 
-        .cloud-badges {
+        /* Supported Clouds Ribbon */
+        .cloud-ribbon {
             display: flex;
-            gap: 24px;
+            gap: 16px;
             justify-content: center;
-            margin-top: 60px;
+            flex-wrap: wrap;
         }
 
-        .cloud-badge {
+        .cloud-chip {
             display: flex;
             align-items: center;
             gap: 8px;
-            padding: 8px 16px;
+            padding: 6px 14px;
             background: var(--bg-card);
-            border-radius: 20px;
-            font-size: 0.875rem;
+            border: 1px solid var(--border);
+            border-radius: 9999px;
+            font-size: 0.85rem;
+            font-weight: 600;
             color: var(--text-muted);
         }
 
-        .cloud-badge .dot {
+        .cloud-chip .dot {
             width: 8px;
             height: 8px;
             border-radius: 50%;
         }
 
-        .cloud-badge.aws .dot { background: var(--aws); }
-        .cloud-badge.azure .dot { background: var(--azure); }
-        .cloud-badge.gcp .dot { background: var(--gcp); }
+        .cloud-chip.aws .dot { background: var(--aws); box-shadow: 0 0 6px var(--aws); }
+        .cloud-chip.azure .dot { background: var(--azure); box-shadow: 0 0 6px var(--azure); }
+        .cloud-chip.gcp .dot { background: var(--gcp); box-shadow: 0 0 6px var(--gcp); }
+        .cloud-chip.oci .dot { background: var(--oci); box-shadow: 0 0 6px var(--oci); }
+        .cloud-chip.ibm .dot { background: var(--ibm); box-shadow: 0 0 6px var(--ibm); }
+        .cloud-chip.iac .dot { background: #10b981; box-shadow: 0 0 6px #10b981; }
 
-        /* Demo Section */
-        .demo {
-            padding: 80px 0;
+        /* Interactive Showcase Viewer (Tabbed) */
+        .interactive-viewer-section {
+            padding: 40px 0 80px;
         }
 
-        .demo-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 40px;
-            align-items: center;
-        }
-
-        .demo-code {
+        .viewer-card {
             background: var(--bg-card);
-            border-radius: 12px;
             border: 1px solid var(--border);
+            border-radius: 20px;
             overflow: hidden;
+            box-shadow: 0 25px 60px rgba(0, 0, 0, 0.45);
         }
 
-        .demo-code-header {
+        .viewer-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 24px;
+            background: rgba(15, 23, 42, 0.7);
+            border-bottom: 1px solid var(--border);
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+
+        .window-controls {
             display: flex;
             gap: 8px;
-            padding: 16px;
-            background: rgba(0, 0, 0, 0.2);
-            border-bottom: 1px solid var(--border);
         }
 
-        .demo-code-header span {
+        .window-controls span {
             width: 12px;
             height: 12px;
             border-radius: 50%;
-            background: var(--border);
         }
 
-        .demo-code-header span:nth-child(1) { background: #ef4444; }
-        .demo-code-header span:nth-child(2) { background: #eab308; }
-        .demo-code-header span:nth-child(3) { background: #22c55e; }
+        .window-controls .wc-red { background: #ef4444; }
+        .window-controls .wc-yellow { background: #f59e0b; }
+        .window-controls .wc-green { background: #10b981; }
 
-        .demo-code pre {
-            padding: 20px;
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.875rem;
-            overflow-x: auto;
-            color: var(--text-muted);
-        }
-
-        .demo-code pre .comment { color: #6b7280; }
-        .demo-code pre .keyword { color: #c084fc; }
-        .demo-code pre .string { color: #34d399; }
-        .demo-code pre .property { color: #60a5fa; }
-
-        .demo-image {
-            background: var(--bg-card);
+        .viewer-tabs {
+            display: flex;
+            gap: 8px;
+            background: var(--bg-dark);
+            padding: 4px;
             border-radius: 12px;
             border: 1px solid var(--border);
-            padding: 24px;
-            text-align: center;
         }
 
-        .demo-image img {
-            max-width: 100%;
-            border-radius: 8px;
-        }
-
-        .demo-image p {
-            margin-top: 16px;
+        .tab-btn {
+            background: transparent;
+            border: none;
             color: var(--text-muted);
+            padding: 8px 16px;
+            border-radius: 8px;
             font-size: 0.875rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
 
-        /* Features Section */
-        .features {
-            padding: 100px 0;
+        .tab-btn:hover {
+            color: var(--text);
         }
 
+        .tab-btn.active {
+            background: var(--primary);
+            color: #ffffff;
+            box-shadow: 0 2px 10px rgba(37, 99, 235, 0.4);
+        }
+
+        .viewer-body {
+            position: relative;
+            min-height: 520px;
+            background: #0d131f;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            padding: 24px;
+        }
+
+        .tab-panel {
+            display: none;
+            width: 100%;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .tab-panel.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(6px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .tab-panel img {
+            width: 100%;
+            max-height: 600px;
+            object-fit: contain;
+            border-radius: 12px;
+            background: #ffffff;
+            padding: 12px;
+            border: 1px solid var(--border);
+        }
+
+        .tab-panel .feature-overlay-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+            margin-top: 20px;
+        }
+
+        .feature-callout {
+            background: rgba(17, 24, 39, 0.9);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 16px;
+            backdrop-filter: blur(8px);
+        }
+
+        .feature-callout h4 {
+            font-size: 0.95rem;
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #93c5fd;
+        }
+
+        .feature-callout p {
+            font-size: 0.825rem;
+            color: var(--text-muted);
+            line-height: 1.5;
+        }
+
+        /* Section Headings */
         .section-header {
             text-align: center;
-            margin-bottom: 60px;
+            margin-bottom: 54px;
         }
 
         .section-header h2 {
-            font-size: 2.5rem;
+            font-size: 2.6rem;
+            font-weight: 700;
             margin-bottom: 16px;
         }
 
         .section-header p {
             color: var(--text-muted);
-            font-size: 1.125rem;
-            max-width: 600px;
+            font-size: 1.15rem;
+            max-width: 680px;
             margin: 0 auto;
         }
 
+        /* Grid Sections */
         .features-grid {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
             gap: 24px;
+            margin-bottom: 80px;
         }
 
         .feature-card {
             background: var(--bg-card);
             border: 1px solid var(--border);
-            border-radius: 12px;
+            border-radius: 16px;
             padding: 32px;
             transition: all 0.3s;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .feature-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--primary), transparent);
+            opacity: 0;
+            transition: opacity 0.3s;
         }
 
         .feature-card:hover {
-            border-color: var(--primary);
+            border-color: rgba(59, 130, 246, 0.5);
             transform: translateY(-4px);
+            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35);
+        }
+
+        .feature-card:hover::before {
+            opacity: 1;
         }
 
         .feature-icon {
-            width: 48px;
-            height: 48px;
-            background: var(--gradient);
-            border-radius: 12px;
+            width: 52px;
+            height: 52px;
+            background: rgba(37, 99, 235, 0.15);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            border-radius: 14px;
             display: flex;
             align-items: center;
             justify-content: center;
-            margin-bottom: 20px;
-            font-size: 1.5rem;
+            font-size: 1.6rem;
+            margin-bottom: 22px;
         }
 
         .feature-card h3 {
-            font-size: 1.25rem;
+            font-size: 1.3rem;
             margin-bottom: 12px;
+            color: #ffffff;
         }
 
         .feature-card p {
             color: var(--text-muted);
             font-size: 0.95rem;
+            line-height: 1.65;
         }
 
-        /* Usage Section */
-        .usage {
-            padding: 100px 0;
-            background: linear-gradient(180deg, transparent 0%, rgba(37, 99, 235, 0.05) 100%);
-        }
-
-        .usage-card {
-            background: var(--bg-card);
-            border: 1px solid var(--border);
-            border-radius: 16px;
-            padding: 48px;
-            max-width: 900px;
-            margin: 0 auto;
-        }
-
-        .usage-card h3 {
-            font-size: 1.5rem;
-            margin-bottom: 24px;
-        }
-
-        .code-block {
-            background: var(--bg-dark);
-            border-radius: 8px;
-            padding: 20px;
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.875rem;
-            overflow-x: auto;
-            margin-bottom: 24px;
-        }
-
-        .code-block .comment { color: #6b7280; }
-        .code-block .key { color: #60a5fa; }
-        .code-block .string { color: #34d399; }
-        .code-block .bool { color: #f472b6; }
-
-        /* Output Formats */
-        .formats {
+        /* Format Matrix Section */
+        .formats-section {
             padding: 80px 0;
+            background: linear-gradient(180deg, transparent 0%, rgba(17, 24, 39, 0.5) 100%);
         }
 
         .formats-grid {
             display: grid;
-            grid-template-columns: repeat(4, 1fr);
+            grid-template-columns: repeat(3, 1fr);
             gap: 20px;
         }
 
         .format-card {
             background: var(--bg-card);
             border: 1px solid var(--border);
-            border-radius: 12px;
+            border-radius: 14px;
             padding: 24px;
-            text-align: center;
+            transition: all 0.25s;
         }
 
-        .format-card .icon {
-            font-size: 2.5rem;
-            margin-bottom: 12px;
+        .format-card:hover {
+            border-color: var(--accent);
+            transform: translateY(-3px);
+        }
+
+        .format-badge {
+            display: inline-block;
+            padding: 4px 10px;
+            background: rgba(6, 182, 212, 0.12);
+            color: var(--accent);
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            margin-bottom: 14px;
         }
 
         .format-card h4 {
-            font-size: 1rem;
+            font-size: 1.15rem;
             margin-bottom: 8px;
         }
 
         .format-card p {
             color: var(--text-muted);
-            font-size: 0.8rem;
+            font-size: 0.9rem;
+            line-height: 1.5;
         }
 
-        /* Gallery Section */
-        .gallery {
+        /* Showcase Gallery */
+        .gallery-section {
             padding: 100px 0;
-            background: linear-gradient(180deg, rgba(124, 58, 237, 0.05) 0%, transparent 100%);
+        }
+
+        .gallery-filter-bar {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            margin-bottom: 40px;
+            flex-wrap: wrap;
+        }
+
+        .filter-btn {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            color: var(--text-muted);
+            padding: 8px 18px;
+            border-radius: 9999px;
+            font-size: 0.875rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .filter-btn:hover {
+            color: var(--text);
+            border-color: var(--border-hover);
+        }
+
+        .filter-btn.active {
+            background: var(--text);
+            color: var(--bg-dark);
+            border-color: var(--text);
         }
 
         .gallery-grid {
@@ -415,682 +591,829 @@
         .gallery-item {
             background: var(--bg-card);
             border: 1px solid var(--border);
-            border-radius: 16px;
+            border-radius: 18px;
             overflow: hidden;
-            transition: all 0.3s;
+            transition: all 0.3s ease;
+            display: flex;
+            flex-direction: column;
         }
 
         .gallery-item:hover {
-            border-color: var(--primary);
+            border-color: rgba(59, 130, 246, 0.6);
             transform: translateY(-4px);
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+            box-shadow: 0 20px 45px rgba(0, 0, 0, 0.4);
         }
 
-        .gallery-item.featured {
-            grid-column: span 2;
+        .gallery-thumb-wrap {
+            position: relative;
+            background: #ffffff;
+            padding: 16px;
+            border-bottom: 1px solid var(--border);
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 280px;
         }
 
-        .gallery-item img {
+        .gallery-thumb-wrap img {
             width: 100%;
             height: auto;
-            display: block;
-            background: #1a1a2e;
+            max-height: 320px;
+            object-fit: contain;
+            transition: transform 0.3s ease;
+        }
+
+        .gallery-item:hover .gallery-thumb-wrap img {
+            transform: scale(1.02);
         }
 
         .gallery-item-info {
-            padding: 20px;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            flex-grow: 1;
         }
 
         .gallery-item-info h4 {
-            font-size: 1.1rem;
+            font-size: 1.25rem;
             margin-bottom: 8px;
+            color: #ffffff;
         }
 
         .gallery-item-info p {
             color: var(--text-muted);
-            font-size: 0.875rem;
-            margin-bottom: 12px;
+            font-size: 0.9rem;
+            line-height: 1.6;
+            margin-bottom: 16px;
+            flex-grow: 1;
         }
 
-        .gallery-item-info .tags {
+        .gallery-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+            padding-top: 14px;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .gallery-tags {
             display: flex;
             gap: 8px;
             flex-wrap: wrap;
         }
 
-        .gallery-item-info .tag {
+        .gtag {
             padding: 4px 10px;
             background: var(--bg-dark);
-            border-radius: 12px;
+            border-radius: 6px;
             font-size: 0.75rem;
+            font-weight: 600;
             color: var(--text-muted);
+            border: 1px solid var(--border);
         }
 
-        .gallery-item-info .tag.aws { color: var(--aws); border: 1px solid var(--aws); }
-        .gallery-item-info .tag.azure { color: var(--azure); border: 1px solid var(--azure); }
-        .gallery-item-info .tag.gcp { color: var(--gcp); border: 1px solid var(--gcp); }
-        .gallery-item-info .tag.multi { color: #a855f7; border: 1px solid #a855f7; }
+        .gtag.aws { color: var(--aws); border-color: rgba(255, 153, 0, 0.3); }
+        .gtag.multi { color: #c084fc; border-color: rgba(192, 132, 252, 0.3); }
+        .gtag.sec { color: #f87171; border-color: rgba(248, 113, 113, 0.3); }
 
-        @media (max-width: 968px) {
-            .gallery-grid {
-                grid-template-columns: 1fr;
-            }
-            .gallery-item.featured {
-                grid-column: span 1;
-            }
-        }
-
-        /* Custom Icons Section */
-        .custom-icons {
-            padding: 100px 0;
-            background: var(--bg-card);
-        }
-
-        .icons-showcase {
+        .tab-action-bar {
             display: flex;
-            justify-content: center;
-            gap: 32px;
-            flex-wrap: wrap;
-            margin: 40px 0;
-        }
-
-        .icon-item {
-            display: flex;
-            flex-direction: column;
             align-items: center;
-            gap: 12px;
-            padding: 20px;
-            background: var(--bg-dark);
+            justify-content: space-between;
+            gap: 16px;
+            margin-bottom: 16px;
+            padding: 12px 18px;
+            background: rgba(15, 23, 42, 0.85);
+            border: 1px solid var(--border);
             border-radius: 12px;
-            border: 1px solid var(--border);
-            transition: all 0.3s;
+            flex-wrap: wrap;
         }
 
-        .icon-item:hover {
-            border-color: var(--primary);
-            transform: translateY(-4px);
-        }
-
-        .icon-item img {
-            width: 64px;
-            height: 64px;
-            object-fit: contain;
-        }
-
-        .icon-item span {
-            font-size: 0.8rem;
+        .action-hint {
+            font-size: 0.85rem;
             color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            gap: 6px;
         }
 
-        .custom-icons-demo {
-            max-width: 1000px;
-            margin: 0 auto;
-            background: var(--bg-dark);
-            border-radius: 16px;
+        .format-pills {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+
+        .fpill {
+            padding: 4px 10px;
+            background: rgba(37, 99, 235, 0.15);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: #93c5fd;
+            text-decoration: none;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .fpill:hover {
+            background: var(--primary);
+            color: white;
+            transform: translateY(-1px);
+        }
+
+        .fpill.drawio-pill {
+            background: rgba(245, 158, 11, 0.15);
+            border-color: rgba(245, 158, 11, 0.4);
+            color: #fbbf24;
+        }
+
+        .fpill.drawio-pill:hover {
+            background: #d97706;
+            color: #ffffff;
+        }
+
+        .fpill.html-pill {
+            background: rgba(16, 185, 129, 0.15);
+            border-color: rgba(16, 185, 129, 0.4);
+            color: #34d399;
+        }
+
+        .fpill.html-pill:hover {
+            background: #059669;
+            color: #ffffff;
+        }
+
+        .gallery-thumb-link {
+            display: block;
+            text-decoration: none;
+            position: relative;
+        }
+
+        .gallery-thumb-link .hover-overlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.75);
+            backdrop-filter: blur(4px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            opacity: 0;
+            transition: opacity 0.25s ease;
+            z-index: 10;
+        }
+
+        .gallery-thumb-link:hover .hover-overlay {
+            opacity: 1;
+        }
+
+        /* MCP & Quick Start Code Blocks */
+        .usage-section {
+            padding: 80px 0;
+        }
+
+        .code-showcase-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 28px;
+        }
+
+        .code-box {
+            background: var(--bg-card);
             border: 1px solid var(--border);
+            border-radius: 16px;
             overflow: hidden;
         }
 
-        .custom-icons-demo img {
-            width: 100%;
-            height: auto;
-        }
-
-        .custom-icons-demo-info {
-            padding: 24px;
-            text-align: center;
-        }
-
-        .custom-icons-demo-info h4 {
-            font-size: 1.25rem;
-            margin-bottom: 8px;
-        }
-
-        .custom-icons-demo-info p {
+        .code-box-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 14px 20px;
+            background: rgba(15, 23, 42, 0.6);
+            border-bottom: 1px solid var(--border);
+            font-size: 0.875rem;
+            font-weight: 600;
             color: var(--text-muted);
         }
+
+        .code-box pre {
+            padding: 20px;
+            font-size: 0.85rem;
+            line-height: 1.65;
+            color: #d1d5db;
+            overflow-x: auto;
+        }
+
+        .code-box pre .hl-comment { color: #6b7280; }
+        .code-box pre .hl-key { color: #60a5fa; }
+        .code-box pre .hl-str { color: #34d399; }
+        .code-box pre .hl-cmd { color: #f472b6; }
 
         /* Footer */
         footer {
             padding: 60px 0;
             border-top: 1px solid var(--border);
             text-align: center;
+            background: var(--bg-dark);
         }
 
         footer p {
             color: var(--text-muted);
+            font-size: 0.95rem;
         }
 
         footer a {
             color: var(--primary);
             text-decoration: none;
+            font-weight: 600;
         }
 
         footer a:hover {
             text-decoration: underline;
         }
 
-        /* Responsive */
         @media (max-width: 968px) {
-            .features-grid {
-                grid-template-columns: repeat(2, 1fr);
-            }
-            .demo-grid {
-                grid-template-columns: 1fr;
-            }
-            .formats-grid {
-                grid-template-columns: repeat(2, 1fr);
-            }
-        }
-
-        @media (max-width: 640px) {
-            .hero h1 {
-                font-size: 2.5rem;
-            }
-            .features-grid {
-                grid-template-columns: 1fr;
-            }
-            .nav-links {
-                display: none;
-            }
-            .cloud-badges {
-                flex-direction: column;
-                align-items: center;
-            }
+            .hero h1 { font-size: 2.8rem; }
+            .features-grid, .formats-grid, .code-showcase-grid { grid-template-columns: 1fr; }
+            .gallery-grid { grid-template-columns: 1fr; }
+            .tab-panel .feature-overlay-grid { grid-template-columns: 1fr; }
+            .nav-links { display: none; }
         }
     </style>
 </head>
 <body>
+    <!-- Navbar -->
     <nav>
         <div class="container">
-            <div class="logo">🏗️ Auto Arch Diagram</div>
+            <a href="#" class="logo">
+                <span class="logo-icon">🏗️</span>
+                <span class="brand-font">auto-arch-<span class="logo-gradient">diagram</span></span>
+            </a>
             <ul class="nav-links">
                 <li><a href="#features">Features</a></li>
-                <li><a href="#custom-icons">Custom Icons</a></li>
-                <li><a href="#gallery">Gallery</a></li>
-                <li><a href="#usage">Usage</a></li>
-                <li><a href="USER_GUIDE.md">User Guide</a></li>
-                <li><a href="https://github.com/suryakumaran2611/auto-arch-diagram">GitHub</a></li>
+                <li><a href="#studio">HTML Studio</a></li>
+                <li><a href="#drawio">draw.io</a></li>
+                <li><a href="#gallery">Showcase</a></li>
+                <li><a href="#mcp">MCP Server</a></li>
+                <li><a href="USER_GUIDE.md">Docs</a></li>
             </ul>
-            <a href="https://github.com/marketplace/actions/auto-architecture-diagram" class="btn btn-primary">
-                Get Action
-            </a>
+            <div class="nav-cta">
+                <a href="https://github.com/suryakumaran2611/auto-arch-diagram" class="btn btn-secondary btn-sm">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+                    GitHub
+                </a>
+                <a href="#quickstart" class="btn btn-primary btn-sm">Get Started</a>
+            </div>
         </div>
     </nav>
 
+    <!-- Hero Header -->
     <section class="hero">
         <div class="container">
-            <h1>Auto-Generate <span>Architecture Diagrams</span><br>from Your IaC</h1>
-            <p>Transform Terraform, CloudFormation, and other Infrastructure-as-Code into beautiful, professional architecture diagrams. Automatically. In your CI/CD pipeline.</p>
+            <div class="badge-pill">
+                <span class="pulse"></span>
+                <span>Next-Generation Architecture Visualization Suite</span>
+            </div>
+            <h1>Turn Code into <span class="gradient-text">Living Architecture</span><br>Interactive, Native, and AI-Enhanced</h1>
+            <p class="lead">Automatically generate interactive HTML studios, editable native draw.io vector diagrams, and AI-optimized architecture maps from Terraform, CloudFormation, Bicep, and Pulumi.</p>
+            
             <div class="hero-buttons">
-                <a href="https://github.com/marketplace/actions/auto-architecture-diagram" class="btn btn-primary">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
-                    GitHub Marketplace
-                </a>
-                <a href="https://github.com/suryakumaran2611/auto-arch-diagram" class="btn btn-secondary">
-                    View Source
-                </a>
+                <a href="#gallery" class="btn btn-primary">Explore Live Showcase ↓</a>
+                <a href="USER_GUIDE.md" class="btn btn-secondary">Read User Guide 📖</a>
             </div>
-            <div class="cloud-badges">
-                <div class="cloud-badge aws"><span class="dot"></span> AWS</div>
-                <div class="cloud-badge azure"><span class="dot"></span> Azure</div>
-                <div class="cloud-badge gcp"><span class="dot"></span> GCP</div>
+
+            <div class="cloud-ribbon">
+                <div class="cloud-chip aws"><span class="dot"></span> AWS 2026 Native</div>
+                <div class="cloud-chip azure"><span class="dot"></span> Azure SVG</div>
+                <div class="cloud-chip gcp"><span class="dot"></span> Google Cloud</div>
+                <div class="cloud-chip oci"><span class="dot"></span> Oracle OCI</div>
+                <div class="cloud-chip ibm"><span class="dot"></span> IBM Cloud</div>
+                <div class="cloud-chip iac"><span class="dot"></span> Terraform • Bicep • CFN • Pulumi</div>
             </div>
         </div>
     </section>
 
-    <section class="demo">
+    <!-- Interactive Showcase Switcher -->
+    <section class="interactive-viewer-section" id="studio">
         <div class="container">
-            <div class="demo-grid">
-                                <div class="demo-code">
-                                        <div class="demo-code-header">
-                                                <span></span><span></span><span></span>
-                                        </div>
-                                        <pre><code><span class="comment"># template.yaml (CloudFormation)</span>
-AWSTemplateFormatVersion: '2010-09-09'
-Description: Secure serverless website (AWS) - S3 private origin + CloudFront + WAF
+            <div class="viewer-card">
+                <div class="viewer-header">
+                    <div class="window-controls">
+                        <span class="wc-red"></span>
+                        <span class="wc-yellow"></span>
+                        <span class="wc-green"></span>
+                    </div>
+                    <div class="viewer-tabs">
+                        <button class="tab-btn active" onclick="switchTab('html-studio')">🌐 Interactive HTML Studio</button>
+                        <button class="tab-btn" onclick="switchTab('drawio-tab')">📊 Native draw.io Export</button>
+                        <button class="tab-btn" onclick="switchTab('ai-suite')">🤖 AI-Enhanced Suite</button>
+                        <button class="tab-btn" onclick="switchTab('vector-svg')">📐 Crisp Vector SVG</button>
+                    </div>
+                </div>
 
-Resources:
-    LogsBucket:
-        Type: AWS::S3::Bucket
-        Properties:
-            BucketEncryption:
-                ServerSideEncryptionConfiguration:
-                    - ServerSideEncryptionByDefault:
-                            SSEAlgorithm: AES256
+                <div class="viewer-body">
+                    <!-- Tab 1: Interactive HTML Studio -->
+                    <div id="html-studio" class="tab-panel active">
+                        <div class="tab-action-bar">
+                            <div class="action-hint">💡 <strong>Interactive Studio:</strong> Click any node to live-trace upstream/downstream dependencies & inspect attributes</div>
+                            <a href="demos/mlops-aws.html" target="_blank" class="btn btn-primary btn-sm">🚀 Open Live Interactive HTML Studio Demo ↗</a>
+                        </div>
+                        <a href="demos/mlops-aws.html" target="_blank" class="gallery-thumb-link" title="Click to launch interactive HTML studio demo">
+                            <img src="images/mlops-aws.png" alt="Interactive HTML Architecture Studio">
+                            <div class="hover-overlay">
+                                <span class="btn btn-primary">🚀 Launch Live Interactive HTML Studio Demo (New Tab) ↗</span>
+                            </div>
+                        </a>
+                        <div class="feature-overlay-grid">
+                            <div class="feature-callout">
+                                <h4>🔍 Path Tracing & Impact Analysis</h4>
+                                <p>Click any resource to instantly highlight its upstream dependencies and downstream consumers in real time.</p>
+                            </div>
+                            <div class="feature-callout">
+                                <h4>🎛️ Live Tier Filter Matrix</h4>
+                                <p>Toggle Compute, Storage, Security, Integration, or Database layers on the fly with live node counting.</p>
+                            </div>
+                            <div class="feature-callout">
+                                <h4>🗺️ Radar Mini-Map & Drawer</h4>
+                                <p>Smooth pan & zoom mini-map with an inspector drawer displaying full Terraform metadata and tags.</p>
+                            </div>
+                        </div>
+                    </div>
 
-    SiteBucket:
-        Type: AWS::S3::Bucket
-        Properties:
-            BucketEncryption:
-                ServerSideEncryptionConfiguration:
-                    - ServerSideEncryptionByDefault:
-                            SSEAlgorithm: AES256
-            VersioningConfiguration:
-                Status: Enabled
-            LoggingConfiguration:
-                DestinationBucketName: !Ref LogsBucket
-                LogFilePrefix: s3/
+                    <!-- Tab 2: Native draw.io -->
+                    <div id="drawio-tab" class="tab-panel">
+                        <div class="tab-action-bar">
+                            <div class="action-hint">📐 <strong>Native draw.io:</strong> Editable vector shapes with obstacle-avoiding corridor lines & bridge jumps</div>
+                            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                                <a href="https://viewer.diagrams.net/?highlight=0000ff&edit=_blank&layers=1&nav=1#Uhttps%3A%2F%2Fraw.githubusercontent.com%2Fsuryakumaran2611%2Fauto-arch-diagram%2Fmain%2Fdocs%2Fdemos%2Fmlops-multi-cloud.drawio" target="_blank" class="btn btn-primary btn-sm">📊 Open in draw.io Web Editor (app.diagrams.net) ↗</a>
+                                <a href="demos/mlops-multi-cloud.drawio" download class="btn btn-secondary btn-sm">💾 Download .drawio</a>
+                            </div>
+                        </div>
+                        <a href="https://viewer.diagrams.net/?highlight=0000ff&edit=_blank&layers=1&nav=1#Uhttps%3A%2F%2Fraw.githubusercontent.com%2Fsuryakumaran2611%2Fauto-arch-diagram%2Fmain%2Fdocs%2Fdemos%2Fmlops-multi-cloud.drawio" target="_blank" class="gallery-thumb-link" title="Open in draw.io editor">
+                            <img src="images/mlops-multi-cloud.png" alt="Native draw.io Vector Diagram">
+                            <div class="hover-overlay">
+                                <span class="btn btn-primary">📊 Open in draw.io Web Editor ↗</span>
+                            </div>
+                        </a>
+                        <div class="feature-overlay-grid">
+                            <div class="feature-callout">
+                                <h4>📐 Official AWS 2026 & Azure Stencils</h4>
+                                <p>Exports native <code>mxgraph.aws4.*</code> and <code>azure2</code> shape packs — fully editable, no embedded raster PNGs.</p>
+                            </div>
+                            <div class="feature-callout">
+                                <h4>🛣️ Obstacle-Free Corridor Routing</h4>
+                                <p>Clean orthogonal paths route strictly through free whitespace gutters, never cutting across node icons or labels.</p>
+                            </div>
+                            <div class="feature-callout">
+                                <h4>🌉 Bridge Arc Line Jumps</h4>
+                                <p>Crisp <code>jumpStyle=arc</code> line bridges at every crossing to prevent ambiguous 4-way line collisions.</p>
+                            </div>
+                        </div>
+                    </div>
 
-    SiteBucketPublicAccessBlock:
-        Type: AWS::S3::BucketPublicAccessBlock
-        Properties:
-            Bucket: !Ref SiteBucket
-            BlockPublicAcls: true
-            IgnorePublicAcls: true
-            BlockPublicPolicy: true
-            RestrictPublicBuckets: true
+                    <!-- Tab 3: AI-Enhanced Suite -->
+                    <div id="ai-suite" class="tab-panel">
+                        <div class="tab-action-bar">
+                            <div class="action-hint">🤖 <strong>AI-Enhanced Suite:</strong> Vision critique loop optimizes spacing, executive labels & flow annotations</div>
+                            <a href="demos/custom-icons-demo.html" target="_blank" class="btn btn-secondary btn-sm">🌐 Open AI-Enhanced HTML Studio Demo ↗</a>
+                        </div>
+                        <a href="demos/custom-icons-demo.html" target="_blank" class="gallery-thumb-link" title="Launch AI-Enhanced HTML Studio">
+                            <img src="images/custom-icons-demo.png" alt="AI-Enhanced Multi-Format Architecture">
+                            <div class="hover-overlay">
+                                <span class="btn btn-primary">🌐 View AI-Enhanced Interactive Studio ↗</span>
+                            </div>
+                        </a>
+                        <div class="feature-overlay-grid">
+                            <div class="feature-callout">
+                                <h4>🧠 Vision-Assisted Refinement</h4>
+                                <p>OpenRouter free vision models evaluate density, spacing, and label placement to eliminate visual clutter.</p>
+                            </div>
+                            <div class="feature-callout">
+                                <h4>🔢 Step Numbers & Tooltips</h4>
+                                <p>Enriches diagrams with executive subtitles, numbered operational flow badges, and IaC review hints.</p>
+                            </div>
+                            <div class="feature-callout">
+                                <h4>📁 Dedicated Multi-Format Suite</h4>
+                                <p>Emits <code>*-ai.png</code>, <code>*-ai.svg</code>, <code>*-ai.drawio</code>, <code>*-ai.html</code>, and <code>*-ai.md</code> in a single pass.</p>
+                            </div>
+                        </div>
+                    </div>
 
-    WafAcl:
-        Type: AWS::WAFv2::WebACL
-        Properties:
-            Name: auto-arch-waf
-            Scope: CLOUDFRONT
-            DefaultAction: ...
-</code></pre>
-                                </div>
-                                <div class="demo-image">
-                                        <img src="images/aws-serverless.png" alt="Generated Architecture Diagram">
-                                        <p>↑ Auto-generated from your CloudFormation code</p>
-                                </div>
+                    <!-- Tab 4: Vector SVG -->
+                    <div id="vector-svg" class="tab-panel">
+                        <div class="tab-action-bar">
+                            <div class="action-hint">📐 <strong>Crisp Scalable Vector:</strong> Embedded base64 high-definition icons with centered bottom legend</div>
+                            <a href="demos/multi-region-active-passive.svg" target="_blank" class="btn btn-secondary btn-sm">📐 View Scalable Vector SVG ↗</a>
+                        </div>
+                        <a href="demos/multi-region-active-passive.svg" target="_blank" class="gallery-thumb-link" title="View Raw Vector SVG">
+                            <img src="images/multi-region-active-passive.png" alt="Crisp Vector SVG Export">
+                            <div class="hover-overlay">
+                                <span class="btn btn-secondary">📐 View Fullscreen Scalable SVG ↗</span>
+                            </div>
+                        </a>
+                        <div class="feature-overlay-grid">
+                            <div class="feature-callout">
+                                <h4>🎯 Embedded High-Res Icons</h4>
+                                <p>Self-contained SVG vector diagrams with embedded base64 icon assets that render portably anywhere.</p>
+                            </div>
+                            <div class="feature-callout">
+                                <h4>🎨 Official Cloud Accents</h4>
+                                <p>Provider borders follow brand palettes (AWS <code>#FF9900</code>, Azure <code>#0078D4</code>, GCP <code>#4285F4</code>, OCI <code>#C74634</code>, IBM <code>#0F62FE</code>).</p>
+                            </div>
+                            <div class="feature-callout">
+                                <h4>📊 Centered Bottom Legend Card</h4>
+                                <p>Guaranteed 100% bottom-centered connectors & type classification legend across all exports.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </section>
 
-    <section class="features" id="features">
+    <!-- Key Core Capabilities -->
+    <section class="features-section" id="features">
         <div class="container">
             <div class="section-header">
-                <h2>Why Auto Architecture Diagram?</h2>
-                <p>Keep your documentation in sync with your infrastructure, automatically.</p>
+                <h2>Architectural Excellence by Default</h2>
+                <p>Engineered for engineering leaders, cloud architects, and platform teams who demand clarity.</p>
             </div>
+
             <div class="features-grid">
                 <div class="feature-card">
-                    <div class="feature-icon">🔄</div>
-                    <h3>Always Up-to-Date</h3>
-                    <p>Diagrams regenerate on every PR, ensuring documentation never drifts from reality.</p>
+                    <div class="feature-icon">🌐</div>
+                    <h3>Interactive HTML Studio</h3>
+                    <p>Standalone, zero-dependency offline web studio with real-time Path Tracing, Impact Analysis, Mini-Map navigation, and in-browser PNG/JSON exports.</p>
                 </div>
                 <div class="feature-card">
-                    <div class="feature-icon">☁️</div>
-                    <h3>Multi-Cloud Support</h3>
-                    <p>Native support for AWS, Azure, and GCP with official cloud icons and styling.</p>
+                    <div class="feature-icon">📊</div>
+                    <h3>Native draw.io Vector Pack</h3>
+                    <p>True vector exports using official AWS 2026, Azure SVG, and GCP shape packs. Features clean obstacle-avoiding corridor routing and bridge arc crossovers.</p>
                 </div>
                 <div class="feature-card">
-                    <div class="feature-icon">📝</div>
-                    <h3>Multiple Formats</h3>
-                    <p>Export to PNG, SVG, JPEG, Mermaid, and Markdown. Use anywhere.</p>
-                </div>
-                <div class="feature-card">
-                    <div class="feature-icon">🎨</div>
-                    <h3>Professional Icons</h3>
-                    <p>Uses official AWS, Azure, and GCP architecture icons for polished diagrams.</p>
+                    <div class="feature-icon">🤖</div>
+                    <h3>AI Vision Refinement</h3>
+                    <p>OpenRouter free-model vision loop analyzes render ergonomics, applying spacing tweaks, contextual overrides, and operational review hints.</p>
                 </div>
                 <div class="feature-card">
                     <div class="feature-icon">⚡</div>
-                    <h3>Zero Config</h3>
-                    <p>Works out of the box. Just add to your workflow and push.</p>
+                    <h3>MCP Server for AI Agents</h3>
+                    <p>Built-in Model Context Protocol server enabling Claude, Cursor, Copilot, and Gemini to query, inspect, and generate cloud graphs via stdio JSON-RPC.</p>
                 </div>
                 <div class="feature-card">
-                    <div class="feature-icon">🔗</div>
-                    <h3>Smart Detection</h3>
-                    <p>Automatically detects resource relationships and dependencies from your code.</p>
+                    <div class="feature-icon">☁️</div>
+                    <h3>Unified Multi-Cloud</h3>
+                    <p>Simultaneous support for AWS, Azure, GCP, OCI, and IBM on a unified canvas with official brand borders and ultra-light tint fills.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🎯</div>
+                    <h3>100% Centered Legend</h3>
+                    <p>Guaranteed bottom-centered legend card across all PNG, SVG, JPG, HTML, and draw.io exports, categorizing data, security, and network edges.</p>
                 </div>
             </div>
         </div>
     </section>
 
-    <section class="custom-icons" id="custom-icons">
+    <!-- Showcase Gallery Section -->
+    <section class="gallery-section" id="gallery">
         <div class="container">
             <div class="section-header">
-                <h2>🎨 Custom Icon Support</h2>
-                <p>Beyond cloud provider icons - use custom icons for any architectural concept.</p>
+                <h2>Real-World Architecture Showcase</h2>
+                <p>Explore production-grade architectures generated directly from live Infrastructure-as-Code. Click any card to launch its live interactive studio or draw.io editor.</p>
             </div>
-            <div class="icons-showcase">
-                <div class="icon-item">
-                    <img src="images/icons/datapipeline.png" alt="Data Pipeline">
-                    <span>Data Pipeline</span>
-                </div>
-                <div class="icon-item">
-                    <img src="images/icons/eventtrigger.png" alt="Event Trigger">
-                    <span>Event Trigger</span>
-                </div>
-                <div class="icon-item">
-                    <img src="images/icons/messagequeue.png" alt="Message Queue">
-                    <span>Message Queue</span>
-                </div>
-                <div class="icon-item">
-                    <img src="images/icons/streamprocessor.png" alt="Stream Processor">
-                    <span>Stream Processor</span>
-                </div>
-                <div class="icon-item">
-                    <img src="images/icons/scheduler.png" alt="Scheduler">
-                    <span>Scheduler</span>
-                </div>
-                <div class="icon-item">
-                    <img src="images/icons/searchengine.png" alt="Search Engine">
-                    <span>Search Engine</span>
-                </div>
-            </div>
-            <div class="custom-icons-demo">
-                <img src="images/custom-icons-demo.png" alt="Custom Icons Demo - Serverless Data Pipeline">
-                <div class="custom-icons-demo-info">
-                    <h4>Serverless Data Pipeline with Custom Icons</h4>
-                    <p>A complete event-driven data pipeline architecture using custom icons for abstract concepts like data streams, event triggers, and processing stages.</p>
-                </div>
-            </div>
-        </div>
-    </section>
 
-    <section class="usage" id="usage">
-        <div class="container">
-            <div class="section-header">
-                <h2>Quick Start</h2>
-                <p>Add to your GitHub Actions workflow in seconds.</p>
+            <div class="gallery-filter-bar">
+                <button class="filter-btn active" onclick="filterGallery('all')">All Architectures</button>
+                <button class="filter-btn" onclick="filterGallery('aws')">AWS</button>
+                <button class="filter-btn" onclick="filterGallery('multi')">Multi-Cloud</button>
+                <button class="filter-btn" onclick="filterGallery('serverless')">Serverless & Events</button>
+                <button class="filter-btn" onclick="filterGallery('security')">Security & VPC</button>
             </div>
-                        <div class="usage-card">
-                                <h3>📋 .github/workflows/diagram.yml</h3>
-                                <div class="code-block">
-<pre><span class="key">name:</span> <span class="string">Update Architecture Diagram</span>
-<span class="key">on:</span>
-    <span class="key">pull_request:</span>
-        <span class="key">paths:</span>
-            - <span class="string">'**/*.tf'</span>
-            - <span class="string">'**/*.yaml'</span>
 
-<span class="key">jobs:</span>
-    <span class="key">diagram:</span>
-        <span class="key">runs-on:</span> <span class="string">ubuntu-latest</span>
-        <span class="key">steps:</span>
-            - <span class="key">uses:</span> <span class="string">actions/checkout@v4</span>
-            - <span class="key">name:</span> <span class="string">Generate Architecture Diagram</span>
-                <span class="key">uses:</span> <span class="string">suryakumaran2611/auto-arch-diagram@v1</span>
-                <span class="key">with:</span>
-                    <span class="key">iac_globs:</span> <span class="string">**/*.tf\n**/*.yaml</span>
-                    <span class="key">out_dir:</span> <span class="string">artifacts</span>
-                    <span class="key">image_formats:</span> <span class="string">png,svg</span>
-                    <span class="key">mode:</span> <span class="string">static</span>
-                    <span class="key">direction:</span> <span class="string">LR</span>
-            - <span class="key">name:</span> <span class="string">Upload Diagram Artifacts</span>
-                <span class="key">uses:</span> <span class="string">actions/upload-artifact@v4</span>
-                <span class="key">with:</span>
-                    <span class="key">name:</span> <span class="string">architecture-diagram</span>
-                    <span class="key">path:</span> <span class="string">artifacts/</span>
-</pre>
-                                </div>
-                                <p><strong>Best Practice:</strong> Use <code>iac_globs</code> to specify all relevant IaC files (Terraform, CloudFormation, etc.) and <code>out_dir</code> for organized output. Always upload generated artifacts for traceability.</p>
-                                <a href="USER_GUIDE.md" class="btn btn-secondary">
-                                        View Full Documentation →
-                                </a>
+            <div class="gallery-grid">
+                <!-- 1. Enterprise MLOps Multi-Region AWS -->
+                <div class="gallery-item" data-category="aws">
+                    <a href="demos/mlops-aws.html" target="_blank" class="gallery-thumb-link" title="Launch Interactive HTML Studio">
+                        <div class="gallery-thumb-wrap">
+                            <img src="images/mlops-aws.png" alt="Enterprise MLOps Multi-Region AWS">
                         </div>
+                        <div class="hover-overlay">
+                            <span class="btn btn-primary btn-sm">🚀 Open Interactive Studio ↗</span>
+                        </div>
+                    </a>
+                    <div class="gallery-item-info">
+                        <h4>Enterprise MLOps & Data Platform (AWS)</h4>
+                        <p>Multi-Region production stack with Primary and DR VPCs, SageMaker orchestration, EKS cluster, Aurora MySQL, ElastiCache, and VPC peering.</p>
+                        <div class="gallery-footer">
+                            <div class="gallery-tags">
+                                <span class="gtag aws">AWS 2026</span>
+                                <span class="gtag">MLOps</span>
+                                <span class="gtag">DR Peering</span>
+                            </div>
+                            <div class="format-pills">
+                                <a href="demos/mlops-aws.html" target="_blank" class="fpill html-pill" title="Launch Interactive Studio">🌐 HTML Studio ↗</a>
+                                <a href="https://viewer.diagrams.net/?highlight=0000ff&edit=_blank&layers=1&nav=1#Uhttps%3A%2F%2Fraw.githubusercontent.com%2Fsuryakumaran2611%2Fauto-arch-diagram%2Fmain%2Fdocs%2Fdemos%2Fmlops-aws.drawio" target="_blank" class="fpill drawio-pill" title="Open in draw.io">📊 .drawio ↗</a>
+                                <a href="demos/mlops-aws.png" target="_blank" class="fpill">PNG</a>
+                                <a href="demos/mlops-aws.svg" target="_blank" class="fpill">SVG</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 2. Secure 3-Tier Web Application -->
+                <div class="gallery-item" data-category="security">
+                    <a href="demos/multi-tier-web-app.html" target="_blank" class="gallery-thumb-link" title="Launch Interactive HTML Studio">
+                        <div class="gallery-thumb-wrap">
+                            <img src="images/multi-tier-web-app.png" alt="Secure 3-Tier Enterprise Web App">
+                        </div>
+                        <div class="hover-overlay">
+                            <span class="btn btn-primary btn-sm">🚀 Open Interactive Studio ↗</span>
+                        </div>
+                    </a>
+                    <div class="gallery-item-info">
+                        <h4>Secure Enterprise 3-Tier Web Platform</h4>
+                        <p>Enterprise DMZ with AWS WAF, Public ALB, AutoScaling EC2 compute subnets, Multi-AZ RDS MySQL, and KMS cryptographic key hierarchies.</p>
+                        <div class="gallery-footer">
+                            <div class="gallery-tags">
+                                <span class="gtag aws">AWS</span>
+                                <span class="gtag sec">Security</span>
+                                <span class="gtag">3-Tier</span>
+                            </div>
+                            <div class="format-pills">
+                                <a href="demos/multi-tier-web-app.html" target="_blank" class="fpill html-pill" title="Launch Interactive Studio">🌐 HTML Studio ↗</a>
+                                <a href="https://viewer.diagrams.net/?highlight=0000ff&edit=_blank&layers=1&nav=1#Uhttps%3A%2F%2Fraw.githubusercontent.com%2Fsuryakumaran2611%2Fauto-arch-diagram%2Fmain%2Fdocs%2Fdemos%2Fmulti-tier-web-app.drawio" target="_blank" class="fpill drawio-pill" title="Open in draw.io">📊 .drawio ↗</a>
+                                <a href="demos/multi-tier-web-app.png" target="_blank" class="fpill">PNG</a>
+                                <a href="demos/multi-tier-web-app.svg" target="_blank" class="fpill">SVG</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 3. Hybrid Multi-Cloud Data Analytics -->
+                <div class="gallery-item" data-category="multi">
+                    <a href="demos/mlops-multi-cloud.html" target="_blank" class="gallery-thumb-link" title="Launch Interactive HTML Studio">
+                        <div class="gallery-thumb-wrap">
+                            <img src="images/mlops-multi-cloud.png" alt="Hybrid Multi-Cloud Data Platform">
+                        </div>
+                        <div class="hover-overlay">
+                            <span class="btn btn-primary btn-sm">🚀 Open Interactive Studio ↗</span>
+                        </div>
+                    </a>
+                    <div class="gallery-item-info">
+                        <h4>Hybrid Multi-Cloud Data Platform</h4>
+                        <p>Simultaneous AWS, Azure, and GCP topology establishing cross-cloud data lake sync, BigQuery analytics, and network perimeter boundaries.</p>
+                        <div class="gallery-footer">
+                            <div class="gallery-tags">
+                                <span class="gtag multi">Multi-Cloud</span>
+                                <span class="gtag aws">AWS</span>
+                                <span class="gtag">GCP</span>
+                                <span class="gtag">Azure</span>
+                            </div>
+                            <div class="format-pills">
+                                <a href="demos/mlops-multi-cloud.html" target="_blank" class="fpill html-pill" title="Launch Interactive Studio">🌐 HTML Studio ↗</a>
+                                <a href="https://viewer.diagrams.net/?highlight=0000ff&edit=_blank&layers=1&nav=1#Uhttps%3A%2F%2Fraw.githubusercontent.com%2Fsuryakumaran2611%2Fauto-arch-diagram%2Fmain%2Fdocs%2Fdemos%2Fmlops-multi-cloud.drawio" target="_blank" class="fpill drawio-pill" title="Open in draw.io">📊 .drawio ↗</a>
+                                <a href="demos/mlops-multi-cloud.png" target="_blank" class="fpill">PNG</a>
+                                <a href="demos/mlops-multi-cloud.svg" target="_blank" class="fpill">SVG</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 4. Serverless Event-Driven Pipeline with Custom Icons -->
+                <div class="gallery-item" data-category="serverless">
+                    <a href="demos/custom-icons-demo.html" target="_blank" class="gallery-thumb-link" title="Launch Interactive HTML Studio">
+                        <div class="gallery-thumb-wrap">
+                            <img src="images/custom-icons-demo.png" alt="Custom Icons Serverless Data Pipeline">
+                        </div>
+                        <div class="hover-overlay">
+                            <span class="btn btn-primary btn-sm">🚀 Open Interactive Studio ↗</span>
+                        </div>
+                    </a>
+                    <div class="gallery-item-info">
+                        <h4>Serverless Event Pipeline (Custom Icons)</h4>
+                        <p>Event-driven microservices architecture utilizing custom programmatic icons for data streams, event queues, schedulers, and search engines.</p>
+                        <div class="gallery-footer">
+                            <div class="gallery-tags">
+                                <span class="gtag multi">Custom Icons</span>
+                                <span class="gtag">Event-Driven</span>
+                                <span class="gtag">Lambda</span>
+                            </div>
+                            <div class="format-pills">
+                                <a href="demos/custom-icons-demo.html" target="_blank" class="fpill html-pill" title="Launch Interactive Studio">🌐 HTML Studio ↗</a>
+                                <a href="https://viewer.diagrams.net/?highlight=0000ff&edit=_blank&layers=1&nav=1#Uhttps%3A%2F%2Fraw.githubusercontent.com%2Fsuryakumaran2611%2Fauto-arch-diagram%2Fmain%2Fdocs%2Fdemos%2Fcustom-icons-demo.drawio" target="_blank" class="fpill drawio-pill" title="Open in draw.io">📊 .drawio ↗</a>
+                                <a href="demos/custom-icons-demo.png" target="_blank" class="fpill">PNG</a>
+                                <a href="demos/custom-icons-demo.svg" target="_blank" class="fpill">SVG</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 5. Dual-VPC Peering Multi-Subnet -->
+                <div class="gallery-item" data-category="security">
+                    <a href="demos/vpc-peering-multi-subnet.html" target="_blank" class="gallery-thumb-link" title="Launch Interactive HTML Studio">
+                        <div class="gallery-thumb-wrap">
+                            <img src="images/vpc-peering-multi-subnet.png" alt="Dual-VPC Peering Multi-Subnet">
+                        </div>
+                        <div class="hover-overlay">
+                            <span class="btn btn-primary btn-sm">🚀 Open Interactive Studio ↗</span>
+                        </div>
+                    </a>
+                    <div class="gallery-item-info">
+                        <h4>Dual-VPC Transit & Peering Mesh</h4>
+                        <p>High-availability dual-VPC architecture with segmented public/private subnets, NAT Gateways, Internet Gateways, and bidirectional route tables.</p>
+                        <div class="gallery-footer">
+                            <div class="gallery-tags">
+                                <span class="gtag aws">AWS</span>
+                                <span class="gtag sec">VPC Peering</span>
+                                <span class="gtag">Transit</span>
+                            </div>
+                            <div class="format-pills">
+                                <a href="demos/vpc-peering-multi-subnet.html" target="_blank" class="fpill html-pill" title="Launch Interactive Studio">🌐 HTML Studio ↗</a>
+                                <a href="https://viewer.diagrams.net/?highlight=0000ff&edit=_blank&layers=1&nav=1#Uhttps%3A%2F%2Fraw.githubusercontent.com%2Fsuryakumaran2611%2Fauto-arch-diagram%2Fmain%2Fdocs%2Fdemos%2Fvpc-peering-multi-subnet.drawio" target="_blank" class="fpill drawio-pill" title="Open in draw.io">📊 .drawio ↗</a>
+                                <a href="demos/vpc-peering-multi-subnet.png" target="_blank" class="fpill">PNG</a>
+                                <a href="demos/vpc-peering-multi-subnet.svg" target="_blank" class="fpill">SVG</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 6. CloudFormation Serverless Website -->
+                <div class="gallery-item" data-category="serverless">
+                    <a href="demos/aws-cloudformation.html" target="_blank" class="gallery-thumb-link" title="Launch Interactive HTML Studio">
+                        <div class="gallery-thumb-wrap">
+                            <img src="images/aws-cloudformation.png" alt="CloudFormation Serverless Website">
+                        </div>
+                        <div class="hover-overlay">
+                            <span class="btn btn-primary btn-sm">🚀 Open Interactive Studio ↗</span>
+                        </div>
+                    </a>
+                    <div class="gallery-item-info">
+                        <h4>CloudFormation Production Web Stack</h4>
+                        <p>CloudFormation-powered secure serverless edge architecture with CloudFront CDN distribution, S3 private bucket origin, and WAF protection.</p>
+                        <div class="gallery-footer">
+                            <div class="gallery-tags">
+                                <span class="gtag aws">CloudFormation</span>
+                                <span class="gtag">Serverless</span>
+                                <span class="gtag">CloudFront</span>
+                            </div>
+                            <div class="format-pills">
+                                <a href="demos/aws-cloudformation.html" target="_blank" class="fpill html-pill" title="Launch Interactive Studio">🌐 HTML Studio ↗</a>
+                                <a href="https://viewer.diagrams.net/?highlight=0000ff&edit=_blank&layers=1&nav=1#Uhttps%3A%2F%2Fraw.githubusercontent.com%2Fsuryakumaran2611%2Fauto-arch-diagram%2Fmain%2Fdocs%2Fdemos%2Faws-cloudformation.drawio" target="_blank" class="fpill drawio-pill" title="Open in draw.io">📊 .drawio ↗</a>
+                                <a href="demos/aws-cloudformation.png" target="_blank" class="fpill">PNG</a>
+                                <a href="demos/aws-cloudformation.svg" target="_blank" class="fpill">SVG</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </section>
 
-        <section class="confluence-publish" id="confluence-publish">
-            <div class="container">
-                <div class="section-header">
-                    <h2>Publish & Replace Diagrams in Confluence</h2>
-                    <p>Automatically publish or robustly replace architecture diagrams in your Confluence pages using the Auto Arch Diagram GitHub Action.</p>
-                </div>
-                <div class="usage-card">
-                    <h3>🔗 Example Workflow: Publish to Confluence</h3>
-                    <div class="code-block">
-    <pre><span class="key">jobs:</span>
-      <span class="key">diagram:</span>
-        <span class="key">runs-on:</span> <span class="string">ubuntu-latest</span>
-        <span class="key">steps:</span>
-          - <span class="key">uses:</span> <span class="string">actions/checkout@v4</span>
-          - <span class="key">uses:</span> <span class="string">suryakumaran2611/auto-arch-diagram@v1</span>
-            <span class="key">with:</span>
-              <span class="key">publish_to_confluence:</span> <span class="string">true</span>
-              <span class="key">confluence_url:</span> <span class="string">https://your-domain.atlassian.net/wiki</span>
-              <span class="key">confluence_page_id:</span> <span class="string">123456</span>
-              <span class="key">confluence_username:</span> <span class="string">${{ secrets.CONFLUENCE_USER }}</span>
-              <span class="key">confluence_api_token:</span> <span class="string">${{ secrets.CONFLUENCE_API_TOKEN }}</span>
-              <span class="key">confluence_marker:</span> <span class="string">ARCH_DIAGRAM_MARKER</span>
-    </pre>
-                    </div>
-                    <p><strong>Best Practice:</strong> Use a unique marker (e.g., <code>ARCH_DIAGRAM_MARKER</code>) in your Confluence page to target the diagram for replacement. The action will only update the image between these markers, ensuring robust and precise updates.</p>
-                    <p><strong>How to Add a Marker:</strong> In your Confluence page, add a comment or text like <code>&lt;!-- ARCH_DIAGRAM_MARKER --&gt;</code> before and after the diagram image. The action will replace the image between these markers.</p>
-                    <p><strong>Troubleshooting:</strong></p>
-                    <ul>
-                        <li>Ensure your Confluence credentials are stored as GitHub secrets.</li>
-                        <li>Test on a non-production page before updating important documentation.</li>
-                        <li>If the marker is not found, the action will not replace any image. Double-check marker spelling and placement.</li>
-                        <li>For multiple diagrams, use different markers for each.</li>
-                    </ul>
-                    <a href="USER_GUIDE.md#confluence-publishing" class="btn btn-secondary">View Full User Guide →</a>
-                </div>
-            </div>
-        </section>
-
-    <section class="formats" id="formats">
+    <!-- MCP Server & CI/CD Section -->
+    <section class="usage-section" id="mcp">
         <div class="container">
             <div class="section-header">
-                <h2>Multiple Output Formats</h2>
-                <p>Export your diagrams in the format that works best for you.</p>
+                <h2>Developer & AI Agent Integration</h2>
+                <p>Plug into your CI/CD workflow or pair-program directly with AI assistants via Model Context Protocol.</p>
             </div>
+
+            <div class="code-showcase-grid">
+                <!-- Code Box 1: GitHub Actions -->
+                <div class="code-box">
+                    <div class="code-box-header">
+                        <span>.github/workflows/auto-arch.yml</span>
+                        <span>GitHub Actions</span>
+                    </div>
+                    <pre><code><span class="hl-key">name:</span> <span class="hl-str">Architecture Diagram</span>
+<span class="hl-key">on:</span>
+  <span class="hl-key">pull_request:</span>
+    <span class="hl-key">paths:</span> [<span class="hl-str">'**/*.tf'</span>, <span class="hl-str">'**/*.bicep'</span>, <span class="hl-str">'**/template.yaml'</span>]
+
+<span class="hl-key">jobs:</span>
+  <span class="hl-key">diagram:</span>
+    <span class="hl-key">runs-on:</span> <span class="hl-str">ubuntu-latest</span>
+    <span class="hl-key">steps:</span>
+      - <span class="hl-key">uses:</span> <span class="hl-str">actions/checkout@v4</span>
+      - <span class="hl-key">uses:</span> <span class="hl-str">suryakumaran2611/auto-arch-diagram@v1</span>
+        <span class="hl-key">with:</span>
+          <span class="hl-key">image_formats:</span> <span class="hl-str">'png,svg,drawio,html'</span>
+          <span class="hl-key">direction:</span> <span class="hl-str">'AUTO'</span></code></pre>
+                </div>
+
+                <!-- Code Box 2: MCP Config -->
+                <div class="code-box">
+                    <div class="code-box-header">
+                        <span>claude_desktop_config.json / mcp.json</span>
+                        <span>MCP Server (AI Pair Programming)</span>
+                    </div>
+                    <pre><code>{
+  <span class="hl-key">"mcpServers"</span>: {
+    <span class="hl-key">"auto-arch-diagram"</span>: {
+      <span class="hl-key">"command"</span>: <span class="hl-str">"python3"</span>,
+      <span class="hl-key">"args"</span>: [<span class="hl-str">"/path/to/auto-arch-diagram/tools/mcp_server.py"</span>]
+    }
+  }
+}
+<span class="hl-comment"># Exposes MCP tools:</span>
+<span class="hl-comment"># • list_resources(files)</span>
+<span class="hl-comment"># • explain_graph(files)</span>
+<span class="hl-comment"># • generate_diagram(files, formats=['drawio', 'html'])</span></code></pre>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Formats Grid -->
+    <section class="formats-section">
+        <div class="container">
+            <div class="section-header">
+                <h2>Comprehensive Export Matrix</h2>
+                <p>Generate every asset format required by engineers, auditors, and leadership in a single pass.</p>
+            </div>
+
             <div class="formats-grid">
                 <div class="format-card">
-                    <div class="icon">🌐</div>
-                    <h4>Interactive HTML Studio</h4>
-                    <p>Offline studio with live Path Tracing, Impact Analysis, Tier Filter Matrix & Radar Mini-Map</p>
+                    <span class="format-badge">INTERACTIVE</span>
+                    <h4>🌐 HTML Studio (.html)</h4>
+                    <p>Standalone zero-CDN web app with Path Tracing, Impact Analysis, Mini-Map Radar, and Tier Filters.</p>
                 </div>
                 <div class="format-card">
-                    <div class="icon">📊</div>
-                    <h4>Native draw.io</h4>
-                    <p>Official editable vector shape packs (AWS 2026, Azure SVG, GCP) with centered legend</p>
+                    <span class="format-badge">EDITABLE VECTOR</span>
+                    <h4>📊 Native draw.io (.drawio)</h4>
+                    <p>Official 2026 shape stencils with clean obstacle-avoiding corridor lines and bridge jump arcs.</p>
                 </div>
                 <div class="format-card">
-                    <div class="icon">🤖</div>
-                    <h4>AI-Enhanced Suite</h4>
-                    <p>Multi-format AI artifacts with executive titles, flow step numbers, tooltips & hints</p>
+                    <span class="format-badge">AI SUITE</span>
+                    <h4>🤖 AI Multi-Format (*-ai.*)</h4>
+                    <p>AI-refined assets with executive titles, operational subtitles, tooltips, and flow step numbers.</p>
                 </div>
                 <div class="format-card">
-                    <div class="icon">🖼️</div>
-                    <h4>PNG & JPEG</h4>
-                    <p>High-contrast raster images with official provider border accents & centered footer</p>
+                    <span class="format-badge">VECTOR</span>
+                    <h4>📐 Scalable Vector (.svg)</h4>
+                    <p>Resolution-independent vector graphics with embedded high-definition cloud provider icons.</p>
                 </div>
                 <div class="format-card">
-                    <div class="icon">📐</div>
-                    <h4>SVG Vector</h4>
-                    <p>Crisp scalable vector graphics with embedded high-resolution provider icons</p>
+                    <span class="format-badge">HIGH-RES RASTER</span>
+                    <h4>🖼️ PNG & JPEG Images</h4>
+                    <p>High-contrast raster images with official provider border accents and bottom-centered legend card.</p>
                 </div>
                 <div class="format-card">
-                    <div class="icon">🧜‍♀️</div>
-                    <h4>Mermaid & Markdown</h4>
-                    <p>Native Markdown embeds and flowcharts for GitHub, Notion, and Confluence</p>
+                    <span class="format-badge">DOCS EMBED</span>
+                    <h4>🧜‍♀️ Markdown & Mermaid</h4>
+                    <p>Native text-based flowcharts and Markdown reports for GitHub PR comments, Confluence, and Notion.</p>
                 </div>
             </div>
         </div>
     </section>
 
-    <section class="gallery" id="gallery">
-        <div class="container">
-            <div class="section-header">
-                <h2>Example Diagrams</h2>
-                <p>Real-world architecture diagrams generated automatically from Terraform code.</p>
-            </div>
-            <div class="gallery-grid">
-                <div class="gallery-item featured">
-                    <img src="images/mlops-multi-cloud.png" alt="MLOps Multi-Cloud Architecture">
-                    <div class="gallery-item-info">
-                        <h4>MLOps Multi-Cloud Pipeline</h4>
-                        <p>Enterprise machine learning architecture spanning AWS, Azure, and GCP for model training, serving, and data analytics.</p>
-                        <div class="tags">
-                            <span class="tag multi">Multi-Cloud</span>
-                            <span class="tag aws">AWS</span>
-                            <span class="tag azure">Azure</span>
-                            <span class="tag gcp">GCP</span>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="gallery-item featured">
-                    <img src="images/multi-region-active-passive.png" alt="AWS Multi-Region Active Passive Architecture">
-                    <div class="gallery-item-info">
-                        <h4>AWS Multi-Region Active-Passive</h4>
-                        <p>Primary and disaster-recovery regions in one AWS cloud boundary with VPC peering and cross-region data flow.</p>
-                        <div class="tags">
-                            <span class="tag aws">AWS</span>
-                            <span class="tag">Multi-Region</span>
-                            <span class="tag">Active-Passive</span>
-                            <span class="tag">DR</span>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="gallery-item featured">
-                    <img src="images/custom-icons-demo.png" alt="Custom Icons Serverless Data Pipeline">
-                    <div class="gallery-item-info">
-                        <h4>Custom Icons: Data Pipeline</h4>
-                        <p>Complex serverless ETL workflow using custom icons for conceptual services like triggers, processors, and streams.</p>
-                        <div class="tags">
-                            <span class="tag aws">AWS</span>
-                            <span class="tag multi">Custom Icons</span>
-                            <span class="tag">Event-Driven</span>
-                            <span class="tag">Terraform</span>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="gallery-item">
-                    <img src="images/mlops-aws.png" alt="MLOps AWS Multi Region">
-                    <div class="gallery-item-info">
-                        <h4>MLOps Multi-Region AWS</h4>
-                        <p>Large-scale AWS MLOps stack with training, orchestration, feature store, and cross-region recovery topology.</p>
-                        <div class="tags">
-                            <span class="tag aws">AWS</span>
-                            <span class="tag">MLOps</span>
-                            <span class="tag">SageMaker</span>
-                            <span class="tag">Multi-Region</span>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="gallery-item">
-                    <img src="images/vpc-peering-multi-subnet.png" alt="AWS VPC Peering Multi Subnet">
-                    <div class="gallery-item-info">
-                        <h4>VPC Peering Multi-Subnet</h4>
-                        <p>Dual-VPC architecture with public/private subnet tiers, route tables, and explicit peering connectivity.</p>
-                        <div class="tags">
-                            <span class="tag aws">AWS</span>
-                            <span class="tag">Networking</span>
-                            <span class="tag">VPC Peering</span>
-                            <span class="tag">Terraform</span>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="gallery-item">
-                    <img src="images/data-pipeline-etl.png" alt="AWS Data Pipeline ETL">
-                    <div class="gallery-item-info">
-                        <h4>Data Pipeline ETL</h4>
-                        <p>Event-driven ingestion, cataloging, transformation, and storage layers with strong IAM and observability paths.</p>
-                        <div class="tags">
-                            <span class="tag aws">AWS</span>
-                            <span class="tag">ETL</span>
-                            <span class="tag">Data</span>
-                            <span class="tag">Event-Driven</span>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="gallery-item">
-                    <img src="images/microservices-k8s.png" alt="AWS Microservices Kubernetes">
-                    <div class="gallery-item-info">
-                        <h4>Microservices on Kubernetes</h4>
-                        <p>EKS-centric microservices architecture with network isolation, persistent data services, and secure IAM edges.</p>
-                        <div class="tags">
-                            <span class="tag aws">AWS</span>
-                            <span class="tag">Kubernetes</span>
-                            <span class="tag">Microservices</span>
-                            <span class="tag">EKS</span>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="gallery-item">
-                    <img src="images/multi-tier-web-app.png" alt="AWS Multi Tier Web App">
-                    <div class="gallery-item-info">
-                        <h4>Multi-Tier Web Application</h4>
-                        <p>Classic web, app, and data-tier design with load balancing, subnet segmentation, and service dependencies.</p>
-                        <div class="tags">
-                            <span class="tag aws">AWS</span>
-                            <span class="tag">Web App</span>
-                            <span class="tag">3-Tier</span>
-                            <span class="tag">Terraform</span>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="gallery-item">
-                    <img src="images/serverless-events.png" alt="AWS Serverless Events Architecture">
-                    <div class="gallery-item-info">
-                        <h4>Serverless Events</h4>
-                        <p>Asynchronous event architecture with API Gateway, Lambda, SNS/SQS, and DynamoDB workflows.</p>
-                        <div class="tags">
-                            <span class="tag aws">AWS</span>
-                            <span class="tag">Serverless</span>
-                            <span class="tag">SNS/SQS</span>
-                            <span class="tag">Lambda</span>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="gallery-item">
-                    <img src="images/multi-cloud-hybrid.png" alt="Hybrid Multi Cloud Architecture">
-                    <div class="gallery-item-info">
-                        <h4>Hybrid Multi-Cloud Platform</h4>
-                        <p>AWS and GCP hybrid architecture combining cross-cloud data movement and mixed compute/data services.</p>
-                        <div class="tags">
-                            <span class="tag multi">Hybrid</span>
-                            <span class="tag aws">AWS</span>
-                            <span class="tag gcp">GCP</span>
-                            <span class="tag">Data Platform</span>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="gallery-item">
-                    <img src="images/aws-basic.png" alt="AWS Basic Reference Architecture">
-                    <div class="gallery-item-info">
-                        <h4>AWS Basic Reference</h4>
-                        <p>Minimal example showing essential network and compute relationships for quick onboarding and validation.</p>
-                        <div class="tags">
-                            <span class="tag aws">AWS</span>
-                            <span class="tag">Starter</span>
-                            <span class="tag">Reference</span>
-                            <span class="tag">Terraform</span>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="gallery-item">
-                    <img src="images/aws-cloudformation.png" alt="AWS CloudFormation Serverless Website">
-                    <div class="gallery-item-info">
-                        <h4>AWS CloudFormation Website</h4>
-                        <p>CloudFormation-powered secure static website with S3, CloudFront, and WAF protection.</p>
-                        <div class="tags">
-                            <span class="tag aws">AWS</span>
-                            <span class="tag">CloudFormation</span>
-                            <span class="tag">Serverless</span>
-                            <span class="tag">Website</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-
+    <!-- Footer -->
     <footer>
         <div class="container">
             <p>
                 Built with ❤️ by <a href="https://github.com/suryakumaran2611">@suryakumaran2611</a>
                 &nbsp;•&nbsp;
-                <a href="https://github.com/suryakumaran2611/auto-arch-diagram/blob/main/LICENSE">License</a>
+                <a href="https://github.com/suryakumaran2611/auto-arch-diagram/blob/main/LICENSE">License (CC BY-NC 4.0)</a>
                 &nbsp;•&nbsp;
-                <a href="https://github.com/suryakumaran2611/auto-arch-diagram">GitHub</a>
+                <a href="https://github.com/suryakumaran2611/auto-arch-diagram">GitHub Repository</a>
+                &nbsp;•&nbsp;
+                <a href="USER_GUIDE.md">User Guide</a>
             </p>
         </div>
     </footer>
+
+    <!-- Interactive Script -->
+    <script>
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.tab-panel').forEach(panel => panel.classList.remove('active'));
+            
+            event.currentTarget.classList.add('active');
+            const targetPanel = document.getElementById(tabId);
+            if (targetPanel) {
+                targetPanel.classList.add('active');
+            }
+        }
+
+        function filterGallery(category) {
+            document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+            event.currentTarget.classList.add('active');
+            
+            const items = document.querySelectorAll('.gallery-item');
+            items.forEach(item => {
+                if (category === 'all' || item.getAttribute('data-category') === category) {
+                    item.style.display = 'flex';
+                } else {
+                    item.style.display = 'none';
+                }
+            });
+        }
+    </script>
 </body>
 </html>

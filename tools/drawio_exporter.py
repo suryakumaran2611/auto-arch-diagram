@@ -877,6 +877,32 @@ class _DrawioExporter:
         return x + rec["w"] / 2, y + rec["h"] / 2
 
     @staticmethod
+    def _box_intersects_segment(
+        p1: tuple[float, float],
+        p2: tuple[float, float],
+        box: tuple[float, float, float, float],
+    ) -> bool:
+        """Check if orthogonal segment (p1, p2) intersects bounding box (bx1, by1, bx2, by2)."""
+        bx1, by1, bx2, by2 = box
+        x1, y1 = p1
+        x2, y2 = p2
+        if abs(y1 - y2) < 1e-4:  # Horizontal segment
+            y = y1
+            if by1 <= y <= by2:
+                seg_min_x = min(x1, x2)
+                seg_max_x = max(x1, x2)
+                if max(seg_min_x, bx1) < min(seg_max_x, bx2):
+                    return True
+        elif abs(x1 - x2) < 1e-4:  # Vertical segment
+            x = x1
+            if bx1 <= x <= bx2:
+                seg_min_y = min(y1, y2)
+                seg_max_y = max(y1, y2)
+                if max(seg_min_y, by1) < min(seg_max_y, by2):
+                    return True
+        return False
+
+    @staticmethod
     def _edge_style(
         edge_type: str,
         exit_pt: tuple[float, float],
@@ -886,31 +912,25 @@ class _DrawioExporter:
         entry_dx: float = 0,
         entry_dy: float = 0,
     ) -> str:
-        # Data flows get directional flow animation; other types stay static dashed.
-        # draw.io honors `flowAnimation` / `dashed` with `fixDash` for animated dashes.
+        # Professional draw.io connector guidelines:
+        # - Jump style arc with jumpSize=6 creates clean bridge arcs when lines cross.
+        # - Rounded corners (arcSize=10) and orthogonal routing avoid diagonal clutter.
+        # - Data flows get directional flow animation; security/dependencies get distinct dash patterns.
+        common = (
+            "edgeStyle=orthogonalEdgeStyle;rounded=1;arcSize=10;html=1;jettySize=auto;"
+            "orthogonalLoop=1;curved=0;jumpStyle=arc;jumpSize=6;"
+        )
         if edge_type == "data":
-            base = (
-                "edgeStyle=orthogonalEdgeStyle;rounded=1;arcSize=10;html=1;jettySize=14;"
-                "orthogonalLoop=1;curved=0;dashed=1;dashPattern=8 8;fixDash=1;flowAnimation=1;"
-            )
+            base = f"{common}dashed=1;dashPattern=8 8;fixDash=1;flowAnimation=1;"
             color, width, dashed = "#1565C0", 1.8, ""
         elif edge_type == "security":
-            base = (
-                "edgeStyle=orthogonalEdgeStyle;rounded=1;arcSize=10;html=1;jettySize=14;"
-                "orthogonalLoop=1;curved=0;"
-            )
+            base = common
             color, width, dashed = "#C62828", 1.4, "dashed=1;dashPattern=8 6;fixDash=1;"
         elif edge_type == "dependency":
-            base = (
-                "edgeStyle=orthogonalEdgeStyle;rounded=1;arcSize=10;html=1;jettySize=14;"
-                "orthogonalLoop=1;curved=0;"
-            )
+            base = common
             color, width, dashed = "#9E9E9E", 1.0, "dashed=1;dashPattern=4 6;fixDash=1;"
         else:
-            base = (
-                "edgeStyle=orthogonalEdgeStyle;rounded=1;arcSize=10;html=1;jettySize=14;"
-                "orthogonalLoop=1;curved=0;"
-            )
+            base = common
             color, width, dashed = _EDGE_COLORS.get(edge_type, "#455A64"), 1.2, ""
         ex, ey = exit_pt
         nx, ny = entry_pt
@@ -921,13 +941,143 @@ class _DrawioExporter:
             f"entryX={nx:g};entryY={ny:g};entryDx={entry_dx:g};entryDy={entry_dy:g};"
         )
 
+    def _route_orthogonal_path(
+        self,
+        src_id: str,
+        dst_id: str,
+        p_start: tuple[float, float],
+        p_end: tuple[float, float],
+        exit_dir: str,
+        entry_dir: str,
+        obstacles: dict[str, tuple[float, float, float, float]],
+        channel_xs: list[float],
+        channel_ys: list[float],
+        edge_idx: int,
+    ) -> list[tuple[float, float]]:
+        """Compute an obstacle-avoiding orthogonal corridor path that never cuts across node icons or labels."""
+        relevant_obs = [box for cid, box in obstacles.items() if cid not in (src_id, dst_id)]
+
+        def path_is_clean(pts: list[tuple[float, float]]) -> bool:
+            for i in range(len(pts) - 1):
+                for box in relevant_obs:
+                    if self._box_intersects_segment(pts[i], pts[i + 1], box):
+                        return False
+            return True
+
+        # 1. Direct straight line (if collinear and obstacle-free)
+        if abs(p_start[0] - p_end[0]) < 1e-4 or abs(p_start[1] - p_end[1]) < 1e-4:
+            if path_is_clean([p_start, p_end]):
+                return []
+
+        # 2. 1-bend L-paths
+        c_a = (p_end[0], p_start[1])
+        if (exit_dir in ("L", "R") or abs(p_start[1] - p_end[1]) < 1e-4) and (
+            entry_dir in ("T", "B") or abs(p_start[0] - p_end[0]) < 1e-4
+        ):
+            if path_is_clean([p_start, c_a, p_end]):
+                return [c_a]
+
+        c_b = (p_start[0], p_end[1])
+        if (exit_dir in ("T", "B") or abs(p_start[0] - p_end[0]) < 1e-4) and (
+            entry_dir in ("L", "R") or abs(p_start[1] - p_end[1]) < 1e-4
+        ):
+            if path_is_clean([p_start, c_b, p_end]):
+                return [c_b]
+
+        # 3. 2-bend Z-paths & U-paths through whitespace gutters
+        valid_candidates: list[tuple[float, list[tuple[float, float]]]] = []
+
+        # Try horizontal channel gutters
+        for cy in channel_ys:
+            p1 = (p_start[0], cy)
+            p2 = (p_end[0], cy)
+            if path_is_clean([p_start, p1, p2, p_end]):
+                dist = abs(cy - (p_start[1] + p_end[1]) / 2)
+                length = abs(p1[1] - p_start[1]) + abs(p2[0] - p1[0]) + abs(p_end[1] - p2[1])
+                valid_candidates.append((length + dist * 1.5, [p1, p2]))
+
+        # Try vertical channel gutters
+        for cx in channel_xs:
+            p1 = (cx, p_start[1])
+            p2 = (cx, p_end[1])
+            if path_is_clean([p_start, p1, p2, p_end]):
+                dist = abs(cx - (p_start[0] + p_end[0]) / 2)
+                length = abs(p1[0] - p_start[0]) + abs(p2[1] - p1[1]) + abs(p_end[0] - p2[0])
+                valid_candidates.append((length + dist * 1.5, [p1, p2]))
+
+        if valid_candidates:
+            valid_candidates.sort(key=lambda x: x[0])
+            best_wps = valid_candidates[0][1]
+            return [(round(wx, 1), round(wy, 1)) for wx, wy in best_wps]
+
+        # 4. Multi-bend corridor search on Hanan channel grid (A*/Dijkstra)
+        import heapq
+
+        grid_xs = sorted(set([p_start[0], p_end[0]] + channel_xs))
+        grid_ys = sorted(set([p_start[1], p_end[1]] + channel_ys))
+
+        start_node = (p_start[0], p_start[1])
+        target_node = (p_end[0], p_end[1])
+
+        queue = [(0.0, start_node, [start_node], None)]
+        visited: dict[tuple[tuple[float, float], str | None], float] = {}
+        best_path: list[tuple[float, float]] | None = None
+
+        while queue:
+            cost, cur, path, last_dir = heapq.heappop(queue)
+            state = (cur, last_dir)
+            if state in visited and visited[state] <= cost:
+                continue
+            visited[state] = cost
+
+            if abs(cur[0] - target_node[0]) < 1e-4 and abs(cur[1] - target_node[1]) < 1e-4:
+                best_path = path
+                break
+
+            cur_x, cur_y = cur
+            # Search horizontal neighbors
+            for nx in grid_xs:
+                if abs(nx - cur_x) < 1e-4:
+                    continue
+                nbr = (nx, cur_y)
+                if not any(self._box_intersects_segment(cur, nbr, box) for box in relevant_obs):
+                    step_cost = abs(nx - cur_x)
+                    turn_cost = 35.0 if last_dir is not None and last_dir != "H" else 0.0
+                    heapq.heappush(queue, (cost + step_cost + turn_cost, nbr, path + [nbr], "H"))
+
+            # Search vertical neighbors
+            for ny in grid_ys:
+                if abs(ny - cur_y) < 1e-4:
+                    continue
+                nbr = (cur_x, ny)
+                if not any(self._box_intersects_segment(cur, nbr, box) for box in relevant_obs):
+                    step_cost = abs(ny - cur_y)
+                    turn_cost = 35.0 if last_dir is not None and last_dir != "V" else 0.0
+                    heapq.heappush(queue, (cost + step_cost + turn_cost, nbr, path + [nbr], "V"))
+
+        if best_path and len(best_path) >= 2:
+            # Simplify collinear segments
+            simplified = [best_path[0]]
+            for i in range(1, len(best_path) - 1):
+                p_prev = simplified[-1]
+                p_curr = best_path[i]
+                p_next = best_path[i + 1]
+                is_collinear_x = abs(p_prev[0] - p_curr[0]) < 1e-4 and abs(p_curr[0] - p_next[0]) < 1e-4
+                is_collinear_y = abs(p_prev[1] - p_curr[1]) < 1e-4 and abs(p_curr[1] - p_next[1]) < 1e-4
+                if not (is_collinear_x or is_collinear_y):
+                    simplified.append(p_curr)
+            simplified.append(best_path[-1])
+            return [(round(x, 1), round(y, 1)) for x, y in simplified[1:-1]]
+
+        return []
+
     def _export_edges(self, filter_fn, detect_fn) -> int:
         from collections import defaultdict
 
         filtered = set(filter_fn(self.resources, set(self.edges)))
         # Collect unique directed edges with geometry for port-distribution
         seen: set[tuple[str, str]] = set()
-        infos: list[tuple[str, str, str, str, tuple[float, float], tuple[float, float], str]] = []
+        infos: list[tuple[str, str, str, str, tuple[float, float], tuple[float, float], str, str, str, tuple[float, float], tuple[float, float]]] = []
         out_groups: dict[tuple[str, tuple[float, float]], list[int]] = defaultdict(list)
         in_groups: dict[tuple[str, tuple[float, float]], list[int]] = defaultdict(list)
 
@@ -941,21 +1091,39 @@ class _DrawioExporter:
                 continue
             sx, sy = self._abs_center(src_id)
             tx, ty = self._abs_center(dst_id)
+            s_ax, s_ay = self._abs_top_left(src_id)
+            d_ax, d_ay = self._abs_top_left(dst_id)
+            s_w, s_h = self.cells[src_id]["w"], self.cells[src_id]["h"]
+            d_w, d_h = self.cells[dst_id]["w"], self.cells[dst_id]["h"]
+
             dx = tx - sx
             dy = ty - sy
             if abs(dx) >= abs(dy):
                 if dx >= 0:
                     exit_pt, entry_pt = (1.0, 0.5), (0.0, 0.5)
+                    exit_dir, entry_dir = "R", "L"
+                    p_start = (s_ax + s_w, sy)
+                    p_end = (d_ax, ty)
                 else:
                     exit_pt, entry_pt = (0.0, 0.5), (1.0, 0.5)
+                    exit_dir, entry_dir = "L", "R"
+                    p_start = (s_ax, sy)
+                    p_end = (d_ax + d_w, ty)
             else:
                 if dy >= 0:
                     exit_pt, entry_pt = (0.5, 1.0), (0.5, 0.0)
+                    exit_dir, entry_dir = "B", "T"
+                    p_start = (sx, s_ay + s_h)
+                    p_end = (tx, d_ay)
                 else:
                     exit_pt, entry_pt = (0.5, 0.0), (0.5, 1.0)
+                    exit_dir, entry_dir = "T", "B"
+                    p_start = (sx, s_ay)
+                    p_end = (tx, d_ay + d_h)
+
             edge_type = detect_fn(src, dst, self.resources)
             idx = len(infos)
-            infos.append((src, dst, src_id, dst_id, exit_pt, entry_pt, edge_type))
+            infos.append((src, dst, src_id, dst_id, exit_pt, entry_pt, edge_type, exit_dir, entry_dir, p_start, p_end))
             out_groups[(src_id, exit_pt)].append(idx)
             in_groups[(dst_id, entry_pt)].append(idx)
 
@@ -964,7 +1132,7 @@ class _DrawioExporter:
         # representative per cell so the diagram stays readable at any scale.
         if len(infos) > 22:
             grid: dict[tuple[int, int], list[int]] = defaultdict(list)
-            for i, (_, _, s_id, d_id, _, _, _) in enumerate(infos):
+            for i, (_, _, s_id, d_id, _, _, _, _, _, _, _) in enumerate(infos):
                 sx, sy = self._abs_center(s_id)
                 tx, ty = self._abs_center(d_id)
                 mx, my = (sx + tx) / 2, (sy + ty) / 2
@@ -982,12 +1150,54 @@ class _DrawioExporter:
                 infos = [info for i, info in enumerate(infos) if i not in drop_geo]
                 out_groups.clear()
                 in_groups.clear()
-                for new_idx, (_, _, s_id, d_id, ex_pt, en_pt, _) in enumerate(infos):
+                for new_idx, (_, _, s_id, d_id, ex_pt, en_pt, _, _, _, _, _) in enumerate(infos):
                     out_groups[(s_id, ex_pt)].append(new_idx)
                     in_groups[(d_id, en_pt)].append(new_idx)
 
+        # -------------------------------------------------------------
+        # Extract obstacle bounding boxes and channel routing corridors
+        # -------------------------------------------------------------
+        pad = 12.0
+        obstacles: dict[str, tuple[float, float, float, float]] = {}
+        channel_xs_set: set[float] = set()
+        channel_ys_set: set[float] = set()
+
+        for cid, c in self.cells.items():
+            if c.get("edge"):
+                continue
+            ax, ay = self._abs_top_left(cid)
+            w, h = c["w"], c["h"]
+            if c.get("metadata"):
+                # Resource node: account for icon size and bottom label footprint
+                meta = c.get("metadata", {})
+                r_type = meta.get("terraform_type", "")
+                r_name = meta.get("terraform_name", "")
+                full_rid = f"{r_type}.{r_name}" if r_type and r_name else cid
+                try:
+                    _, total_w, total_h, icon_size = self._node_metrics(full_rid)
+                except Exception:
+                    total_w, total_h, icon_size = w + 20.0, h + 24.0, w
+                left = ax - (total_w - icon_size) / 2
+                right = left + total_w
+                top = ay
+                bottom = ay + total_h
+                obstacles[cid] = (left - pad, top - pad, right + pad, bottom + pad)
+                channel_xs_set.add(left - 24.0)
+                channel_xs_set.add(right + 24.0)
+                channel_ys_set.add(top - 20.0)
+                channel_ys_set.add(bottom + 20.0)
+            else:
+                # Container frame: corridor along container boundaries
+                channel_xs_set.add(ax - 20.0)
+                channel_xs_set.add(ax + w + 20.0)
+                channel_ys_set.add(ay + _TITLE_H + 8.0)
+                channel_ys_set.add(ay + h + 20.0)
+
+        channel_xs = sorted(channel_xs_set)
+        channel_ys = sorted(channel_ys_set)
+
         count = 0
-        for idx, (src, dst, src_id, dst_id, exit_pt, entry_pt, edge_type) in enumerate(infos):
+        for idx, (src, dst, src_id, dst_id, exit_pt, entry_pt, edge_type, exit_dir, entry_dir, p_start, p_end) in enumerate(infos):
             # Distribute parallel edges sharing the same port (10 px stagger)
             out_list = out_groups[(src_id, exit_pt)]
             pos_out = out_list.index(idx)
@@ -997,47 +1207,29 @@ class _DrawioExporter:
             offset_in = (pos_in - (len(in_list) - 1) / 2) * 10.0
 
             if exit_pt[0] == 0.5:  # vertical side (top/bottom) → stagger in X
-                exit_dx, exit_dy = offset_out, 0
+                exit_dx, exit_dy = offset_out, 0.0
             else:  # horizontal side → stagger in Y
-                exit_dx, exit_dy = 0, offset_out
+                exit_dx, exit_dy = 0.0, offset_out
             if entry_pt[0] == 0.5:
-                entry_dx, entry_dy = offset_in, 0
+                entry_dx, entry_dy = offset_in, 0.0
             else:
-                entry_dx, entry_dy = 0, offset_in
+                entry_dx, entry_dy = 0.0, offset_in
 
-            # Smart waypoints: for long edges, add a midpoint detour that
-            # routes around the dense centre, staggering waypoints so parallel
-            # highways don't collapse onto the same orthogonal segment.
-            waypoints: list[tuple[float, float]] | None = None
-            sx, sy = self._abs_center(src_id)
-            tx, ty = self._abs_center(dst_id)
-            length = ((tx - sx) ** 2 + (ty - sy) ** 2) ** 0.5
-            if length > 220:
-                mx, my = (sx + tx) / 2, (sy + ty) / 2
-                # Perpendicular offset spreads parallel highways
-                # Horizontal-dominant edges offset vertically, vertical-dominant horizontally
-                is_horiz = abs(tx - sx) >= abs(ty - sy)
-                spread = (idx % 5 - 2) * 18  # -36, -18, 0, 18, 36
-                if is_horiz:
-                    my += spread
-                else:
-                    mx += spread
-                # Nudge away from any node that the straight segment would cut through
-                # (simple AABB check against all other nodes)
-                for oid, rec2 in self.cells.items():
-                    if oid in (src_id, dst_id) or rec2.get("edge"):
-                        continue
-                    ox, oy = self._abs_top_left(oid)
-                    ow, oh = rec2["w"], rec2["h"]
-                    # Expand hitbox slightly
-                    pad = 14
-                    if (min(sx, tx) - pad < ox + ow and max(sx, tx) + pad > ox and
-                        min(sy, ty) - pad < oy + oh and max(sy, ty) + pad > oy):
-                        # If midpoint inside this node's box, push waypoint outside
-                        if ox < mx < ox + ow and oy < my < oy + oh:
-                            my = oy + oh + 28 if is_horiz else oy - 28
-                            break
-                waypoints = [(round(mx, 1), round(my, 1))]
+            # Compute clean obstacle-avoiding corridor waypoints
+            adj_p_start = (p_start[0] + exit_dx, p_start[1] + exit_dy)
+            adj_p_end = (p_end[0] + entry_dx, p_end[1] + entry_dy)
+            waypoints = self._route_orthogonal_path(
+                src_id,
+                dst_id,
+                adj_p_start,
+                adj_p_end,
+                exit_dir,
+                entry_dir,
+                obstacles,
+                channel_xs,
+                channel_ys,
+                idx,
+            )
 
             ecid = self._next_id("edge")
             rec = self._add(

@@ -1,95 +1,211 @@
-# Auto Architecture Diagram User Guide
+# 🏗️ Auto Architecture Diagram — Comprehensive User Guide
 
-This comprehensive guide will help you set up and use the Auto Architecture Diagram action to automatically generate and maintain architecture diagrams for your Infrastructure as Code (IaC) projects.
+Transform Infrastructure-as-Code (Terraform, CloudFormation, Bicep, Pulumi) into interactive HTML studios, editable native draw.io diagrams, crisp vector SVGs, and AI-enhanced architecture artifacts.
 
-## Table of Contents
+---
 
-1. [Overview](#overview)
-2. [Quick Start](#quick-start)
-3. [Configuration](#configuration)
-4. [Supported IaC Formats](#supported-iac-formats)
-5. [Workflow Modes](#workflow-modes)
-6. [PR Creation and Updates](#pr-creation-and-updates)
-7. [Customization Options](#customization-options)
-8. [Troubleshooting](#troubleshooting)
-9. [Advanced Usage](#advanced-usage)
-10. [Best Practices](#best-practices)
-11. [Confluence Publishing and Image Replacement](#confluence-publishing-and-image-replacement)
+## 📑 Table of Contents
 
-## Overview
+1. [Platform Overview](#-platform-overview)
+2. [Quick Start](#-quick-start)
+   - [GitHub Actions Workflow](#1-github-actions-reusable-workflow-recommended)
+   - [Local CLI Generation](#2-local-cli-generation)
+3. [Output Formats Matrix](#-output-formats-matrix)
+   - [Interactive HTML Studio (`.html`)](#1-interactive-html-architecture-studio---out-html)
+   - [Native draw.io Vector Exporter (`.drawio`)](#2-native-drawio-vector-exporter---out-drawio)
+   - [AI-Enhanced Multi-Format Suite (`*-ai.*`)](#3-ai-enhanced-multi-format-suite---ai-enhance)
+   - [Scalable Vector SVG (`.svg`)](#4-scalable-vector-svg---out-svg)
+   - [High-Res PNG & JPEG (`.png`, `.jpg`)](#5-high-res-png--jpeg)
+   - [Mermaid & Markdown (`.mmd`, `.md`)](#6-mermaid--markdown-embeds)
+4. [CI/CD Automation & GitHub Integration](#-cicd-automation--github-integration)
+   - [Sticky PR Comments](#sticky-pull-request-comments)
+   - [Automated Diagram PRs](#automatic-diagram-pull-requests)
+   - [Direct Repository Auto-Commit](#direct-repository-auto-commit)
+   - [Force Updates](#force-diagram-updates)
+5. [Confluence Publishing & Image Replacement](#-confluence-publishing--image-replacement)
+   - [Workflow Configuration](#confluence-workflow-setup)
+   - [Marker-Based Image Replacement](#marker-based-image-replacement)
+   - [Multi-Environment Architecture Pages](#multi-environment-publishing)
+6. [Model Context Protocol (MCP) Server for AI Assistants](#-model-context-protocol-mcp-server)
+   - [Claude Desktop / Cursor / Antigravity Setup](#configuring-mcp-clients)
+   - [Exposed MCP Tools](#mcp-tools-reference)
+7. [Multi-Cloud & Structured Tiering](#-multi-cloud--structured-tiering)
+8. [Full CLI Reference](#-full-cli-reference)
+9. [Enterprise Showcase Gallery](#-enterprise-showcase-gallery)
+10. [Troubleshooting & FAQ](#-troubleshooting--faq)
 
-The Auto Architecture Diagram action automatically:
-- Detects changes in your IaC files
-- Generates architecture diagrams in multiple formats (Mermaid, PNG, SVG, JPEG)
-- Comments on pull requests with updated diagrams
-- Optionally creates pull requests to update diagram files in your repository
+---
 
-### Key Features
+## 🌟 Platform Overview
 
-- **3-Stage Layout Engine**: Compute geometry (`dot -Tdot`), refine with post-processing (`layout_postprocess.gvpr` / Python), and re-render with `neato -n2` for alignment without overlap.
-- **Interactive Offline HTML**: Standalone zero-dependency HTML viewer with smooth pan/zoom, clickable resource metadata drawer, search/filtering, and dark/light themes (`--out-html`).
-- **Multi-Format Matrix**: Mermaid markdown, PNG, SVG, JPEG, native editable `.drawio`, and interactive HTML from a single CLI command.
-- **Pre-Generated Plan Support**: Diagram directly from `terraform show -json` plan and `terraform graph` DOT outputs without cloud credentials or Terraform runtime (`--planfile`, `--graphfile`).
-- **Simplified Executive View**: Strip network plumbing while preserving compute-to-gateway relations (`--simplified`).
-- **MCP Server Mode**: Stdio Model Context Protocol server (`tools/mcp_server.py`) for direct integration with AI coding assistants.
-- **Multi-Cloud Mastery**: Single-canvas multi-cloud architectures (AWS, Azure, GCP, OCI, IBM) with brand accents and tint fills.
-- **Multi-format Support**: Terraform, CloudFormation, Bicep, Pulumi, AWS CDK.
-- **SVG Portability**: Embedded icons ensure SVGs work in any viewer.
+The **Auto Architecture Diagram** suite automatically extracts, categorizes, and renders cloud topologies directly from your Infrastructure-as-Code files.
 
-## Quick Start
-
-### 0. Prerequisites & Local Setup
-
-Before using the action, you may want to test locally:
-
-#### Windows with PowerShell (Recommended)
-
-```powershell
-# Create virtual environment with uv
-cd auto-arch-diagram
-uv venv --python "3.12" --seed 3.12.11
-
-# Activate environment
-.venv\Scripts\activate
-
-# Install dependencies
-uv pip install python-hcl2 pytest graphviz diagrams
-uv pip install -r requirements-ai.txt  # For AI mode
+```
+┌────────────────────────────────────────────────────────────────────────┐
+│                        Infrastructure as Code                          │
+│   Terraform (.tf) • CloudFormation (YAML) • Bicep • Pulumi • CDK       │
+└──────────────────────────────────┬─────────────────────────────────────┘
+                                   │ Static / Plan Analysis
+                                   ▼
+┌────────────────────────────────────────────────────────────────────────┐
+│                      Intelligent Layout Pipeline                       │
+│  • 3-Stage Neato Post-Processing Engine                                │
+│  • Obstacle-Avoiding Orthogonal Corridor Router                        │
+│  • Multi-Cloud Palette & Brand Border Accents (AWS, Azure, GCP, OCI)   │
+│  • 100% Guaranteed Bottom-Centered Unified Legend Card                 │
+└──────┬───────────────────┬───────────────────┬───────────────────┬─────┘
+       │                   │                   │                   │
+       ▼                   ▼                   ▼                   ▼
+┌──────────────┐    ┌──────────────┐    ┌──────────────┐    ┌──────────────┐
+│  🌐 HTML     │    │  📊 draw.io  │    │  🤖 AI Suite │    │  📐 SVG/PNG  │
+│  Studio      │    │  Vectors     │    │  Insights    │    │  Vectors     │
+│  • Path Trace│    │  • 2026 Pack │    │  • Vision Opt│    │  • Base64    │
+│  • Impact Map│    │  • Jumps     │    │  • Steps     │    │  • Centered  │
+└──────────────┘    └──────────────┘    └──────────────┘    └──────────────┘
 ```
 
-#### Traditional Setup
+---
 
-```powershell
-# Using pip
-python -m venv .venv
-.venv\Scripts\activate
-pip install python-hcl2 pytest graphviz diagrams
+## 🚀 Quick Start
 
-# Linux/macOS
-python3 -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
-```
-
-### 1. Basic Setup
+### 1. GitHub Actions Reusable Workflow (Recommended)
 
 Create `.github/workflows/auto-arch-diagram.yml` in your repository:
 
 ```yaml
-name: Auto Architecture Diagram
+name: Architecture Diagram
 
 on:
   pull_request:
-    types: [opened, synchronize, reopened]
     paths:
       - '**/*.tf'
-      - '**/*.tfvars'
       - '**/*.bicep'
-      - '**/*.cfn.yaml'
-      - '**/*.cfn.yml'
       - '**/template.yaml'
       - '**/template.yml'
+  workflow_dispatch:
+    inputs:
+      force_update:
+        description: 'Force diagram generation even if no IaC files changed'
+        type: boolean
+        default: false
 
+jobs:
+  diagram:
+    permissions:
+      contents: read
+      pull-requests: write
+    uses: suryakumaran2611/auto-arch-diagram/.github/workflows/reusable-auto-arch-diagram.yml@main
+    with:
+      direction: AUTO                 # Intelligent layout selection
+      image_formats: png,svg,drawio,html
+      comment_on_pr: true             # Post interactive sticky comment on PR
+      force_full: ${{ github.event.inputs.force_update || false }}
+```
+
+---
+
+### 2. Local CLI Generation
+
+#### Environment Setup (WSL Ubuntu / Linux / macOS)
+```bash
+# Clone and enter repo
+git clone https://github.com/suryakumaran2611/auto-arch-diagram.git
+cd auto-arch-diagram
+
+# Setup Python 3.12+ virtual environment
+python3 -m venv .venv
+source .venv/bin/activate
+
+# Install dependencies
+pip install -r requirements.txt
+sudo apt-get install -y graphviz  # macOS: brew install graphviz
+```
+
+#### Run Generator
+```bash
+# Generate complete multi-format suite from a Terraform directory:
+python tools/generate_arch_diagram.py \
+  --changed-files examples/terraform/mlops-multi-region-aws/main.tf \
+  --out-png artifacts/architecture.png \
+  --out-svg artifacts/architecture.svg \
+  --out-drawio artifacts/architecture.drawio \
+  --out-html artifacts/architecture.html \
+  --direction AUTO
+```
+
+---
+
+## 📦 Output Formats Matrix
+
+### 1. 🌐 Interactive HTML Architecture Studio (`--out-html`)
+Generates a standalone, zero-CDN, offline-ready HTML studio file with embedded SVG vectors and metadata.
+
+- **Path Tracing & Blast-Radius Impact Analysis**: Click any node to highlight upstream dependencies, downstream consumers, and direct network edges.
+- **Dynamic Tier Filter Matrix**: Live toggle chips for Compute, Storage, Database, Security, Containers, and Integration layers.
+- **Radar Mini-Map & Smooth Pan/Zoom**: Fast, fluid navigation across dense 100+ node architectures.
+- **Resource Inspector Drawer**: Click nodes to inspect Terraform resource types, attributes, provider categories, and custom tags.
+- **In-Browser Export Studio**: Export custom filtered views directly to high-res PNG or JSON metadata.
+
+👉 **[Launch Live Demo (MLOps Multi-Region AWS)](https://suryakumaran2611.github.io/auto-arch-diagram/demos/mlops-aws.html)**
+
+---
+
+### 2. 📊 Native draw.io Vector Exporter (`--out-drawio`)
+Generates native `.drawio` files using official vector shape packs that can be edited in [draw.io](https://app.diagrams.net).
+
+- **Official Editable Shapes**: Uses official AWS 2026 (`mxgraph.aws4.*`), Azure SVG (`img/lib/azure2/*`), and GCP (`mxgraph.gcp2.*`) shape packs — fully editable, no embedded raster PNGs.
+- **Obstacle-Avoiding Orthogonal Corridor Routing**: Connectors route strictly through free whitespace gutters, **never crossing over or cutting through node icons or labels**.
+- **Bridge Arc Line Jumps (`jumpStyle=arc;jumpSize=6`)**: Crisp line bridges at every crossing to eliminate 4-way intersection ambiguity.
+- **AWS Group Frames & Centered Legend**: Official `mxgraph.aws4.group` containers with bottom-centered legend cards.
+
+👉 **[Open Live draw.io Diagram in diagrams.net](https://viewer.diagrams.net/?highlight=0000ff&edit=_blank&layers=1&nav=1#Uhttps%3A%2F%2Fraw.githubusercontent.com%2Fsuryakumaran2611%2Fauto-arch-diagram%2Fmain%2Fdocs%2Fdemos%2Fmlops-multi-cloud.drawio)**
+
+---
+
+### 3. 🤖 AI-Enhanced Multi-Format Suite (`--ai-enhance`)
+Runs an optional OpenRouter free-model vision loop (strict $0 budget) that critiques render layout density and enriches the diagram.
+
+- **Vision-Assisted Layout Refinement**: OpenRouter free vision models analyze diagram layout, spacing, and label placement to eliminate visual overlaps.
+- **Executive Titles & Numbered Flows**: Enriches diagrams with executive subtitles, numbered operational flow badges, and IaC review hints.
+- **Dedicated Output Suite**: Emits `*-ai.png`, `*-ai.svg`, `*-ai.html`, `*-ai.drawio`, and `*-ai.md` alongside deterministic base outputs.
+
+```bash
+# Run with AI Enhancement:
+python tools/generate_arch_diagram.py --changed-files path/to/main.tf \
+  --out-png out/architecture.png --out-html out/architecture.html --out-drawio out/architecture.drawio --ai-enhance
+```
+
+---
+
+### 4. 📐 Scalable Vector SVG (`--out-svg`)
+- High-contrast vector graphics with embedded high-resolution base64 icon assets.
+- Single-provider category lanes and official provider brand accents (AWS `#FF9900`, Azure `#0078D4`, GCP `#4285F4`, OCI `#C74634`, IBM `#0F62FE`).
+- 100% Guaranteed Bottom-Centered connectors legend table.
+
+---
+
+### 5. 🖼️ High-Res PNG & JPEG
+- Sharp raster images with antialiased typography (**Open Sans Bold**).
+- Pure white canvas with subtle category subcluster borders (`#CBD5E1`).
+
+---
+
+### 6. 🧜‍♀️ Mermaid & Markdown Embeds
+- Generates native Mermaid `.mmd` flowcharts and GitHub Flavored Markdown `.md` embed reports.
+
+---
+
+## ⚡ CI/CD Automation & GitHub Integration
+
+### Sticky Pull Request Comments
+
+When `comment_on_pr: true` is enabled, the action automatically posts and updates a sticky comment on the PR containing:
+1. Direct high-res diagram preview.
+2. Formatted resource summary (added/modified resources).
+3. Collapsible architectural breakdown table by category and cloud provider.
+4. Links to download `.drawio` and launch the Interactive HTML Studio.
+
+```yaml
 jobs:
   comment:
     permissions:
@@ -97,289 +213,16 @@ jobs:
       pull-requests: write
     uses: suryakumaran2611/auto-arch-diagram/.github/workflows/reusable-auto-arch-diagram.yml@main
     with:
-      mode: static
-      direction: LR
-      edge_color: "#4B5563"
-      edge_penwidth: "1.3"
-      edge_arrowsize: "0.8"
+      direction: AUTO
+      image_formats: png,svg,drawio,html
       comment_on_pr: true
-      create_diagram_pr: false
 ```
 
-### 2. Enable PR Creation (Optional)
+---
 
-To automatically create PRs that update diagram files:
+### Automatic Diagram Pull Requests
 
-```yaml
-  diagram_pr:
-    if: github.event_name == 'pull_request_target'
-    permissions:
-      contents: write
-      pull-requests: write
-    uses: suryakumaran2611/auto-arch-diagram/.github/workflows/reusable-auto-arch-diagram.yml@main
-    with:
-      mode: static
-      direction: LR
-      edge_color: "#4B5563"
-      edge_penwidth: "1.3"
-      edge_arrowsize: "0.8"
-      comment_on_pr: false
-      create_diagram_pr: true
-      publish_enabled: true
-```
-
-### 2b. Auto-Commit Diagrams (Optional)
-
-To commit generated diagrams directly to the repository (no PR):
-
-```yaml
-  diagram_commit:
-    if: github.event_name == 'push'
-    permissions:
-      contents: write
-      pull-requests: write
-    uses: suryakumaran2611/auto-arch-diagram/.github/workflows/reusable-auto-arch-diagram.yml@main
-    with:
-      mode: static
-      direction: LR
-      edge_color: "#4B5563"
-      edge_penwidth: "1.3"
-      edge_arrowsize: "0.8"
-      comment_on_pr: false
-      create_diagram_pr: false
-      auto_commit_artifacts: true
-```
-
-### 3. Configure Output Paths
-
-Create `.auto-arch-diagram.yml`:
-
-```yaml
-publish:
-  enabled: true
-  paths:
-    md: docs/architecture/architecture-diagram.md
-    mmd: docs/architecture/architecture-diagram.mmd
-    png: docs/architecture/architecture-diagram.png
-    svg: docs/architecture/architecture-diagram.svg
-```
-
-## Configuration
-
-### Repository Variables
-
-You can configure the action using GitHub repository variables:
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `AUTO_ARCH_MODE` | `static` | Generation mode: `static` or `ai` |
-| `AUTO_ARCH_MODEL` | `gpt-4o-mini` | AI model (when mode=ai) - **Experimental** |
-| `AUTO_ARCH_DIRECTION` | `LR` | Diagram direction: `LR`, `TB`, `RL`, `BT`, `AUTO` |
-| `AUTO_ARCH_RENDER_LAYOUT` | `lanes` | Layout: `lanes` or `providers` |
-| `AUTO_ARCH_RENDER_BG` | `transparent` | Background: `transparent` or `white` |
-| `AUTO_ARCH_EDGE_COLOR` | `#4B5563` | Edge color for PNG/SVG |
-| `AUTO_ARCH_EDGE_PENWIDTH` | `1.3` | Edge line width |
-| `AUTO_ARCH_EDGE_ARROWSIZE` | `0.8` | Edge arrow size |
-| `AUTO_ARCH_IAC_ROOT` | `.` | Root directory to read IaC files from |
-| `AUTO_ARCH_TOOL_REPO` | _(auto)_ | Override tool repository (owner/repo) |
-| `AUTO_ARCH_TOOL_REF` | _(auto)_ | Override tool ref (branch/tag/sha) |
-| `AUTO_ARCH_CREATE_DIAGRAM_PR` | `false` | Enable automatic diagram PR creation |
-| `AUTO_ARCH_FORCE_UPDATE` | `false` | Force diagram updates even without IaC changes |
-
-### Workflow Inputs (Reusable Workflow)
-
-| Input | Default | Description |
-|-------|---------|-------------|
-| `iac_globs` | IaC defaults | Newline-separated IaC file patterns |
-| `iac_root` | `.` | Root directory to read IaC files from |
-| `direction` | `LR` | `AUTO`, `LR`, `TB`, `RL`, `BT` |
-| `mode` | `static` | `static` or `ai` |
-| `model` | `gpt-4o-mini` | AI model name (mode=ai) |
-| `image_formats` | `png,jpg,svg` | Formats to generate or `none` |
-| `out_dir` | `artifacts` | Output directory |
-| `out_md` | `<out_dir>/architecture-diagram.md` | Output Markdown path |
-| `out_mmd` | `<out_dir>/architecture-diagram.mmd` | Output Mermaid path |
-| `out_png` | `<out_dir>/architecture-diagram.png` | Output PNG path |
-| `out_jpg` | `<out_dir>/architecture-diagram.jpg` | Output JPG path |
-| `out_svg` | `<out_dir>/architecture-diagram.svg` | Output SVG path |
-| `artifact_name` | _(auto)_ | Artifact name override (use for matrix jobs) |
-| `render_layout` | `lanes` | `lanes` or `providers` |
-| `render_bg` | `transparent` | `transparent` or `white` |
-| `edge_color` | `#4B5563` | Edge color for PNG/SVG |
-| `edge_penwidth` | `1.3` | Edge line width |
-| `edge_arrowsize` | `0.8` | Edge arrow size |
-| `comment_on_pr` | `true` | Post/update sticky PR comment |
-| `create_diagram_pr` | `false` | Create diagram update PR |
-| `auto_commit_artifacts` | `false` | Commit generated artifacts directly to the repo |
-| `tool_repo` | _(auto)_ | Override tool repository (owner/repo) |
-| `tool_ref` | _(auto)_ | Override tool ref (branch/tag/sha) |
-
-### Configuration File
-
-Create `.auto-arch-diagram.yml` in your repository root:
-
-```yaml
-# Configuration for Auto Architecture Diagram
-diagram:
-  format: mermaid
-  direction: LR  # LR, TB, RL, BT, or AUTO
-
-generator:
-  mode: static  # static or ai (requires OPENAI_API_KEY)
-
-render:
-  layout: lanes  # lanes or providers
-  background: transparent  # transparent or white
-  lanes: [Network, Security, Containers, Compute, Data, Storage, Other]
-
-  edge_color: "#4B5563"
-  edge_penwidth: 1.3
-  edge_arrowsize: 0.8
-
-publish:
-  enabled: true
-  paths:
-    md: docs/architecture/auto-arch-diagram.md
-    mmd: docs/architecture/auto-arch-diagram.mmd
-    png: docs/architecture/auto-arch-diagram.png
-    jpg: docs/architecture/auto-arch-diagram.jpg
-    svg: docs/architecture/auto-arch-diagram.svg
-
-model:
-  provider: openai
-  name: gpt-4o-mini
-
-limits:
-  max_files: 25
-  max_bytes_per_file: 30000
-```
-
-## Supported IaC Formats
-
-### Terraform
-- `**/*.tf`
-- `**/*.tfvars`
-- `**/*.hcl`
-
-### AWS CloudFormation
-- `**/*.cfn.yaml`
-- `**/*.cfn.yml`
-- `**/*.cfn.json`
-- `**/template.yaml`
-- `**/template.yml`
-
-**✨ Enhanced Support**: Full service-specific icon mapping, intelligent arrow styling matching Terraform diagrams, and proper resource categorization.
-
-### Azure Bicep
-- `**/*.bicep`
-
-### Pulumi
-- `**/Pulumi.*.yaml`
-- `**/Pulumi.*.yml`
-- `**/Pulumi.yaml`
-- `**/Pulumi.yml`
-- `**/Pulumi.*.json`
-- `**/Pulumi.*.ts`
-- `**/Pulumi.*.py`
-
-### AWS CDK
-- `**/*.cdk.ts`
-- `**/*.cdk.py`
-
-## Workflow Modes
-
-### Static Mode (Default)
-
-Uses parsers and libraries to analyze IaC files without external AI services.
-
-**Advantages:**
-- No API keys required
-- Faster execution
-- Consistent results
-- Free to use
-
-**Limitations:**
-- May miss complex architectural relationships
-- Limited understanding of custom modules
-
-### AI Mode (Experimental)
-
-⚠️ **Experimental Feature - Not for Production Use**
-
-Uses OpenAI's models to analyze and generate more intelligent diagrams.
-
-**Requirements:**
-- `OPENAI_API_KEY` secret in your repository
-- API costs may apply
-
-**Advantages:**
-- Better understanding of complex architectures
-- Can identify relationships not obvious from static analysis
-- More intelligent diagram layouts
-
-**⚠️ Experimental Notice:**
-- AI-generated diagrams may contain inaccuracies
-- API costs can accumulate quickly
-- Not recommended for production environments
-- Generated diagrams should be reviewed manually
-
-### AI-Assisted Refinement (`--ai-enhance`)
-
-A separate, budget-safe enhancement pass (distinct from AI mode above): a free
-OpenRouter vision model critiques the rendered diagram and the generator keeps
-the best-scoring render configuration.
-
-```bash
-# CLI flag or environment variable (workflow-friendly)
-python tools/generate_arch_diagram.py --changed-files main.tf --out-png arch.png --ai-enhance
-AUTO_ARCH_AI_ENHANCE=true python tools/generate_arch_diagram.py ...
-```
-
-**How it works**
-
-1. Renders the diagram, sends it to a vision model for critique (score 0-10) and platform summarization.
-2. Applies mapped suggestions (spacing, direction, splines, fonts, edge noise) and re-renders; iterations cap at 5 with plateau early-stop.
-3. Generates dedicated AI-enhanced multi-format outputs (`*-ai.png`, `*-ai.svg`, `*-ai.jpg`, `*-ai.html`, `*-ai.drawio`, `*-ai.md`).
-4. **Native AI Architectural Card**: Integrates AI platform titles, subtitles, and operational context hints directly into the bottom-centered HTML legend table on vector SVG and raster renders without raster stitching artifacts.
-5. **Interactive AI HTML Studio (`*-ai.html`)**: Embeds AI executive summaries, contextual tooltips, and interactive impact analysis.
-6. **Native draw.io Export (`*-ai.drawio`)**: Populates native cloud icons with AI contextual tooltips and operational summaries.
-7. **Executive Architecture Insights (`*-ai.md`)**: Detailed report detailing scalability, security posture, and numbered step-by-step dataflow stages.
-
-**Key guarantees**
-
-- **$0 budget**: only models whose catalog pricing is exactly 0 for prompt and
-  completion AND that accept image input are used; explicit `OPENROUTER_MODEL`
-  overrides must pass the same checks or generation is refused.
-- **Base outputs untouched**: deterministic `architecture-diagram.*` files are
-  never modified by the AI pass.
-- **Never breaks generation**: missing key, rate limits, or API failures simply
-  skip enhancement (429/5xx fall through ranked candidate models).
-
-**Configuration**
-
-| Env var | Purpose |
-| --- | --- |
-| `OPENROUTER_API_KEY` | API key (else `~/.config/auto-arch-diagram/openrouter_key`, chmod 600) |
-| `AUTO_ARCH_AI_ENHANCE` | `true`/`false` equivalent of `--ai-enhance` |
-| `AUTO_ARCH_AI_ITERATIONS` | Max feedback iterations, 1-5 (default 5 with plateau stop) |
-| `OPENROUTER_MODEL` | Optional model override (must be free + vision-capable) |
-
-In CI, dispatch the **AI-Assisted Architecture Diagrams** workflow
-(`.github/workflows/ai-generate.yml`) or set the reusable workflow input
-`ai_enhance: true` (plus `ai_iterations`) with the `OPENROUTER_API_KEY` secret.
-
-## PR Creation and Updates
-
-### How PR Creation Works
-
-1. **Trigger**: When a pull request is opened or updated with IaC changes
-2. **Analysis**: The action analyzes changed IaC files
-3. **Generation**: Creates updated diagrams in configured formats
-4. **PR Creation**: Creates/updates a separate PR with diagram files
-
-### PR Creation Configuration
-
-To enable automatic diagram PR creation:
+Automatically generate and open a PR with updated diagrams in your repository:
 
 ```yaml
 jobs:
@@ -395,605 +238,181 @@ jobs:
       diagram_pr_branch_prefix: 'auto-arch-diagram/update'
 ```
 
-### PR Branch Management
-
-- **Branch Name**: `{diagram_pr_branch_prefix}-{pr_number}`
-- **Base Branch**: The target branch of the original PR
-- **Commit Message**: "chore: update architecture diagram"
-- **Auto-merge**: Can be enabled if desired
-
-## Customization Options
-
-### Diagram Direction
-
-| Direction | Description |
-|-----------|-------------|
-| `LR` | Left to Right (horizontal) |
-| `TB` | Top to Bottom (vertical) |
-| `RL` | Right to Left |
-| `BT` | Bottom to Top |
-| `AUTO` | Intelligent selection based on architecture |
-
-### Render Layouts
-
-#### Lanes Layout (Default)
-Organizes components by category lanes:
-- Network
-- Security  
-- Containers
-- Compute
-- Data
-- Storage
-- Other
-
-#### Providers Layout
-Organizes components by cloud provider or service category.
-
-### Background Options
-
-- **Transparent**: Best for dark themes and overlay use
-- **White**: Best for print and light themes
-
-### Font Configuration
-
-The action uses **Open Sans Bold** font by default for enhanced readability and professional appearance. This modern typeface provides excellent screen readability and consistent rendering across different platforms.
-
-**Font**: Open Sans Bold (for optimal contrast and legibility)
-
-**Note**: The GitHub Actions workflow automatically installs the Open Sans font family on Ubuntu runners to ensure consistent rendering.
-
-### Image Formats
-
-| Format | Best For | Notes |
-|--------|----------|-------|
-| PNG | General use, good compression | Lossless compression |
-| JPEG | Small file size | Lossy compression, not for diagrams with text |
-| SVG | Scalable, web use | Vector format, infinite scaling |
-
-## Troubleshooting
-
-### Common Issues
-
-#### 1. "No IaC files found" Error
-**Cause**: No files matching the IaC patterns were found.
-
-**Solution**: 
-- Check that your files match the supported patterns
-- Verify the files are committed to the repository
-- Check the `iac_globs` input in your workflow
-
-#### 2. "publish.paths is empty" Error
-**Cause**: Missing or incorrect `.auto-arch-diagram.yml` configuration.
-
-**Solution**:
-```yaml
-publish:
-  enabled: true
-  paths:
-    md: docs/architecture/auto-arch-diagram.md
-    mmd: docs/architecture/auto-arch-diagram.mmd
-    png: docs/architecture/auto-arch-diagram.png
-```
-
-#### 3. PR Not Created
-**Cause**: Missing permissions or incorrect event trigger.
-
-**Solution**:
-- Ensure `contents: write` and `pull-requests: write` permissions
-- Use `pull_request_target` event for PR creation
-- Set `create_diagram_pr: true`
-
-#### 4. AI Mode Not Working
-**Cause**: Missing or invalid `OPENAI_API_KEY`.
-
-**Solution**:
-- Add `OPENAI_API_KEY` as a repository secret
-- Verify the API key has sufficient credits
-- Check that the model name is correct
-
-#### 5. SVG Icons Not Displaying
-**Cause**: SVG files may not have embedded icons or the viewer doesn't support embedded images.
-
-**Solution**:
-- Ensure SVG format is selected in `image_formats`
-- The tool automatically embeds PNG icons as base64 data URIs in SVG files
-- If icons still don't show, try opening the SVG in a different browser or viewer
-- PNG/JPG formats are recommended for guaranteed icon display
-
-#### 6. "Too many resources" Warning
-**Cause**: Diagrams with more than 60 resources are automatically skipped to prevent performance issues.
-
-**Solution**:
-- Split large infrastructure files into smaller, focused diagrams
-- Use multiple Terraform files or modules for different components
-- For multi-cloud architectures, the tool automatically uses "providers" layout for optimal organization
-- For extremely complex architectures, create separate diagrams for different layers (network, compute, data, etc.)
-
-### Debug Mode
-
-Add this step to your workflow for debugging:
-
-```yaml
-- name: Debug workflow
-  run: |
-    echo "Event: ${{ github.event_name }}"
-    echo "Base ref: ${{ github.event.pull_request.base.ref }}"
-    echo "Head ref: ${{ github.event.pull_request.head.ref }}"
-    echo "Repository: ${{ github.repository }}"
-```
-
-## Advanced Usage
-
-### Custom IaC Patterns
-
-Override the default file patterns:
-
-```yaml
-uses: suryakumaran2611/auto-arch-diagram/.github/workflows/reusable-auto-arch-diagram.yml@main
-with:
-  iac_globs: |
-    infra/**/*.tf
-    cloudformation/**/*.yaml
-    custom/**/*.bicep
-```
-
-### Multiple Workflow Files
-
-You can use multiple workflow files for different purposes:
-
-```yaml
-# .github/workflows/pr-comments.yml
-on:
-  pull_request:
-    paths: ['**/*.tf']
-jobs:
-  comment:
-    permissions:
-      contents: read
-      pull-requests: write
-    uses: suryakumaran2611/auto-arch-diagram/.github/workflows/reusable-auto-arch-diagram.yml@main
-    with:
-      comment_on_pr: true
-      create_diagram_pr: false
-
 ---
 
-# .github/workflows/diagram-updates.yml
+### Direct Repository Auto-Commit
+
+Commit generated diagrams directly to the default branch on push:
+
+```yaml
 on:
-  pull_request_target:
-    paths: ['**/*.tf']
+  push:
+    branches: [main]
+
 jobs:
-  diagram_pr:
+  diagram_commit:
     permissions:
       contents: write
-      pull-requests: write
     uses: suryakumaran2611/auto-arch-diagram/.github/workflows/reusable-auto-arch-diagram.yml@main
     with:
-      comment_on_pr: false
-      create_diagram_pr: true
-```
-
-### Conditional PR Creation
-
-Control PR creation based on file changes:
-
-```yaml
-env:
-  CREATE_DIAGRAM_PR: ${{ contains(github.event.pull_request.changed_files, 'production/') }}
-```
-
-## Best Practices
-
-### 1. Repository Organization
-
-```
-your-repo/
-├── .github/
-│   ├── workflows/
-│   │   └── auto-arch-diagram.yml
-│   └── auto-arch-diagram.yml
-├── docs/
-│   └── architecture/
-│       ├── architecture-diagram.md
-│       ├── architecture-diagram.mmd
-│       ├── architecture-diagram.png
-│       └── architecture-diagram.svg
-└── infrastructure/
-    ├── terraform/
-    ├── cloudformation/
-    └── bicep/
-```
-
-### 2. Branch Strategy
-
-- **Main Branch**: Always has up-to-date diagrams
-- **Feature Branches**: PR comments show diagram changes
-- **Release Branches**: Automatic diagram updates via PR creation
-
-### 3. Performance Optimization
-
-- Use `force_full: false` for large repositories
-- Limit file analysis with custom `iac_globs`
-- Cache dependencies in workflows
-
-### 4. Security Considerations
-
-- Never commit API keys to your repository
-- Use repository secrets for sensitive data
-- Review generated diagrams for sensitive information
-- Use `pull_request_target` for untrusted forks
-- **AI Mode**: OpenAI API keys transmit your IaC code to external services
-- **AI Mode**: Review your organization's data sharing policies before use
-- **AI Mode**: Consider the implications of sending infrastructure code to third parties
-
-### 5. Integration with Documentation
-
-- Include diagrams in your documentation site
-- Use GitHub Pages to host generated diagrams
-- Link to diagrams from README files
-- Update diagrams as part of your release process
-
-## Confluence Publishing and Image Replacement
-
-The Auto Architecture Diagram action supports robust publishing and replacement of diagrams in Confluence pages. You can target a specific image using a unique marker or filename, ensuring only the intended diagram is updated.
-
-### Example Workflow
-
-```yaml
-with:
-  direction: AUTO
-  image_formats: png,svg
-  publish_enabled: true
-  publish_confluence: true
-  confluence_url: ${{ secrets.CONFLUENCE_URL }}
-  confluence_user: ${{ secrets.CONFLUENCE_USER }}
-  confluence_token: ${{ secrets.CONFLUENCE_TOKEN }}
-  confluence_page_id: '123456789'  # Target Confluence page ID
-  confluence_replace: true         # Replace existing diagram on the page
-  confluence_image_marker: '<!-- auto-arch-diagram:architecture-diagram.png -->' # Unique marker for image replacement
-```
-
-### How It Works
-- The workflow searches for the marker or filename in the Confluence page and replaces only that image.
-- If the marker is not found, it falls back to replacing the first image or prepends the new image.
-- Use a unique marker for each diagram to avoid accidental replacement of other images.
-
-### Best Practices
-- Use a unique marker for each diagram type or environment (e.g., `<!-- auto-arch-diagram:prod.png -->`).
-- Store Confluence credentials as repository secrets.
-- Test the workflow with a test page before using in production.
-- Review the page source in Confluence to confirm marker placement.
-
-### Troubleshooting
-- If the image is not replaced, check that the marker matches exactly in the page source.
-- Ensure the page ID and credentials are correct.
-- Review workflow logs for error messages from the Confluence API.
-- If multiple diagrams are present, use distinct markers for each.
-
-### Required Secrets
-- `CONFLUENCE_URL`: Base URL of your Confluence instance (e.g., `https://your-domain.atlassian.net/wiki`)
-- `CONFLUENCE_USER`: Confluence username or email
-- `CONFLUENCE_TOKEN`: API token generated from Confluence
-
-### Environment Variables
-- `CONFLUENCE_IMAGE_MARKER`: (Optional) Unique marker to target a specific image for replacement.
-
-### Advanced Example: Multiple Diagrams
-
-```yaml
-with:
-  direction: AUTO
-  image_formats: png,svg
-  publish_enabled: true
-  publish_confluence: true
-  confluence_url: ${{ secrets.CONFLUENCE_URL }}
-  confluence_user: ${{ secrets.CONFLUENCE_USER }}
-  confluence_token: ${{ secrets.CONFLUENCE_TOKEN }}
-  confluence_page_id: '123456789'
-  confluence_replace: true
-  confluence_image_marker: '<!-- auto-arch-diagram:staging-architecture.png -->'
-```
-
-**Tip:** Use different markers for staging, production, or environment-specific diagrams.
-
-### Security & Best Practices
-- Never commit API tokens to your repository.
-- Use repository secrets for all sensitive data.
-- Review generated diagrams for sensitive information before publishing.
-- Use a test page for initial integration to avoid overwriting important documentation.
-
-### Testing New AI/ML/Blockchain Services
-
-The action now supports comprehensive AI, ML, and Blockchain services across all major cloud providers:
-
-#### Test with Example Files
-
-```powershell
-# Test AWS AI/ML/Blockchain services
-python tools/generate_arch_diagram.py \
-  --iac-root examples/test-ai-ml-blockchain/aws \
-  --direction AUTO \
-  --out-md aws-ai-ml-test.md \
-  --out-png aws-ai-ml-test.png
-
-# Test Azure AI/ML/Blockchain services  
-python tools/generate_arch_diagram.py \
-  --iac-root examples/test-ai-ml-blockchain/azure \
-  --direction LR \
-  --out-md azure-ai-ml-test.md
-
-# Test with AI mode for enhanced analysis
-$env:OPENAI_API_KEY = "your-key-here"
-python tools/generate_arch_diagram.py \
-  --mode ai \
-  --iac-root examples/test-ai-ml-blockchain \
-  --direction AUTO \
-  --out-md enhanced-ai-diagram.md
-```
-
-#### Newly Supported Services
-
-**AWS AI/ML:**
-- SageMaker (Notebook, Endpoint, Model, Pipeline, Ground Truth)
-- Bedrock (Agent, Knowledge Base, Runtime)
-- AI Services (Textract, Comprehend, Translate, Polly, Rekognition)
-- Custom AI (Personalize, Forecast, Lex, Transcribe)
-
-**AWS Blockchain:**
-- Managed Blockchain (Nodes, Networks)
-- Quantum Ledger Database (QLDB)
-- Amplify (API, GraphQL)
-
-**Azure AI/ML:**
-- Azure Machine Learning (Workspace, Compute, Model, Endpoint)
-- Azure OpenAI Service
-- Cognitive Services (Computer Vision, Face API, Speech, Language)
-- Azure Databricks Integration
-
-**Azure Blockchain:**
-- Blockchain Service (Members, Nodes)
-- Blockchain Workbench
-
-**GCP AI/ML:**
-- Vertex AI (Notebooks, Endpoints, Models, Training)
-- AutoML (Tables, Vision, NLP, Translation)
-- Cloud AI APIs (Speech, Vision, Recommendations)
-- Cloud Datalab, Colab, Jupyter Integration
-
-**Oracle AI/ML:**
-- OCI AI Services (Language, Vision, Data Science, Speech)
-- AI Anomaly Detection
-
-**IBM AI/ML:**
-- Watson Studio, Watson Machine Learning, Watson AutoAI
-- Watson Assistant, Discovery
-- IBM Cloud Pak for Data, Cognos Analytics
-
-**IBM Blockchain:**
-- IBM Blockchain Platform
-
-#### Expected Results
-
-- **Diagram Categories**: Services properly categorized as 'ml', 'blockchain', 'analytics'
-- **Icon Mapping**: Each service uses appropriate cloud provider icons
-- **Color Coding**: AI services get specialized colors/themes
-- **Layout Optimization**: Intelligent grouping of AI/ML services
-
-#### Debugging Service Recognition
-
-```powershell
-# Check if services are recognized
-python tools/generate_arch_diagram.py --iac-root examples/test-ai-ml-blockchain --direction LR --out-md debug-output.md
-
-# Enable debug mode to see mapping details
-$env:AUTO_ARCH_DEBUG = "1"
-python tools/generate_arch_diagram.py --iac-root examples/test-ai-ml-blockchain --out-md debug-detailed.md
-```
-
-## FAQ
-- **Q: Can I replace multiple images in one page?**
-  - Yes, by running the workflow multiple times with different markers and filenames.
-- **Q: What if the marker is missing?**
-  - The workflow will replace the first image or prepend the new image to the page.
-- **Q: How do I debug Confluence publishing issues?**
-  - Check workflow logs for API errors, verify credentials, and confirm marker placement in the page source.
-
-For more examples and advanced usage, see the README and workflow documentation.
-
-## Example Implementations
-
-### Basic Terraform Repository
-
-```yaml
-# .github/workflows/diagrams.yml
-name: Architecture Diagrams
-
-on:
-  pull_request:
-    paths: ['terraform/**/*.tf']
-
-jobs:
-  diagrams:
-    uses: suryakumaran2611/auto-arch-diagram/.github/workflows/reusable-auto-arch-diagram.yml@main
-    with:
-      mode: static
-      direction: TB
-      comment_on_pr: true
-    secrets:
-      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-```
-
-### Multi-Cloud Setup
-
-```yaml
-# .auto-arch-diagram.yml
-diagram:
-  direction: AUTO
-
-generator:
-  mode: ai
-
-render:
-  layout: providers
-  background: transparent
-
-publish:
-  enabled: true
-  paths:
-    md: docs/diagrams/multi-cloud-architecture.md
-    mmd: docs/diagrams/multi-cloud-architecture.mmd
-    svg: docs/diagrams/multi-cloud-architecture.svg
-```
-
-### Enterprise Configuration
-
-```yaml
-# .github/workflows/enterprise-diagrams.yml
-name: Enterprise Architecture Diagrams
-
-on:
-  pull_request:
-    paths:
-      - '**/*.tf'
-      - '**/*.bicep'
-      - '**/*.yaml'
-
-jobs:
-  comment:
-    uses: suryakumaran2611/auto-arch-diagram/.github/workflows/reusable-auto-arch-diagram.yml@main
-    with:
-      mode: ai
-      direction: AUTO
-      render_layout: lanes
-      comment_on_pr: true
+      auto_commit_artifacts: true
       create_diagram_pr: false
-      image_formats: png,svg
-      force_full: false
-    secrets:
-      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-
-  update-diagrams:
-    if: github.event_name == 'pull_request_target'
-    uses: suryakumaran2611/auto-arch-diagram/.github/workflows/reusable-auto-arch-diagram.yml@main
-    with:
-      mode: ai
-      direction: AUTO
-      comment_on_pr: false
-      create_diagram_pr: true
       publish_enabled: true
-    secrets:
-      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
 ```
 
-## Force Updates
+---
 
-Sometimes you may want to regenerate architecture diagrams even when no IaC files have changed. This is useful for:
-- Updating diagram styling or configuration changes
-- Testing workflow modifications
-- Updating icons or rendering engine improvements
-- Migrating between different diagram layouts
+### Force Diagram Updates
 
-### Manual Force Update
+To regenerate diagrams even when no IaC files have changed:
+1. **Repository Variable**: Set `AUTO_ARCH_FORCE_UPDATE = true` in Repository Settings → Variables.
+2. **Manual Dispatch**: Select "Force architecture diagram update" checkbox in GitHub Actions UI.
+3. **Workflow Input**: Pass `force_full: true` in your workflow invocation.
 
-You can manually trigger a workflow with the force update option:
+---
 
-1. Go to the **Actions** tab in your repository
-2. Select the **Auto Architecture Diagram** workflow
-3. Click **Run workflow**
-4. Check **Force architecture diagram update even if no IaC files changed**
-5. Click **Run workflow**
+## 📑 Confluence Publishing & Image Replacement
 
-### Automatic Force Updates
+Automatically upload or replace architecture diagrams in Atlassian Confluence documentation pages.
 
-Set the `AUTO_ARCH_FORCE_UPDATE` repository variable to `true` to force updates on every push to main/develop branches:
-
-```yaml
-# Repository Settings → Variables → New repository variable
-Name: AUTO_ARCH_FORCE_UPDATE
-Value: true
-```
-
-### Force Update in Workflow Configuration
+### Confluence Workflow Setup
 
 ```yaml
 jobs:
-  comment:
-    uses: suryakumaran2611/auto-arch-diagram/.github/workflows/reusable-auto-arch-diagram.yml@main
-    with:
-      force_full: true  # Force diagram generation regardless of file changes
+  publish_docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: suryakumaran2611/auto-arch-diagram@v1
+        with:
+          iac_globs: 'terraform/**/*.tf'
+          publish_enabled: true
+          publish_confluence: true
+          confluence_url: ${{ secrets.CONFLUENCE_URL }}
+          confluence_user: ${{ secrets.CONFLUENCE_USER }}
+          confluence_token: ${{ secrets.CONFLUENCE_TOKEN }}
+          confluence_page_id: '123456789'
+          confluence_replace: true
+          confluence_image_marker: '<!-- auto-arch-diagram:prod-architecture.png -->'
 ```
 
-## Upcoming Features
+### Marker-Based Image Replacement
+Place an HTML comment marker in your Confluence page source where the diagram should live:
+```html
+<!-- auto-arch-diagram:prod-architecture.png -->
+<p><img src="architecture-diagram.png" /></p>
+<!-- auto-arch-diagram:prod-architecture.png -->
+```
+The action will replace only the content between the matching markers, preserving all surrounding text, headers, and tables.
 
-The following features are planned for future releases:
-
-### 🤖 Enhanced AI Capabilities
-- **Multiple AI Providers**: Support for Claude, Gemini, and local AI models
-- **Advanced Analysis**: Better understanding of complex architectural patterns
-- **Custom Prompts**: User-defined AI prompts for specialized diagram generation
-- **Smart Layouts**: AI-driven layout optimization based on diagram complexity
-
-### 🔌 Integration Expansions
-- **Confluence Integration**: Automatic diagram publishing to Confluence pages
-- **Notion Integration**: Direct updates to Notion databases and pages
-- **Slack/Discord**: Diagram sharing and notifications in team channels
-- **Jira Integration**: Link diagrams to Jira tickets and documentation
-
-### 📊 Advanced Features
-- **Cost Estimation**: Integration with cloud pricing APIs for cost-aware diagrams
-- **Security Insights**: Automated security recommendations in diagrams
-- **Compliance Checking**: Compliance overlays and certifications display
-- **Version Comparison**: Visual diff between diagram versions
-
-### 🎨 Enhanced Customization
-- **Custom Themes**: User-defined color schemes and styles
-- **Branding Options**: Company logos and custom branding in diagrams
-- **Interactive Diagrams**: Clickable components with drill-down capabilities
-- **Diagram Templates**: Pre-built templates for common architectures
-
-### 🔧 Developer Experience
-- **Local CLI**: Command-line interface for local diagram generation
-- **IDE Extensions**: VS Code and JetBrains IDE integrations
-- **API Access**: REST API for programmatic diagram generation
-- **Webhooks**: Custom webhooks for diagram generation events
-
-## Experimental Features
-
-The following features are currently experimental and not recommended for production use:
-
-### 🧠 AI-Generated Diagrams
-- **Status**: Experimental
-- **Warning**: May contain inaccuracies and security implications
-- **Use Case**: Testing and evaluation only
-- **Future Plans**: Production-ready with multiple provider support
-
-### 🔗 Third-Party Integrations
-- **Status**: Planned
-- **Warning**: Not yet implemented
-- **Use Case**: Future roadmap items
-- **Timeline**: Q2 2025 onwards
-
-## Getting Help
-
-If you encounter issues:
-
-1. **Check the logs**: Review the workflow run logs for error messages
-2. **Verify configuration**: Ensure all required files and secrets are in place
-3. **Test with static mode**: Try static mode first to isolate AI-related issues
-4. **Check file patterns**: Verify your IaC files match the supported patterns
-5. **Review permissions**: Ensure proper GitHub token permissions
-6. **Force update**: Try a force update if diagrams seem outdated
-
-For additional support:
-- Create an issue in the [Auto Architecture Diagram repository](https://github.com/suryakumaran2611/auto-arch-diagram)
-- Check the [GitHub discussions](https://github.com/suryakumaran2611/auto-arch-diagram/discussions)
-- Review existing [issues and solutions](https://github.com/suryakumaran2611/auto-arch-diagram/issues)
-- **AI Mode Issues**: Report AI-specific issues with detailed logs and examples
+### Multi-Environment Publishing
+Use distinct markers for multiple environments on a single Confluence wiki page:
+- Staging: `<!-- auto-arch-diagram:staging-architecture.png -->`
+- Production: `<!-- auto-arch-diagram:prod-architecture.png -->`
+- DR / Disaster Recovery: `<!-- auto-arch-diagram:dr-architecture.png -->`
 
 ---
 
-**Note on Experimental Features**: Features marked as experimental are provided for testing and evaluation purposes only. They should not be used in production environments and may change significantly in future releases.
+## 🤖 Model Context Protocol (MCP) Server
+
+The built-in Model Context Protocol (MCP) server allows AI coding agents (Claude Desktop, Cursor, VS Code, Antigravity) to query and generate architecture diagrams interactively.
+
+### Configuring MCP Clients
+
+Add to your `claude_desktop_config.json` or `mcp.json`:
+
+```json
+{
+  "mcpServers": {
+    "auto-arch-diagram": {
+      "command": "python3",
+      "args": ["/path/to/auto-arch-diagram/tools/mcp_server.py"]
+    }
+  }
+}
+```
+
+### MCP Tools Reference
+
+| Tool Name | Parameters | Description |
+|:---|:---|:---|
+| `list_resources` | `changed_files`, `iac_root` | Lists all detected cloud resources, types, and categories. |
+| `explain_graph` | `changed_files`, `iac_root` | Returns a natural language summary of the architectural connectivity and topology. |
+| `generate_diagram` | `changed_files`, `iac_root`, `formats`, `direction` | Triggers diagram generation across specified formats (`png`, `svg`, `drawio`, `html`). |
 
 ---
 
-This documentation is maintained as part of the Auto Architecture Diagram project. For the latest updates and examples, visit the [project repository](https://github.com/suryakumaran2611/auto-arch-diagram).
+## ☁️ Multi-Cloud & Structured Tiering
+
+- **Universal Multi-Cloud**: Renders AWS, Azure, Google Cloud, Oracle Cloud (OCI), and IBM Cloud simultaneously on a single unified canvas.
+- **Brand Palette Borders**:
+  - AWS: `#FF9900` (Orange)
+  - Azure: `#0078D4` (Blue)
+  - GCP: `#4285F4` (Google Blue)
+  - OCI: `#C74634` (Red)
+  - IBM: `#0F62FE` (Carbon Blue)
+- **Automatic Category Subclusters**: Uncontained resources are cleanly organized into `Security`, `Compute`, `Storage`, `Integration`, and `Management` subclusters with `#CBD5E1` borders and `#FFFFFF` background.
+- **Guaranteed Centered Bottom Legend**: A clean HTML table centered at the bottom of the diagram categorizing all edge types and resource classes.
+
+---
+
+## 🛠️ Full CLI Reference
+
+```
+usage: generate_arch_diagram.py [-h] [--changed-files FILES] [--iac-root DIR]
+                                [--direction {AUTO,LR,TB,RL,BT}]
+                                [--out-png FILE] [--out-svg FILE]
+                                [--out-jpg FILE] [--out-drawio FILE]
+                                [--out-html FILE] [--out-md FILE]
+                                [--out-mmd FILE] [--render-engine {auto,neato,dot}]
+                                [--fontsize INT] [--iconsize INT]
+                                [--simplified] [--expand-badges]
+                                [--no-consolidate] [--planfile PLAN_JSON]
+                                [--graphfile GRAPH_DOT] [--varfile PATH]
+                                [--ai-enhance]
+```
+
+### Key CLI Flags
+- `--changed-files <files>`: Space/newline-separated list of changed IaC files.
+- `--out-html <file>`: Output path for the Interactive HTML Architecture Studio.
+- `--out-drawio <file>`: Output path for native editable draw.io diagrams.
+- `--simplified`: Executive view stripping network plumbing while preserving compute-to-gateway relations.
+- `--expand-badges`: Expand security group shield badges into standalone nodes.
+- `--planfile <plan.json>`: Diagram directly from `terraform show -json` output without requiring a Terraform workspace or cloud credentials.
+- `--graphfile <graph.dot>`: Diagram directly from `terraform graph` DOT output.
+- `--ai-enhance`: Enable OpenRouter vision-assisted layout critique loop ($0 budget, free models only).
+
+---
+
+## 🌟 Enterprise Showcase Gallery
+
+| Architecture | Cloud Providers | Formats | Live Previews |
+|:---|:---|:---:|:---|
+| **Enterprise MLOps Multi-Region Platform** | AWS | PNG • SVG • draw.io • HTML | [🌐 Interactive HTML Studio](https://suryakumaran2611.github.io/auto-arch-diagram/demos/mlops-aws.html) • [📊 Open draw.io](https://viewer.diagrams.net/?highlight=0000ff&edit=_blank&layers=1&nav=1#Uhttps%3A%2F%2Fraw.githubusercontent.com%2Fsuryakumaran2611%2Fauto-arch-diagram%2Fmain%2Fdocs%2Fdemos%2Fmlops-aws.drawio) |
+| **Secure Enterprise 3-Tier Web Platform** | AWS | PNG • SVG • draw.io • HTML | [🌐 Interactive HTML Studio](https://suryakumaran2611.github.io/auto-arch-diagram/demos/multi-tier-web-app.html) • [📊 Open draw.io](https://viewer.diagrams.net/?highlight=0000ff&edit=_blank&layers=1&nav=1#Uhttps%3A%2F%2Fraw.githubusercontent.com%2Fsuryakumaran2611%2Fauto-arch-diagram%2Fmain%2Fdocs%2Fdemos%2Fmulti-tier-web-app.drawio) |
+| **Hybrid Multi-Cloud Data Analytics** | AWS + Azure + GCP | PNG • SVG • draw.io • HTML | [🌐 Interactive HTML Studio](https://suryakumaran2611.github.io/auto-arch-diagram/demos/mlops-multi-cloud.html) • [📊 Open draw.io](https://viewer.diagrams.net/?highlight=0000ff&edit=_blank&layers=1&nav=1#Uhttps%3A%2F%2Fraw.githubusercontent.com%2Fsuryakumaran2611%2Fauto-arch-diagram%2Fmain%2Fdocs%2Fdemos%2Fmlops-multi-cloud.drawio) |
+| **Serverless Event Pipeline (Custom Icons)** | AWS + Custom Icons | PNG • SVG • draw.io • HTML | [🌐 Interactive HTML Studio](https://suryakumaran2611.github.io/auto-arch-diagram/demos/custom-icons-demo.html) • [📊 Open draw.io](https://viewer.diagrams.net/?highlight=0000ff&edit=_blank&layers=1&nav=1#Uhttps%3A%2F%2Fraw.githubusercontent.com%2Fsuryakumaran2611%2Fauto-arch-diagram%2Fmain%2Fdocs%2Fdemos%2Fcustom-icons-demo.drawio) |
+| **Dual-VPC Transit & Peering Mesh** | AWS | PNG • SVG • draw.io • HTML | [🌐 Interactive HTML Studio](https://suryakumaran2611.github.io/auto-arch-diagram/demos/vpc-peering-multi-subnet.html) • [📊 Open draw.io](https://viewer.diagrams.net/?highlight=0000ff&edit=_blank&layers=1&nav=1#Uhttps%3A%2F%2Fraw.githubusercontent.com%2Fsuryakumaran2611%2Fauto-arch-diagram%2Fmain%2Fdocs%2Fdemos%2Fvpc-peering-multi-subnet.drawio) |
+| **CloudFormation Production Web Stack** | AWS CloudFormation | PNG • SVG • draw.io • HTML | [🌐 Interactive HTML Studio](https://suryakumaran2611.github.io/auto-arch-diagram/demos/aws-cloudformation.html) • [📊 Open draw.io](https://viewer.diagrams.net/?highlight=0000ff&edit=_blank&layers=1&nav=1#Uhttps%3A%2F%2Fraw.githubusercontent.com%2Fsuryakumaran2611%2Fauto-arch-diagram%2Fmain%2Fdocs%2Fdemos%2Faws-cloudformation.drawio) |
+
+---
+
+## ❓ Troubleshooting & FAQ
+
+### Frequently Asked Questions
+
+**Q: Do I need cloud credentials or an active Terraform backend to generate diagrams?**
+> **No.** The generator performs static parsing of your `.tf`, `.bicep`, or CloudFormation files directly. Alternatively, you can feed a pre-generated `terraform show -json` plan via `--planfile plan.json`.
+
+**Q: How does the obstacle-avoiding corridor router work in draw.io exports?**
+> The exporter calculates the exact absolute bounding boxes for all resource nodes and label blocks, builds whitespace gutter channels between columns and cluster frames, and routes connectors cleanly through those channels with bridge arc hops (`jumpStyle=arc`).
+
+**Q: How do I test the workflow locally before pushing to GitHub?**
+> Run the CLI command directly using Python in WSL or Linux:
+> ```bash
+> python tools/generate_arch_diagram.py --changed-files path/to/main.tf --out-png out.png --out-html out.html --out-drawio out.drawio
+> ```
+
+---
+
+Built with ❤️ by [@suryakumaran2611](https://github.com/suryakumaran2611) • Licensed under [CC BY-NC 4.0](https://creativecommons.org/licenses/by-nc/4.0/)

@@ -70,30 +70,36 @@ Rendered diagram: available as workflow artifact
 
 *Reviewed by OpenRouter free vision model `stealth/ox-alpha` (quality score: 5/10).*
 
-**Architecture.** Event-driven serverless pipeline: an EventBridge schedule triggers an ingestion Lambda landing raw objects in S3; SNS→SQS pairs decouple processing and transformation stages; three Lambda functions progressively refine data (raw → processed → curated lake), complemented by a Glue Spark ETL job and Glue Catalog for schema governance.
+## Architecture Summary
+Event-driven serverless lakehouse on AWS. EventBridge schedule invokes an ingestion Lambda landing raw data in S3; SNS/SQS queues decouple processing and transformation Lambdas; Glue ETL curates datasets registered in the Glue Catalog.
 
-**Dataflow.** (1) scheduled trigger, (2) raw landing, (3) queue fan-out, (4) batch consumption, (5) processed persistence, (6) transformation fan-out, (7) enrichment, (8) lake curation.
+## Dataflow Stages
+1. Scheduled trigger → ingestion Lambda → raw bucket.
+2. Glue ETL reads source bucket, writes processed data, catalogs schemas.
+3. Queued events drive processing and transformation Lambdas into the curated lake.
 
-**Security.** Dedicated IAM roles per service with S3-scoped inline policies; SQS queue policies restrict principals; a DLQ isolates poison messages. No KMS or bucket-encryption resources are declared — add SSE-KMS and restrictive bucket policies.
+## Security
+Three scoped IAM roles enforce least privilege; SQS queue policies restrict senders; DLQ isolates poison messages. No KMS keys declared—confirm default encryption.
 
-**Scaling.** Serverless components scale per request; SQS buffering absorbs bursts; versioning enables replay. No cross-region redundancy or lifecycle policies are defined.
+## Scaling
+SQS event source mappings auto-scale Lambda concurrency with queue depth; S3 and Glue scale elastically; SNS fan-out keeps stages loosely coupled.
 
 **Context hints**
-- `[S3]` Four-bucket medallion progression: sources, raw, processed, curated lake; versioning enabled
-- `[IAM]` Per-service roles with S3-scoped inline policies; queue policies restrict principals
-- `[COMPUTE]` Three Lambda stages scale per message; SQS event source mappings buffer bursts
-- `[DATA]` Glue Catalog defines schemas; Spark ETL scans source bucket in batch
-- `[GENERAL]` DLQ isolates failed ingestion messages; CloudWatch logs cover Lambda and Glue
-- `[DATA]` No KMS resources declared; encryption posture unverifiable from inventory
+- `[S3]` Four-stage S3 medallion flow: sources, raw, processed, curated lake; versioning enabled
+- `[IAM]` Three least-privilege roles isolate EventBridge, Glue, and Lambda permissions
+- `[COMPUTE]` Three Lambdas scale on SQS queue depth via event source mappings
+- `[DATA]` Glue Catalog database registers pipeline schemas for downstream query engines
+- `[GENERAL]` DLQ isolates failed ingestion messages; CloudWatch logs centralize observability
+- `[KMS]` No KMS keys declared; verify S3 default encryption and SQS SSE
 
-**Contextual labels applied:** `lambda_data_ingestion` → Ingestion Trigger Function, `lambda_data_processing` → Processing Stage Function, `lambda_data_transformation` → Transformation Stage Function, `s3_raw_data` → Raw Landing Zone, `s3_processed_data` → Processed Data Bucket, `s3_data_lake` → Curated Data Lake (+6 more)
+**Contextual labels applied:** `lambda_function_data_ingestion` → Ingestion Lambda Function, `lambda_function_data_processing` → Processing Lambda Function, `lambda_function_data_transformation` → Transformation Lambda Function, `s3_bucket_data_sources` → External Source Data Bucket, `s3_bucket_raw_data` → Raw Data Landing Zone, `s3_bucket_processed_data` → Processed Data Bucket (+6 more)
 
 **Review notes**
-- [grouping] Catch-all 'Other' cluster mixes messaging (SNS/SQS), monitoring (log groups, event rule), and ETL; dedicated Messaging and Monitoring groups are needed
-- [edge-routing] Long blue edges traverse the full canvas (data lake to transformation Lambda; SNS to distant SQS), creating many crossings
-- [edge-routing] Red security edges overlap the Security group boundary and collide with node labels
-- [labeling] Truncated labels: 'Glue Catalog...', 'Sns Topic transformation...', 'Sqs Queue data transformation...', 'Cloudwatch Event...'
-- [layout] Pipeline reads bottom-up: storage sits mid-canvas and arrows point upward against the declared LR flow direction
+- [labeling] Multiple labels truncated with ellipses: 'Glue Catalog...', 'Sns Topic transformation...', 'Cloudwatch Event...', 'Sqs Queue data processing...'
+- [grouping] 'Other' is a catch-all cluster mixing messaging, observability, and ETL resources; split into Messaging and Monitoring groups
+- [edge-routing] Long blue edges (data lake → transformation Lambda, processed data → processing Lambda) traverse nearly the full canvas and cross group boundaries
+- [edge-routing] Dashed red security edges from IAM roles cross the Storage cluster, creating visual noise
+- [layout] Declared flowchart LR renders as a very tall portrait canvas with large empty regions in Compute and Storage clusters
 
 Feedback iterations: iter0: 5/10, iter1: 5/10, iter2: 5/10
 

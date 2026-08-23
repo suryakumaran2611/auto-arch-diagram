@@ -329,6 +329,26 @@ def main():
             'source': 'examples/serverless-website/oci/terraform/architecture-diagram.png',
             'dest': 'docs/images/oci-serverless.png',
             'desc': 'OCI Terraform Serverless Website image'
+        },
+        {
+            'source': 'examples/terraform/multi-tier-web-app/architecture-diagram.png',
+            'dest': 'docs/images/multi-tier-web-app.png',
+            'desc': 'Multi-Tier Web App image'
+        },
+        {
+            'source': 'examples/terraform/vpc-peering-multi-subnet/architecture-diagram.png',
+            'dest': 'docs/images/vpc-peering-multi-subnet.png',
+            'desc': 'VPC Peering Multi-Subnet image'
+        },
+        {
+            'source': 'examples/terraform/multi-region-active-passive/architecture-diagram.png',
+            'dest': 'docs/images/multi-region-active-passive.png',
+            'desc': 'Multi-Region Active Passive image'
+        },
+        {
+            'source': 'examples/terraform/serverless-events/architecture-diagram.png',
+            'dest': 'docs/images/serverless-events.png',
+            'desc': 'Serverless Events image'
         }
     ]
 
