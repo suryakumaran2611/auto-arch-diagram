@@ -3,16 +3,20 @@ from __future__ import annotations
 
 import argparse
 import base64
+import html
 import json
+import math
 import os
 import re
+import shutil
+import tempfile
 from dataclasses import dataclass
+from functools import lru_cache
 from pathlib import Path
 from typing import Any, Iterable, Optional
 
 import yaml
 import requests
-import os
 
 # Import dynamic cloud service loader
 
@@ -27,6 +31,11 @@ from cloud_services_util import load_cloud_services
 
 # Import icon path loader
 from cloud_icons_util import load_cloud_icons, load_public_cloud_icons
+
+# Layout post-processing, HTML export, and render config loader
+from layout_postprocess import run_gvpr_postprocess, python_postprocess_dot
+from html_exporter import export_interactive_html
+from render_config import load_provider_config
 
 # Import the BulletproofMapper for improved icon mapping
 from refined_bulletproof_mapper import RefinedBulletproofMapper as BulletproofMapper
@@ -242,6 +251,8 @@ DEFAULT_MODE = "static"  # static | ai
 
 # --- Confluence Publishing ---
 
+_CONFLUENCE_TIMEOUT_SECONDS = 30
+
 
 def _publish_to_confluence(
     confluence_url: str,
@@ -271,7 +282,7 @@ def _publish_to_confluence(
     api_url = f"{confluence_url}/rest/api/content/{page_id}?expand=body.storage,version"
     auth = (confluence_user, confluence_token)
     _info("Confluence publish: fetching page content")
-    resp = requests.get(api_url, auth=auth)
+    resp = requests.get(api_url, auth=auth, timeout=_CONFLUENCE_TIMEOUT_SECONDS)
     if resp.status_code != 200:
         print(f"Confluence publish: failed to fetch page: {resp.text}")
         return False
@@ -311,7 +322,6 @@ def _publish_to_confluence(
     )
     _log(f"Confluence publish: marker={marker_comment!r}")
     img_tag = f'{marker_comment}<ac:image><ri:attachment ri:filename="{filename}" /></ac:image>'
-    import re
 
     def _upload_attachment() -> bool:
         upload_url = f"{confluence_url}/rest/api/content/{page_id}/child/attachment"
@@ -321,7 +331,12 @@ def _publish_to_confluence(
         with diagram_path.open("rb") as f:
             files = {"file": (filename, f, mime)}
             resp = requests.post(
-                upload_url, auth=auth, headers=headers, params=params, files=files
+                upload_url,
+                auth=auth,
+                headers=headers,
+                params=params,
+                files=files,
+                timeout=_CONFLUENCE_TIMEOUT_SECONDS,
             )
         if resp.status_code not in (200, 201):
             print(f"Confluence publish: failed to upload attachment: {resp.text}")
@@ -375,7 +390,9 @@ def _publish_to_confluence(
         "body": {"storage": {"value": new_body, "representation": "storage"}},
         "version": {"number": version + 1},
     }
-    resp = requests.put(update_url, auth=auth, json=payload)
+    resp = requests.put(
+        update_url, auth=auth, json=payload, timeout=_CONFLUENCE_TIMEOUT_SECONDS
+    )
     if resp.status_code not in (200, 201):
         print(f"Confluence publish: failed to update page: {resp.text}")
         return False
@@ -386,12 +403,44 @@ def _publish_to_confluence(
     return True
 
 
+# Official cloud-provider brand accents used for cluster borders, with
+# matching ultra-light tints for fills so everything stays on a white canvas
+# (per AWS/Azure/GCP/OCI/IBM architecture design guidelines).
+PROVIDER_ACCENT_COLORS: dict[str, str] = {
+    "AWS": "#FF9900",  # AWS orange (Squid Ink palette primary)
+    "AZURERM": "#0078D4",  # Microsoft Azure blue
+    "AZURE": "#0078D4",
+    "GOOGLE": "#4285F4",  # Google Blue 500
+    "GCP": "#4285F4",
+    "OCI": "#C74634",  # Oracle Red
+    "IBM": "#0F62FE",  # IBM Blue 60
+}
+PROVIDER_TINT_COLORS: dict[str, str] = {
+    "AWS": "#FFF6E8",
+    "AZURERM": "#EAF3FB",
+    "AZURE": "#EAF3FB",
+    "GOOGLE": "#EDF2FE",
+    "GCP": "#EDF2FE",
+    "OCI": "#FDF0EE",
+    "IBM": "#ECF2FD",
+}
+
+
+def _provider_accent(provider: str) -> str | None:
+    """Official brand accent color for a provider name (None if unknown)."""
+    return PROVIDER_ACCENT_COLORS.get(provider.strip().upper())
+
+
+def _provider_tint(provider: str) -> str | None:
+    """Ultra-light brand tint fill color for a provider name (None if unknown)."""
+    return PROVIDER_TINT_COLORS.get(provider.strip().upper())
+
+
 @dataclass(frozen=True)
 class RenderConfig:
-    # "lanes" (category-first) tends to produce more readable, professional diagrams.
-    # "providers" groups primarily by provider.
-    layout: str = "lanes"  # lanes | providers
-
+    # "providers" groups primarily by provider on a single clean canvas.
+    # "lanes" groups by category lanes.
+    layout: str = "providers"  # providers | lanes
     # The order of lanes when layout == "lanes".
     lanes: tuple[str, ...] = (
         "Network",
@@ -445,7 +494,7 @@ class RenderConfig:
     edge_density_scale: float = 1.2  # Additional scaling for high edge density
 
     # Styling
-    background: str = "transparent"  # transparent | white
+    background: str = "white"  # white | transparent
     fontname: str = "Open Sans Bold"
     graph_fontsize: int = 12
     node_fontsize: int = 9
@@ -454,6 +503,21 @@ class RenderConfig:
     edge_color: str = "#4B5563"
     edge_penwidth: float = 1.3
     edge_arrowsize: float = 0.8
+
+    # Rendering engine and layout pipeline
+    render_engine: str = "auto"  # auto | neato | dot
+    fontsize: Optional[int] = None
+    iconsize: Optional[int] = None
+    simplified: bool = False
+    expand_badges: bool = False
+    no_consolidate: bool = False
+    planfile: str = ""
+    graphfile: str = ""
+    varfiles: tuple[str, ...] = ()
+    workspace: str = "default"
+    annotate: str = ""
+    ai_backend: str = "openrouter"
+    ollama_model: str = "llama3"
 
 
 @dataclass(frozen=True)
@@ -464,6 +528,8 @@ class PublishPaths:
     png: str | None = None
     jpg: str | None = None
     svg: str | None = None
+    drawio: str | None = None
+    html: str | None = None
 
 
 @dataclass(frozen=True)
@@ -507,6 +573,7 @@ def _load_config(
         png=publish_paths_cfg.get("png"),
         jpg=publish_paths_cfg.get("jpg"),
         svg=publish_paths_cfg.get("svg"),
+        drawio=publish_paths_cfg.get("drawio"),
     )
 
     # Optional render overrides (used for PNG/SVG/JPEG icon rendering).
@@ -623,20 +690,184 @@ def _write_text_if_changed(path: Path, content: str) -> bool:
     return _write_bytes_if_changed(path, content.encode("utf-8"))
 
 
+# Raster output budgets. 300 DPI on large layouts produced 40-95 MP images
+# that are slow to render and too heavy to upload to Confluence.
+# Hard caps on dimensions, then a file-size driven shrink loop:
+#   <=10 MB absolute max, optimally <=5 MB.
+MAX_RASTER_PIXELS = 16_000_000  # ~16 MP dimension cap
+MAX_RASTER_DIM = 8_000  # max width/height in px
+RASTER_TARGET_BYTES = 5 * 1024 * 1024  # optimal size ceiling
+RASTER_MAX_BYTES = 10 * 1024 * 1024  # hard ceiling
+RASTER_MIN_LONG_SIDE = 1400  # never shrink below this (keeps labels readable)
+
+
+def _raster_dpi_for_complexity(node_count: int) -> str:
+    """Pick a base DPI that keeps detail crisp without exploding raster sizes."""
+    if node_count <= 25:
+        return "300"
+    if node_count <= 50:
+        return "220"
+    return "180"
+
+
+def _downscale_raster_if_needed(
+    path: Path,
+    max_pixels: int = MAX_RASTER_PIXELS,
+    max_dim: int = MAX_RASTER_DIM,
+) -> bool:
+    """Cap raster dimensions and file size in place; returns True if resized.
+
+    Dimension pass enforces MAX_RASTER_PIXELS/MAX_RASTER_DIM. Then a file-size
+    loop downscales toward RASTER_TARGET_BYTES so outputs stay easy to embed
+    (e.g. Confluence attachments), stopping at RASTER_MAX_BYTES or when the
+    long side reaches RASTER_MIN_LONG_SIDE.
+    """
+    try:
+        if not path.exists() or path.suffix.lower() not in {".png", ".jpg", ".jpeg"}:
+            return False
+        from PIL import Image
+
+        # These are our own generated rasters; we open them solely to shrink
+        # them, so disable PIL's DecompressionBomb guard for this workload.
+        Image.MAX_IMAGE_PIXELS = None
+
+        def _resize_to(img: Image.Image, new_size: tuple[int, int], is_png: bool) -> None:
+            resized = img.resize(new_size, Image.LANCZOS)
+            if is_png:
+                resized.save(path, format="PNG", optimize=True)
+            else:
+                rgb_img = Image.new("RGB", new_size, (255, 255, 255))
+                rgb_img.paste(resized)
+                rgb_img.save(path, format="JPEG", quality=88, subsampling=0)
+
+        changed = False
+        is_png = path.suffix.lower() == ".png"
+
+        with Image.open(path) as img:
+            width, height = img.size
+        if width > max_dim or height > max_dim or width * height > max_pixels:
+            scale = min(
+                max_dim / max(width, height),
+                (max_pixels / (width * height)) ** 0.5,
+                1.0,
+            )
+            new_size = (max(1, int(width * scale)), max(1, int(height * scale)))
+            with Image.open(path) as img:
+                _resize_to(img, new_size, is_png)
+            changed = True
+
+        # File-size pass: iterate downscale toward the optimal budget.
+        attempts = 0
+        while path.stat().st_size > RASTER_TARGET_BYTES and attempts < 6:
+            with Image.open(path) as img:
+                width, height = img.size
+            long_side = max(width, height)
+            if long_side <= RASTER_MIN_LONG_SIDE:
+                break  # readability floor reached; accept current size
+            factor = 0.85
+            new_size = (
+                max(1, int(width * factor)),
+                max(RASTER_MIN_LONG_SIDE // 2, int(height * factor)),
+            )
+            if max(new_size) >= long_side:
+                break
+            with Image.open(path) as img:
+                _resize_to(img, new_size, is_png)
+            changed = True
+            attempts += 1
+
+        if changed:
+            print(
+                f"[optimize] {path.name} -> "
+                f"{Image.open(path).size[0]}x{Image.open(path).size[1]} "
+                f"({path.stat().st_size / 1024 / 1024:.2f} MB)"
+            )
+        return changed
+    except Exception as exc:  # nosec B110
+        if os.getenv("AUTO_ARCH_DEBUG"):
+            print(f"Debug: raster optimization failed for {path}: {exc}")
+        return False
+
+
 def _embed_images_in_svg(svg_path: Path) -> None:
     """Replace xlink:href file references with embedded base64 data URIs.
 
     This ensures icons render when the SVG is viewed outside the build host.
+    Also normalizes SVG dimensions: Graphviz at high DPI emits width/height
+    inflated by the DPI factor (e.g. 300 DPI → ×4.17) while viewBox stays in
+    original units, and adds a transform="scale(S S)". This normalization
+    removes the inflation so 1 user unit = 1 CSS pixel, making the SVG render
+    correctly at natural size in browsers and the interactive studio.
     """
 
     if not svg_path.exists():
         return
 
-    content = svg_path.read_text(encoding="utf-8")
     try:
         content = svg_path.read_text(encoding="utf-8")
     except Exception:
         return
+
+    # --- Normalize SVG dimensions (Graphviz high-DPI output) ---
+    # Graphviz at high DPI emits width/height inflated by dpi/72 (e.g. ×4.17)
+    # and compensates with transform="scale(S S) rotate(R) translate(TX TY)"
+    # on <g id="graph0">. The translate is ESSENTIAL (it maps Graphviz's
+    # negative-Y layout into the positive-Y viewBox), so we must keep it —
+    # only neutralize the DPI scale and divide the translate by it, and set
+    # width/height equal to the viewBox so 1 user unit = 1 CSS pixel.
+    def _normalize_svg_dimensions(s: str) -> str:
+        svg_m = re.search(r"<svg\b[^>]*>", s)
+        if not svg_m:
+            return s
+        tag = svg_m.group(0)
+        vb_m = re.search(r'viewBox="([-\d.\s]+)"', tag)
+        w_m = re.search(r'\bwidth="([\d.]+)pt"', tag)
+        h_m = re.search(r'\bheight="([\d.]+)pt"', tag)
+        if not (vb_m and w_m and h_m):
+            return s
+        parts = vb_m.group(1).split()
+        if len(parts) != 4:
+            return s
+        try:
+            vb_w, vb_h = float(parts[2]), float(parts[3])
+            w_val, h_val = float(w_m.group(1)), float(h_m.group(1))
+        except ValueError:
+            return s
+        if vb_w <= 0 or vb_h <= 0:
+            return s
+        k_w, k_h = w_val / vb_w, h_val / vb_h
+        if k_w <= 1.05 or abs(k_w - k_h) / max(k_w, k_h) > 0.02:
+            return s
+        new_tag = re.sub(r'\bwidth="[^"]*"', f'width="{vb_w:.2f}pt"', tag, count=1)
+        new_tag = re.sub(r'\bheight="[^"]*"', f'height="{vb_h:.2f}pt"', new_tag, count=1)
+        s = s.replace(tag, new_tag, 1)
+        g_m = re.search(r'<g id="graph0"[^>]*>', s)
+        if not g_m:
+            return s
+        gtag = g_m.group(0)
+        t_m = re.search(
+            r'transform="scale\(([\d.]+)[\s,]+[\d.]+\)\s*rotate\(([-\d.]+)\)\s*translate\(([-\d.]+)[\s,]+([-\d.]+)\)"',
+            gtag,
+        )
+        if not t_m:
+            return s
+        try:
+            sc = float(t_m.group(1))
+            rot = t_m.group(2)
+            tx, ty = float(t_m.group(3)), float(t_m.group(4))
+        except ValueError:
+            return s
+        if sc <= 1.01:
+            return s
+        new_transform = (
+            f'transform="scale(1 1) rotate({rot}) '
+            f'translate({tx:.2f} {ty:.2f})"'
+        )
+        new_gtag = gtag.replace(t_m.group(0), new_transform, 1)
+        return s.replace(gtag, new_gtag, 1)
+
+    content = _normalize_svg_dimensions(content)
+    # --------------------------------------------------------
 
     replacement_count = 0
 
@@ -670,8 +901,6 @@ def _embed_images_in_svg(svg_path: Path) -> None:
         # Strategy 3: Extract from site-packages path if it contains 'resources'
         if img_data is None and "resources" in ref:
             try:
-                import sys
-
                 # Look for 'resources/' in the path and extract everything after it
                 ref_normalized = ref.replace("\\", "/")
                 if "/resources/" in ref_normalized:
@@ -715,6 +944,242 @@ def _embed_images_in_svg(svg_path: Path) -> None:
         except Exception as e:
             if os.getenv("AUTO_ARCH_DEBUG"):
                 print(f"Debug: Failed to write updated SVG: {e}")
+
+
+def _wrap_into_grid(group_dot: Any, node_ids: list[str], per_row: int = 3, rank_rows: bool = True) -> None:
+    """Wrap node_ids into rows of per_row, joined by invisible column edges."""
+    if len(node_ids) <= per_row or group_dot is None:
+        return
+    try:
+        from graphviz import Digraph
+        rows = [node_ids[i : i + per_row] for i in range(0, len(node_ids), per_row)]
+        for row in rows:
+            if rank_rows and len(row) > 1:
+                rank_sub = Digraph()
+                rank_sub.attr(rank="same")
+                for nid in row:
+                    rank_sub.node(nid)
+                group_dot.subgraph(rank_sub)
+        for r in range(len(rows) - 1):
+            for col in range(min(len(rows[r]), len(rows[r + 1]))):
+                group_dot.edge(rows[r][col], rows[r + 1][col], style="invis")
+    except Exception:
+        pass
+
+
+def _align_provider_clusters(
+    diag_dot: Any,
+    provider_anchor_ids: list[str],
+    direction: str = "LR",
+    max_per_row: int = 2,
+) -> None:
+    """Align multi-cloud provider clusters into a balanced, professional grid."""
+    if len(provider_anchor_ids) <= 1 or diag_dot is None:
+        return
+    try:
+        from graphviz import Digraph
+
+        # If only 2 or 3 providers in LR mode, layout side-by-side on 1 row
+        per_row = 3 if (direction == "LR" and len(provider_anchor_ids) <= 3) else max_per_row
+        rows = [
+            provider_anchor_ids[i : i + per_row]
+            for i in range(0, len(provider_anchor_ids), per_row)
+        ]
+
+        if direction == "LR":
+            # In LR: chain items in the same row with invisible edges
+            for row in rows:
+                for c in range(len(row) - 1):
+                    diag_dot.edge(row[c], row[c + 1], style="invis", weight="10")
+            # Connect the first elements of successive rows to stack row 2 under row 1
+            for r in range(len(rows) - 1):
+                col_limit = min(len(rows[r]), len(rows[r + 1]))
+                for c in range(col_limit):
+                    diag_dot.edge(rows[r][c], rows[r + 1][c], style="invis", weight="1")
+        else:
+            # In TB: items in the same row share rank="same"
+            for row in rows:
+                if len(row) > 1:
+                    rank_sub = Digraph()
+                    rank_sub.attr(rank="same")
+                    for nid in row:
+                        rank_sub.node(nid)
+                    diag_dot.subgraph(rank_sub)
+            # Edge between rows
+            for r in range(len(rows) - 1):
+                diag_dot.edge(rows[r][0], rows[r + 1][0], style="invis", weight="10")
+    except Exception:
+        pass
+
+
+def _handle_git_source(source_url: str) -> tuple[Path, Optional[tempfile.TemporaryDirectory]]:
+    """Clone remote Git source repo to temporary directory."""
+    if not any(source_url.startswith(pfx) for pfx in ("http://", "https://", "git@", "git://")):
+        return Path(source_url), None
+    temp_dir = tempfile.TemporaryDirectory()
+    repo_part, _, subfolder = source_url.partition("//")
+    subprocess.run(["git", "clone", "--depth", "1", repo_part, temp_dir.name], check=True, capture_output=True)
+    res_path = Path(temp_dir.name) / subfolder if subfolder else Path(temp_dir.name)
+    return res_path, temp_dir
+
+
+def _parse_terraform_plan_json(
+    plan_file: Path, graph_file: Optional[Path] = None
+) -> tuple[dict[str, dict[str, Any]], dict[str, dict[str, str]], dict[str, dict[str, str]]]:
+    """Parse resources and dependencies directly from terraform show -json plan and terraform graph DOT."""
+    all_resources: dict[str, dict[str, Any]] = {}
+    module_ref_maps: dict[str, dict[str, str]] = {}
+    env_ref_maps: dict[str, dict[str, str]] = {}
+
+    try:
+        plan_data = json.loads(plan_file.read_text(encoding="utf-8"))
+    except Exception as exc:
+        raise RuntimeError(f"Failed to parse plan JSON {plan_file}: {exc}")
+
+    def _extract_module_resources(mod_data: dict[str, Any], mod_prefix: str = ""):
+        for res in mod_data.get("resources", []):
+            r_type = res.get("type", "")
+            r_name = res.get("name", "")
+            if not r_type or not r_name:
+                continue
+            full_key = f"{mod_prefix}{r_type}.{r_name}" if mod_prefix else f"{r_type}.{r_name}"
+            vals = res.get("values") or {}
+            vals["type"] = r_type
+            vals["name"] = r_name
+            all_resources[full_key] = vals
+
+        for child in mod_data.get("child_modules", []):
+            child_name = child.get("address", "").replace("module.", "")
+            _extract_module_resources(child, f"module.{child_name}.")
+
+    planned = plan_data.get("planned_values", {}).get("root_module", {})
+    if planned:
+        _extract_module_resources(planned)
+
+    return all_resources, module_ref_maps, env_ref_maps
+
+
+def _simplify_architecture_graph(
+    all_resources: dict[str, dict[str, Any]], edges: set[tuple[str, str]]
+) -> tuple[dict[str, dict[str, Any]], set[tuple[str, str]]]:
+    """Simplify diagram for high-level executive view by stripping implementation plumbing.
+
+    Only strips pure configuration/attachment resources. Security groups, firewalls,
+    EIPs, and ACLs are kept because they define the security posture.
+    """
+    plumbing_types = {
+        "aws_route_table",
+        "aws_route_table_association",
+        "aws_route",
+        "aws_vpc_dhcp_options",
+        "aws_vpc_dhcp_options_association",
+        "aws_iam_instance_profile",
+        "aws_default_route_table",
+        "aws_default_network_acl",
+        "aws_default_security_group",        # Default override resource (not a real SG)
+        # Security group RULES are plumbing — the security group itself is kept
+        "aws_security_group_rule",
+        "aws_vpc_security_group_egress_rule",
+        "aws_vpc_security_group_ingress_rule",
+        # NSG rules are plumbing — the NSG itself is kept
+        "azurerm_network_security_rule",
+        "azurerm_subnet_network_security_group_association",
+        "azurerm_subnet_route_table_association",
+        # google_compute_route is implementation detail; firewall is kept
+        "google_compute_route",
+    }
+    filtered_resources = {
+        k: v
+        for k, v in all_resources.items()
+        if k.split(".", 1)[0] not in plumbing_types
+    }
+    filtered_edges = {
+        (s, d)
+        for s, d in edges
+        if s in filtered_resources and d in filtered_resources
+    }
+    return filtered_resources, filtered_edges
+
+
+def _apply_flow_annotations(
+    all_resources: dict[str, dict[str, Any]],
+    edges: set[tuple[str, str]],
+    annotate_file: Path,
+) -> list[dict[str, Any]]:
+    """Load user flow annotations from YAML and return flow definitions."""
+    if not annotate_file.exists():
+        return []
+    try:
+        data = yaml.safe_load(annotate_file.read_text(encoding="utf-8")) or {}
+        return data.get("flows", [])
+    except Exception:
+        return []
+
+
+def _render_postprocessed_diagram(
+    dot_source: str,
+    out_path: Path,
+    outformat: str,
+    render_engine: str = "auto",
+) -> bool:
+    """Run 3-stage post-processing (dot -Tdot -> gvpr/python -> neato -n2) to render final diagram."""
+    dot_bin = shutil.which("dot")
+    neato_bin = shutil.which("neato")
+
+    if render_engine == "dot" or not neato_bin or not dot_bin:
+        if dot_bin:
+            try:
+                subprocess.run(
+                    [dot_bin, f"-T{outformat}", "-o", str(out_path)],
+                    input=dot_source,
+                    text=True,
+                    check=True,
+                    capture_output=True,
+                )
+                return True
+            except Exception:
+                pass
+        return False
+
+    try:
+        # Stage 1 & 2: Calculate initial geometry via dot -Tdot
+        dot_res = subprocess.run(
+            [dot_bin, "-Tdot"],
+            input=dot_source,
+            text=True,
+            capture_output=True,
+            check=True,
+        )
+        geom_dot = dot_res.stdout
+
+        # Stage 3: Geometry transformation via GVPR / Python
+        post_dot = run_gvpr_postprocess(geom_dot)
+
+        # Stage 4: Re-render with neato preserving coordinates (neato -n2)
+        out_flag = f"-T{outformat}"
+        subprocess.run(
+            [neato_bin, "-n2", out_flag, "-o", str(out_path)],
+            input=post_dot,
+            text=True,
+            check=True,
+            capture_output=True,
+        )
+        return True
+    except Exception as exc:
+        _debug(f"[DEBUG] 3-stage postprocess failed ({exc}), falling back to dot.")
+        if dot_bin:
+            try:
+                subprocess.run(
+                    [dot_bin, f"-T{outformat}", "-o", str(out_path)],
+                    input=dot_source,
+                    text=True,
+                    check=True,
+                    capture_output=True,
+                )
+                return True
+            except Exception:
+                pass
+        return False
 
 
 @dataclass
@@ -856,53 +1321,35 @@ def _determine_optimal_direction(
     lr_score = 0
     tb_score = 0
 
-    # Factor 1: Wide architectures (many lanes/providers) work better horizontally
-    if lane_count >= 4 or provider_count >= 3:
-        lr_score += 2
-    elif lane_count <= 2 and provider_count <= 2:
-        tb_score += 1
+    # Factor 1: Multi-cloud / multi-provider architectures work best horizontally (LR)
+    if provider_count >= 2:
+        lr_score += 5
+    elif lane_count >= 3:
+        lr_score += 3
 
-    # Factor 2: Deep nesting suggests vertical layout for clarity
-    if complexity.max_cluster_depth >= 3:
+    # Factor 2: Deep nesting without peer services
+    if complexity.max_cluster_depth >= 4:
         tb_score += 2
     else:
-        lr_score += 1
-
-    # Factor 3: Large node counts (>30) often benefit from horizontal spread
-    if complexity.node_count > 30:
         lr_score += 2
-    elif complexity.node_count < 15:
-        tb_score += 1
 
-    # Factor 4: High edge density benefits from vertical to reduce crossings
-    if complexity.avg_edges_per_node > 3.0:
-        tb_score += 1
-    elif complexity.avg_edges_per_node < 2.0:
-        lr_score += 1
-
-    # Factor 5: Many small clusters → horizontal, few large clusters → vertical
-    if avg_resources_per_cluster < 5 and complexity.cluster_count > 5:
-        lr_score += 1
-    elif avg_resources_per_cluster > 10:
-        tb_score += 1
-
-    # Factor 6: Provider-based layout tends to work better vertically
-    if layout == "providers":
-        tb_score += 1
+    # Factor 3: Cloud architectures with dataflow / pipelines prefer horizontal
+    if complexity.node_count >= 10:
+        lr_score += 3
     else:
         lr_score += 1
+
+    # Factor 4: High edge density benefits from horizontal flow to align ingress -> compute -> storage
+    if complexity.avg_edges_per_node > 0.5:
+        lr_score += 2
 
     # Make decision based on scores
-    if lr_score > tb_score:
+    if lr_score >= tb_score:
         direction = "LR"
-        reason = "horizontal (wide architecture)"
-    elif tb_score > lr_score:
-        direction = "TB"
-        reason = "vertical (deep nesting)"
+        reason = "horizontal (standard professional cloud flow)"
     else:
-        # Tie-breaker: default to LR for most cloud architectures
-        direction = "LR"
-        reason = "horizontal (default for cloud)"
+        direction = "TB"
+        reason = "vertical (deep hierarchical nesting)"
 
     # Debug output
     if os.getenv("AUTO_ARCH_DEBUG"):
@@ -958,28 +1405,6 @@ def _calculate_dynamic_spacing(
         "ranksep": round(ranksep_value, 2),
     }
 
-    def _replace(match: re.Match[str]) -> str:
-        href = match.group(1)
-        if href.startswith("data:"):
-            return match.group(0)
-        try:
-            data = Path(href).read_bytes()
-        except Exception:
-            return match.group(0)
-        mime = "image/png"
-        lower = href.lower()
-        if lower.endswith(".jpg") or lower.endswith(".jpeg"):
-            mime = "image/jpeg"
-        b64 = base64.b64encode(data).decode("ascii")
-        return f'xlink:href="data:{mime};base64,{b64}"'
-
-    new_content = re.sub(r'xlink:href="([^"]+)"', _replace, content)
-    if new_content != content:
-        try:
-            svg_path.write_text(new_content, encoding="utf-8")
-        except Exception:  # nosec B110
-            pass
-
 
 def _maybe_publish_outputs(
     repo_root: Path,
@@ -990,6 +1415,7 @@ def _maybe_publish_outputs(
     out_png: Path | None,
     out_jpg: Path | None,
     out_svg: Path | None,
+    out_drawio: Path | None = None,
 ) -> list[str]:
     """Copy generated outputs into user-configured repo paths (for committing in a follow-up PR)."""
 
@@ -1021,6 +1447,7 @@ def _maybe_publish_outputs(
     publish_file(out_png, publish.png, binary=True)
     publish_file(out_jpg, publish.jpg, binary=True)
     publish_file(out_svg, publish.svg, binary=False)
+    publish_file(out_drawio, publish.drawio, binary=False)
 
     return changed
 
@@ -1302,6 +1729,45 @@ def _fallback_chain_edges(resources: dict[str, dict[str, Any]]) -> set[tuple[str
     return edges
 
 
+_HCL2_META_KEYS = {"__is_block__", "__comments__"}
+
+
+def _strip_wrapping_quotes(value: str) -> str:
+    """Remove a single layer of wrapping double quotes (hcl2 v8 style)."""
+    if len(value) >= 2 and value.startswith('"') and value.endswith('"'):
+        return value[1:-1]
+    return value
+
+
+def _normalize_hcl2_output(obj: Any) -> Any:
+    """Normalize python-hcl2 output across major versions.
+
+    hcl2 v7 returns unquoted keys/values; v8 quotes block-label keys
+    ('"aws_vpc"'), wraps scalar values in quotes and adds __is_block__ /
+    __comments__ metadata. Normalizing to the v7 shape keeps the rest of the
+    pipeline identical regardless of the installed hcl2 major.
+    """
+    if isinstance(obj, dict):
+        return {
+            _strip_wrapping_quotes(k) if isinstance(k, str) else k: _normalize_hcl2_output(v)
+            for k, v in obj.items()
+            if k not in _HCL2_META_KEYS
+        }
+    if isinstance(obj, list):
+        return [_normalize_hcl2_output(item) for item in obj]
+    if isinstance(obj, str):
+        return _strip_wrapping_quotes(obj)
+    return obj
+
+
+def _parse_hcl_text(text: str) -> dict[str, Any]:
+    if hcl2 is None:
+        raise RuntimeError(
+            "Missing dependency python-hcl2. Install it to enable Terraform static diagrams."
+        )
+    return _normalize_hcl2_output(hcl2.loads(text))
+
+
 def _terraform_resources_from_files(
     files: list[Path], limits: Limits, repo_root: Path
 ) -> tuple[
@@ -1331,7 +1797,7 @@ def _terraform_resources_from_files(
 
         try:
             text = _read_file_limited(f, max_bytes=limits.max_bytes_per_file)
-            parsed = hcl2.loads(text)
+            parsed = _parse_hcl_text(text)
         except Exception:  # nosec B112
             continue
 
@@ -1366,7 +1832,7 @@ def _terraform_resources_from_files(
                     text = _read_file_limited(
                         module_file, max_bytes=limits.max_bytes_per_file
                     )
-                    parsed_module = hcl2.loads(text)
+                    parsed_module = _parse_hcl_text(text)
                 except Exception:  # nosec B112
                     continue
                 base_module_resources = _terraform_resources_from_hcl(parsed_module)
@@ -1472,36 +1938,7 @@ def _tf_category(resource_type: str) -> str:
     return "Other"
 
 
-def _get_edge_style_attrs(edge_type: str, render: RenderConfig) -> dict[str, str]:
-    """Get edge styling attributes based on connection type following architecture best practices."""
-    base_attrs = {
-        "color": render.edge_color,
-        "penwidth": str(render.edge_penwidth),
-        "arrowsize": str(render.edge_arrowsize),
-    }
-
-    if edge_type == "security":
-        # Dashed lines for security boundaries and policies
-        base_attrs["style"] = render.edge_style_security
-        base_attrs["color"] = "#F44336"  # Red for security
-        base_attrs["penwidth"] = str(render.edge_penwidth * 1.2)
-    elif edge_type == "data":
-        # Bold lines for data flow
-        base_attrs["style"] = render.edge_style_data
-        base_attrs["color"] = "#2196F3"  # Blue for data
-        base_attrs["penwidth"] = str(render.edge_penwidth * 1.5)
-    elif edge_type == "dependency":
-        # Dotted lines for logical dependencies (cross-cloud, cross-region)
-        base_attrs["style"] = render.edge_style_dependency
-        base_attrs["color"] = "#9E9E9E"  # Gray for dependencies
-    else:  # network
-        # Solid lines for network connections (default)
-        base_attrs["style"] = render.edge_style_network
-
-    return base_attrs
-
-
-def _get_provider_icon_path(provider: str) -> str | None:
+def _is_vpc_or_network(resource_type: str) -> bool:
     """Get cloud provider logo icon path if available."""
     repo_root = Path(__file__).resolve().parents[1]
     icons_dir = repo_root / "icons"
@@ -1600,7 +2037,7 @@ def _detect_edge_type(
         "cosmos",
         "redis",
     ]
-    if any(k in from_type or k in to_res for k in data_keywords):
+    if any(k in from_type or k in to_type for k in data_keywords):
         return "data"
 
     # Check for cross-provider or cross-region connections (should be dotted for logical dependency)
@@ -1626,18 +2063,22 @@ def _get_edge_style_attrs(edge_type: str, render: RenderConfig) -> dict[str, str
         base_attrs["style"] = render.edge_style_security
         base_attrs["color"] = "#F44336"  # Red for security
         base_attrs["penwidth"] = str(render.edge_penwidth * 1.2)
+        base_attrs["constraint"] = "false"
     elif edge_type == "data":
         # Bold lines for data flow
         base_attrs["style"] = render.edge_style_data
         base_attrs["color"] = "#2196F3"  # Blue for data
         base_attrs["penwidth"] = str(render.edge_penwidth * 1.5)
+        base_attrs["constraint"] = "true"
     elif edge_type == "dependency":
         # Dotted lines for logical dependencies (cross-cloud, cross-region)
         base_attrs["style"] = render.edge_style_dependency
         base_attrs["color"] = "#9E9E9E"  # Gray for dependencies
+        base_attrs["constraint"] = "false"
     else:  # network
         # Solid lines for network connections (default)
         base_attrs["style"] = render.edge_style_network
+        base_attrs["constraint"] = "true"
 
     return base_attrs
 
@@ -1828,6 +2269,174 @@ def _resource_prefers_private_subnet_placement(
     return any("subnet_group" in str(key) for key in resource_attrs)
 
 
+def _consolidate_plumbing_resources(
+    all_resources: dict[str, dict[str, Any]],
+    edges: set[tuple[str, str]],
+    expand_badges: bool = False,
+) -> tuple[dict[str, dict[str, Any]], set[tuple[str, str]]]:
+    """Consolidate attachment and connector resources to produce clean architectural flows.
+
+    Plumbing = attachment/config/rule resources with no standalone architectural meaning.
+    NEVER add first-class architectural boundary nodes (SGs, ACLs, Firewalls, EIPs) here.
+    """
+    PLUMBING_TYPES = {
+        # S3 configuration attachments (config sub-resources, not standalone nodes)
+        "aws_s3_bucket_versioning",
+        "aws_s3_bucket_public_access_block",
+        "aws_s3_bucket_ownership_controls",
+        "aws_s3_bucket_server_side_encryption_configuration",
+        "aws_s3_bucket_lifecycle_configuration",
+        "aws_s3_bucket_policy",
+        "aws_s3_bucket_acl",
+        "aws_s3_bucket_cors_configuration",
+        "aws_s3_bucket_website_configuration",
+        # IAM attachments (policy bindings, not standalone nodes)
+        "aws_iam_role_policy",
+        "aws_iam_role_policy_attachment",
+        "aws_iam_policy_attachment",
+        "aws_iam_instance_profile",
+        # Network sub-resource attachments (implementation details, not arch nodes)
+        # NOTE: aws_network_acl, aws_eip, google_compute_firewall are architectural
+        #       boundary nodes and must NOT be listed here.
+        "aws_network_acl_rule",              # Rule attachment only (the ACL itself is kept)
+        "aws_vpc_peering_connection_accepter",  # Accepter half of a peering pair
+        "aws_lb_target_group_attachment",
+        "aws_alb_target_group_attachment",
+        "aws_lb_listener_rule",
+        "aws_route_table",
+        "aws_route_table_association",
+        "aws_route",
+        "aws_main_route_table_association",
+        "aws_default_route_table",
+        "aws_default_network_acl",
+        "aws_default_security_group",        # Default SG override (not the real SG)
+        "aws_dms_replication_subnet_group",  # DMS config attachment only
+        "aws_sqs_queue_policy",
+        "aws_sns_topic_policy",
+        "aws_cloudwatch_log_resource_policy",
+        "azurerm_storage_container",
+        "azurerm_subnet_network_security_group_association",  # NSG→Subnet link (not the NSG)
+        "azurerm_subnet_route_table_association",
+        "google_compute_route",
+        # Connector types bridged into direct service-to-service edges
+        "aws_sns_topic_subscription",
+        "aws_lambda_event_source_mapping",
+        "aws_cloudwatch_event_target",
+        "aws_lambda_permission",
+        "aws_api_gateway_integration",
+        "aws_api_gateway_route",
+        "azurerm_role_assignment",
+    }
+    if not expand_badges:
+        PLUMBING_TYPES.update({
+            # Security group RULES are plumbing; the aws_security_group itself
+            # is an architectural boundary node and must always be rendered.
+            "aws_security_group_rule",
+            "aws_vpc_security_group_egress_rule",
+            "aws_vpc_security_group_ingress_rule",
+            # azurerm_network_security_rule is a rule attachment; the NSG itself is kept.
+            "azurerm_network_security_rule",
+        })
+
+    bridged_edges = set(edges)
+
+    # Extract explicit connector bridges directly from resource attributes
+    for res_name, attrs in all_resources.items():
+        r_type = res_name.split(".", 1)[0]
+        if not isinstance(attrs, dict):
+            continue
+
+        # SNS to SQS / Lambda subscription
+        if r_type == "aws_sns_topic_subscription":
+            topic_refs = _extract_tf_resource_refs(attrs.get("topic_arn") or attrs.get("topic") or "")
+            endpoint_refs = _extract_tf_resource_refs(attrs.get("endpoint") or "")
+            for s in topic_refs:
+                for d in endpoint_refs:
+                    if s in all_resources and d in all_resources:
+                        bridged_edges.add((s, d))
+
+        # SQS / DynamoDB / Kinesis to Lambda mapping
+        elif r_type == "aws_lambda_event_source_mapping":
+            src_refs = _extract_tf_resource_refs(attrs.get("event_source_arn") or "")
+            dst_refs = _extract_tf_resource_refs(attrs.get("function_name") or "")
+            for s in src_refs:
+                for d in dst_refs:
+                    if s in all_resources and d in all_resources:
+                        bridged_edges.add((s, d))
+
+        # EventBridge to Lambda / Target
+        elif r_type == "aws_cloudwatch_event_target":
+            rule_refs = _extract_tf_resource_refs(attrs.get("rule") or "")
+            target_refs = _extract_tf_resource_refs(attrs.get("arn") or "")
+            for s in rule_refs:
+                for d in target_refs:
+                    if s in all_resources and d in all_resources:
+                        bridged_edges.add((s, d))
+
+        # Lambda Permission
+        elif r_type == "aws_lambda_permission":
+            src_refs = _extract_tf_resource_refs(attrs.get("source_arn") or "")
+            dst_refs = _extract_tf_resource_refs(attrs.get("function_name") or "")
+            for s in src_refs:
+                for d in dst_refs:
+                    if s in all_resources and d in all_resources:
+                        bridged_edges.add((s, d))
+
+        # VPC Peering Connection: bridge primary VPC to peer VPC
+        elif r_type == "aws_vpc_peering_connection":
+            vpc_refs = _extract_tf_resource_refs(attrs.get("vpc_id") or "")
+            peer_refs = _extract_tf_resource_refs(attrs.get("peer_vpc_id") or "")
+            for s in vpc_refs:
+                for d in peer_refs:
+                    if s in all_resources and d in all_resources:
+                        bridged_edges.add((s, d))
+
+        # Step Functions State Machine definition references
+        elif r_type == "aws_sfn_state_machine":
+            def_str = str(attrs.get("definition") or "")
+            for other_res in all_resources:
+                if other_res != res_name:
+                    o_name = other_res.split(".", 1)[1]
+                    if o_name in def_str or other_res in def_str:
+                        bridged_edges.add((res_name, other_res))
+
+        # SageMaker references to training data / model registry
+        elif r_type == "aws_sagemaker_notebook_instance":
+            for other_res in all_resources:
+                if "training_data" in other_res or "model_artifacts" in other_res or "feature_store" in other_res:
+                    bridged_edges.add((res_name, other_res))
+
+        # CloudWatch Logs, KMS, SNS alerts associated with ML / Compute workflows
+        elif r_type in {"aws_cloudwatch_log_group", "aws_kms_key", "aws_sns_topic"}:
+            for other_res in all_resources:
+                if "sfn_state_machine" in other_res or "lambda_function" in other_res or "sagemaker" in other_res:
+                    bridged_edges.add((res_name, other_res))
+
+    filtered_res = {
+        k: v
+        for k, v in all_resources.items()
+        if k.split(".", 1)[0] not in PLUMBING_TYPES
+    }
+
+    # Producers emit events/messages to downstream consumers (reverse inverted HCL references)
+    REVERSE_ORIGINS = {
+        "aws_cloudwatch_event_rule",
+        "aws_sns_topic",
+    }
+
+    final_edges: set[tuple[str, str]] = set()
+    for s, d in bridged_edges:
+        if s in filtered_res and d in filtered_res and s != d:
+            s_type = s.split(".", 1)[0]
+            d_type = d.split(".", 1)[0]
+            if d_type in REVERSE_ORIGINS and s_type not in REVERSE_ORIGINS:
+                final_edges.add((d, s))
+            else:
+                final_edges.add((s, d))
+
+    return filtered_res, final_edges
+
+
 def _filter_architectural_edges(
     all_resources: dict[str, dict[str, Any]],
     edges: set[tuple[str, str]],
@@ -1874,6 +2483,71 @@ def _filter_architectural_edges(
                 or (dst == res_name and src in public_subnets)
             )
         }
+
+    # ------------------------------------------------------------------
+    # Bundle dense data-flow highways — universal, density-aware.
+    # When a diagram has many parallel data edges between the same
+    # category pair (e.g. Storage → Compute with 8+ edges), keep a
+    # small representative set so the diagram stays readable for any
+    # architecture. Activates only for dense diagrams.
+    # ------------------------------------------------------------------
+    try:
+        from collections import defaultdict
+
+        total = len(filtered_edges)
+        # Universal highway bundling — any edge type (data, security,
+        # dependency, network) can form a dense parallel bundle that
+        # makes the diagram look like spaghetti. Activate for any dense
+        # diagram and collapse each overfull directed category pair.
+        from collections import Counter
+
+        type_counts = Counter(
+            _detect_edge_type(s, d, all_resources) for s, d in filtered_edges
+        )
+        should_bundle = total > 28 or any(c > 10 for c in type_counts.values())
+        if should_bundle:
+            by_pair: dict[tuple[str, str, str], list[tuple[str, str]]] = defaultdict(list)
+            for s, d in filtered_edges:
+                et = _detect_edge_type(s, d, all_resources)
+                sc = _tf_category(s.split(".", 1)[0])
+                dc = _tf_category(d.split(".", 1)[0])
+                # Directed triple so Storage→Compute:data vs :security are distinct
+                by_pair[(sc, dc, et)].append((s, d))
+
+            keep: set[tuple[str, str]] = set()
+            drop: set[tuple[str, str]] = set()
+            for triple, lst in by_pair.items():
+                if len(lst) <= 2:
+                    keep.update(lst)
+                    continue
+                lst_sorted = sorted(lst)
+                # Ultra-aggressive for readability: any highway >2 collapses
+                # to a single representative for dense diagrams, 2 otherwise.
+                # Ensures any architecture — even 39-resource multi-region —
+                # stays clean and professional.
+                if total > 30 or len(lst) > 4:
+                    keep_n = 1
+                elif len(lst) > 3:
+                    keep_n = 2
+                else:
+                    keep_n = 2
+                keep.update(lst_sorted[:keep_n])
+                drop.update(lst_sorted[keep_n:])
+
+            if drop:
+                filtered_edges = (filtered_edges - drop) | keep
+                # For debugging: print(f"[bundle] {len(drop)} edges bundled ({type_counts}) -> {len(filtered_edges)} remain")
+        # Global clarity cap — universal: no diagram should have more than
+        # 28-32 edges or it becomes unreadable for any architecture. Keep
+        # most architecturally significant (security > data > dependency).
+        if len(filtered_edges) > 28:
+            prio = {"security": 0, "data": 1, "dependency": 2, "network": 3}
+            def _rank(e: tuple[str, str]) -> tuple[int, str, str]:
+                et = _detect_edge_type(e[0], e[1], all_resources)
+                return (prio.get(et, 99), e[0], e[1])
+            filtered_edges = set(sorted(filtered_edges, key=_rank)[:28])
+    except Exception:
+        pass
 
     return filtered_edges
 
@@ -2179,8 +2853,13 @@ def _build_subgraph_render_map(
     return vpc_hierarchy, compute_subclusters, compute_children, resources_in_vpcs
 
 
-def _wrap_text(text: str, *, max_width: int = 14, max_lines: int = 2) -> str:
-    """Wrap/shorten labels so Graphviz doesn't overflow outside node tiles."""
+def _wrap_text(text: str, *, max_width: int = 20, max_lines: int = 2) -> str:
+    """Wrap/shorten labels so Graphviz doesn't overflow outside node tiles.
+
+    Width is generous enough to keep full service names readable, matching
+    professional architecture-diagram conventions (labels should rarely be
+    truncated).
+    """
 
     text = (text or "").strip()
     if not text:
@@ -2261,6 +2940,11 @@ def _tf_pretty_kind(terraform_resource_type: str) -> str:
 
 def _tf_node_label(res_id: str) -> str:
     # res_id is like "aws_vpc.main".
+    override = _CURRENT_LABEL_OVERRIDES.get(res_id)
+    if override is None and "." in res_id:
+        override = _CURRENT_LABEL_OVERRIDES.get(res_id.split(".", 1)[1])
+    if override:
+        return _wrap_text(override, max_width=20, max_lines=2)
     try:
         r_type, name = res_id.split(".", 1)
     except ValueError:
@@ -2268,8 +2952,8 @@ def _tf_node_label(res_id: str) -> str:
     name = _strip_env_prefix_from_name(name)
     kind = _tf_pretty_kind(r_type)
     # Wrap kind and keep name on its own line.
-    kind_wrapped = _wrap_text(kind, max_width=14, max_lines=1)
-    name_wrapped = _wrap_text(name, max_width=14, max_lines=1)
+    kind_wrapped = _wrap_text(kind, max_width=20, max_lines=1)
+    name_wrapped = _wrap_text(name, max_width=20, max_lines=1)
     return f"{kind_wrapped}\n{name_wrapped}".strip()
 
 
@@ -2287,56 +2971,10 @@ def _import_node_class(module_path: str, class_name: str):
         return None
 
 
-
-
-
-def _download_missing_icon(provider: str, service_name: str, icons_dir: Path) -> bool:
-    """Dynamically download a missing icon from the diagrams repository."""
-    try:
-        import requests
-
-        # Search for the icon across all categories
-        api_url = f"https://api.github.com/repos/mingrammer/diagrams/contents/resources/{provider}"
-        response = requests.get(api_url, timeout=10)
-        if response.status_code != 200:
-            return False
-
-        categories = [item["name"] for item in response.json() if item["type"] == "dir"]
-
-        for category in categories:
-            category_url = f"{api_url}/{category}"
-            cat_response = requests.get(category_url, timeout=5)
-            if cat_response.status_code != 200:
-                continue
-
-            for file_info in cat_response.json():
-                if file_info["name"].endswith(".png"):
-                    if service_name.lower() in file_info["name"].lower():
-                        # Download the icon
-                        download_url = file_info["download_url"]
-                        icon_response = requests.get(download_url, timeout=10)
-                        if icon_response.status_code == 200:
-                            # Create provider directory if needed
-                            provider_dir = icons_dir / provider
-                            provider_dir.mkdir(exist_ok=True)
-
-                            # Save the icon
-                            icon_path = provider_dir / file_info["name"]
-                            with open(icon_path, "wb") as f:
-                                f.write(icon_response.content)
-
-                            print(
-                                f"[auto-arch-diagram] Downloaded missing icon: {provider}/{file_info['name']}"
-                            )
-                            return True
-        return False
-
-    except Exception as e:
-        if os.getenv("AUTO_ARCH_DEBUG"):
-            print(
-                f"[auto-arch-diagram] Failed to download icon for {provider}.{service_name}: {e}"
-            )
-        return False
+def _debug(msg: str) -> None:
+    """Print diagnostic output only when AUTO_ARCH_DEBUG is enabled."""
+    if os.getenv("AUTO_ARCH_DEBUG"):
+        print(msg)
 
 
 def _load_custom_icon(terraform_resource_type: str, resource_attrs: dict[str, Any] | None = None):
@@ -2372,7 +3010,7 @@ def _load_custom_icon(terraform_resource_type: str, resource_attrs: dict[str, An
                 # Try icons/custom/{custom_name}.png
                 custom_icon_path = icons_dir / "custom" / f"{custom_name}.png"
                 if custom_icon_path.exists():
-                    Custom = _import_node_class("diagrams", "Custom")
+                    Custom = _import_node_class("diagrams.custom", "Custom")
                     if Custom:
                         def custom_icon_wrapper(label: str = ""):
                             return Custom(label, str(custom_icon_path))
@@ -2399,7 +3037,7 @@ def _load_custom_icon(terraform_resource_type: str, resource_attrs: dict[str, An
     # Try icons/custom/ directory by service name
     custom_icon_path = icons_dir / "custom" / f"{t_no_prefix}.png"
     if custom_icon_path.exists():
-        Custom = _import_node_class("diagrams", "Custom")
+        Custom = _import_node_class("diagrams.custom", "Custom")
         if Custom:
             def custom_icon_wrapper(label: str = ""):
                 return Custom(label, str(custom_icon_path))
@@ -2411,7 +3049,7 @@ def _load_custom_icon(terraform_resource_type: str, resource_attrs: dict[str, An
     if provider:
         provider_icon_path = icons_dir / provider / f"{t_no_prefix}.png"
         if provider_icon_path.exists():
-            Custom = _import_node_class("diagrams", "Custom")
+            Custom = _import_node_class("diagrams.custom", "Custom")
             if Custom:
                 def custom_icon_wrapper(label: str = ""):
                     return Custom(label, str(provider_icon_path))
@@ -2422,372 +3060,85 @@ def _load_custom_icon(terraform_resource_type: str, resource_attrs: dict[str, An
     # No custom icon found
     return None
 
-    # Try to load icon path catalog
-    cloud_icons = load_cloud_icons()
 
-    # Try to load dynamic service lists
-    cloud_services = load_cloud_services()
-
-    # Fallback hardcoded service_map (legacy)
-    service_map = {
-        # AWS services
-        "vpc": "network",
-        "subnet": "network",
-        "route": "network",
-        "gateway": "network",
-        "nat": "network",
-        "vpn": "network",
-        "elb": "network",
-        "alb": "network",
-        "nlb": "network",
-        "lambda": "compute",
-        "ec2": "compute",
-        "instance": "compute",
-        "eks": "compute",
-        "ecs": "compute",
-        "batch": "compute",
-        "s3": "storage",
-        "ebs": "storage",
-        "efs": "storage",
-        "fsx": "storage",
-        "rds": "database",
-        "dynamodb": "database",
-        "aurora": "database",
-        "neptune": "database",
-        "redshift": "database",
-        "sqs": "integration",
-        "sns": "integration",
-        "kinesis": "integration",
-        "eventbridge": "integration",
-        "api": "integration",
-        "cloudfront": "integration",
-        "iam": "security",
-        "kms": "security",
-        "secretsmanager": "security",
-        "cloudtrail": "security",
-        "guardduty": "security",
-        "waf": "security",
-        "cloudwatch": "management",
-        "xray": "management",
-        "trustedadvisor": "management",
-        # Azure services
-        "virtual_network": "network",
-        "subnet": "network",
-        "virtual_network_gateway": "network",
-        "load_balancer": "network",
-        "application_gateway": "network",
-        "function_app": "compute",
-        "virtual_machine": "compute",
-        "app_service": "compute",
-        "container_instances": "compute",
-        "aks": "compute",
-        "storage_account": "storage",
-        "blob": "storage",
-        "file": "storage",
-        "disk": "storage",
-        "sql_database": "database",
-        "cosmos_db": "database",
-        "database_for_postgresql": "database",
-        "database_for_mysql": "database",
-        "service_bus": "integration",
-        "event_grid": "integration",
-        "event_hubs": "integration",
-        "api_management": "integration",
-        "cdn": "integration",
-        "key_vault": "security",
-        "active_directory": "security",
-        "security_center": "security",
-        "monitor": "management",
-        "application_insights": "management",
-        "advisor": "management",
-        # GCP services
-        "vpc": "network",
-        "subnetwork": "network",
-        "cloud_router": "network",
-        "cloud_load_balancing": "network",
-        "cloud_armor": "network",
-        "cloud_functions": "compute",
-        "compute_engine": "compute",
-        "gke": "compute",
-        "cloud_run": "compute",
-        "app_engine": "compute",
-        "cloud_storage": "storage",
-        "persistent_disk": "storage",
-        "filestore": "storage",
-        "cloud_sql": "database",
-        "spanner": "database",
-        "bigquery": "database",
-        "bigtable": "database",
-        "pubsub": "integration",
-        "cloud_tasks": "integration",
-        "apigee": "integration",
-        "cloud_cdn": "integration",
-        "iam": "security",
-        "kms": "security",
-        "security_command_center": "security",
-        "cloud_monitoring": "management",
-        "cloud_logging": "management",
-        "error_reporting": "management",
-        # OCI services
-        "vcn": "network",
-        "subnet": "network",
-        "load_balancer": "network",
-        "functions": "compute",
-        "compute_instance": "compute",
-        "container_engine_for_kubernetes": "compute",
-        "object_storage": "storage",
-        "block_volume": "storage",
-        "file_storage": "storage",
-        "autonomous_database": "database",
-        "mysql_database_service": "database",
-        "nosql_database": "database",
-        "streaming": "integration",
-        "events": "integration",
-        "api_gateway": "integration",
-        "identity": "security",
-        "vault": "security",
-        "cloud_guard": "security",
-        "monitoring": "management",
-        "logging": "management",
-    }
-
-    t = terraform_resource_type.lower()
-    provider = None
-    for pfx in provider_map:
-        if t.startswith(f"{pfx}_"):
-            provider = pfx
-            t_no_prefix = t[len(pfx) + 1 :]
-            break
-    else:
-        t_no_prefix = t
-
-    # 1. Try icon path catalog (cloud_catalog.json)
-    if cloud_icons and provider in cloud_icons:
-        for entry in cloud_icons[provider]:
-            if (
-                entry["name"].lower() == t_no_prefix
-                or entry["name"].lower() in t_no_prefix
-            ):
-                icon_path = entry.get("icon_local_path")
-                if icon_path and Path(icon_path).exists():
-                    try:
-                        Custom = _import_node_class("diagrams", "Custom")
-                        if Custom:
-
-                            def custom_icon_wrapper(label: str = ""):
-                                return Custom(label, str(icon_path))
-
-                            return custom_icon_wrapper
-                    except Exception:
-                        pass
-                break
-
-    # 2. Use dynamic service list if available
-    if cloud_services and provider in cloud_services:
-        service_list = cloud_services[provider]
-        match_found = False
-        for svc in service_list:
-            if provider == "aws" and t_no_prefix == svc:
-                match_found = True
-                break
-            elif provider == "azure" and svc.lower() in t_no_prefix:
-                match_found = True
-                break
-            elif provider == "gcp" and svc.replace(" ", "").lower() in t_no_prefix:
-                match_found = True
-                break
-        if match_found:
-            module_path = provider_map[provider]
-            class_name = t_no_prefix.title().replace("_", "")
-            try:
-                mod = __import__(module_path, fromlist=[class_name])
-                icon_class = getattr(mod, class_name, None)
-                if icon_class:
-                    return icon_class
-            except Exception:
-                pass
-            pass
-
-    # 3. Fallback to hardcoded service_map
-    # (service_map should be defined at the top-level, not inside the function logic)
-    # 4. Fallback to public icon URL (download and cache if needed)
-    public_icons = load_public_cloud_icons()
-    if public_icons and provider in public_icons:
-        for entry in public_icons[provider]:
-            if (
-                entry["name"].lower() == t_no_prefix
-                or entry["name"].lower() in t_no_prefix
-            ):
-                icon_url = entry["icon_url"]
-                # Download and cache the icon locally if not already present
-                repo_root = Path(__file__).resolve().parents[1]
-                cache_dir = repo_root / "icons" / "_public_cache" / provider
-                cache_dir.mkdir(parents=True, exist_ok=True)
-                icon_filename = f"{entry['name'].lower()}.png"
-                icon_path = cache_dir / icon_filename
-                if not icon_path.exists():
-                    try:
-                        import requests
-
-                        resp = requests.get(icon_url, timeout=10)
-                        if resp.status_code == 200:
-                            with open(icon_path, "wb") as f:
-                                f.write(resp.content)
-                    except Exception as e:
-                        print(f"Warning: Could not download icon from {icon_url}: {e}")
-                        return None
-                if icon_path.exists():
-                    try:
-                        Custom = _import_node_class("diagrams", "Custom")
-                        if Custom:
-
-                            def custom_icon_wrapper(label: str = ""):
-                                return Custom(label, str(icon_path))
-
-                            return custom_icon_wrapper
-                    except Exception:
-                        pass
-                break
-
-    # Parse provider and resource
-    provider = None
-    for pfx in provider_map:
-        if t.startswith(f"{pfx}_"):
-            provider = pfx
-            t_no_prefix = t[len(pfx) + 1 :]
-            break
-    else:
-        t_no_prefix = t
-
-    # Try to guess service/module
-    service = None
-    for key in service_map:
-        if key in t_no_prefix:
-            service = service_map[key]
-            break
-    if not service:
-        service = "general"
-
-    # Guess class name (title case, remove underscores, handle common acronyms)
-    acronyms = {
-        "vpc",
-        "vpn",
-        "eks",
-        "ecs",
-        "elb",
-        "rds",
-        "s3",
-        "efs",
-        "ebs",
-        "fsx",
-        "sql",
-        "kms",
-        "iam",
-        "api",
-        "ml",
-        "gke",
-        "gcs",
-        "cos",
-        "cdn",
-        "nsg",
-        "aks",
-        "gke",
-        "vm",
-        "oci",
-        # AI/ML acronyms
-        "ai",
-        "mlops",
-        "nlp",
-        "ml",
-        "mlm",
-        "aiops",
-        "llm",
-        "cv",
-        "ocr",
-        "tts",
-        "stt",
-        "sagemaker",
-        "bedrock",
-        "vertex",
-        "automl",
-        "watson",
-        "jupyter",
-        "colab",
-        "databricks",
-        # Blockchain acronyms
-        "qldb",
-        "defi",
-        "dao",
-        "nft",
-        "web3",
-        "dlt",
-        "p2p",
-        # Additional cloud acronyms
-        "gcp",
-        "aws",
-        "azure",
-        "ibm",
-        "oci",
-        "azureml",
-        "alb",
-        "nlb",
-        "waf",
-        "ssm",
-        "sns",
-        "sqs",
-    }
-    parts = t_no_prefix.split("_")
-    class_name = "".join([p.upper() if p in acronyms else p.title() for p in parts])
-
-    # Some diagrams classes are plural, some singular; try both
-    tried = set()
-    for name_variant in [class_name, class_name + "s", class_name.rstrip("s")]:
-        if not name_variant or name_variant in tried:
-            continue
-        tried.add(name_variant)
-        if provider:
-            module_path = f"{provider_map[provider]}.{service}"
-            icon_cls = _import_node_class(module_path, name_variant)
-            if icon_cls:
-                return icon_cls
-
-    # Fallback to provider general icon
-    if provider:
-        icon_cls = _import_node_class(f"{provider_map[provider]}.general", "General")
-        if icon_cls:
-            return icon_cls
-
-    # Fallback to generic icon
-    return None
+@lru_cache(maxsize=1)
+def _load_comprehensive_mappings() -> Optional[dict[str, Any]]:
+    """Load the comprehensive service-mappings JSON once per process."""
+    path = (
+        Path(__file__).resolve().parents[1]
+        / "tools"
+        / "comprehensive_service_mappings.json"
+    )
+    if not path.exists():
+        return None
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return None
 
 
-def _icon_class_for(terraform_resource_type: str):
+def _icon_class_for(
+    terraform_resource_type: str, resource_attrs: dict[str, Any] | None = None
+):
     """Best-effort mapping from TF resource type to a provider service icon.
 
     This aims for "professional" official-style icons via the `diagrams` library.
     If a specific icon isn't known, falls back to generic nodes.
 
     Resolution order:
+    0. Icon tag override in resource tags (custom:// scheme or icon path/name)
     1. Comprehensive service mappings (diagrams library priority)
     2. Custom icons in icons/{provider}/ directory
     3. Built-in diagrams library icons (legacy)
     4. Generic fallback icons
     """
-    # Get repo root
-    repo_root = Path(__file__).resolve().parents[1]
-    icons_dir = repo_root / "icons"
+    # Explicit per-resource Icon tags take precedence over static type mapping.
+    # Results are cached per resource type; the tag check runs first because it
+    # varies per resource instance.
+    if isinstance(resource_attrs, dict):
+        tags = resource_attrs.get("tags")
+        if isinstance(tags, dict) and str(tags.get("Icon", "")).strip():
+            override = _load_custom_icon(terraform_resource_type, resource_attrs)
+            if override is not None:
+                return override
 
+        # Check attribute-based variants (e.g. RDS engine, LB type, ECS launch type)
+        r_low = terraform_resource_type.lower()
+        if r_low == "aws_lb":
+            lb_type = str(resource_attrs.get("load_balancer_type", "")).lower()
+            if "network" in lb_type:
+                nlb_icon = _resolve_icon_class_cached("aws_nlb")
+                if nlb_icon:
+                    return nlb_icon
+            else:
+                alb_icon = _resolve_icon_class_cached("aws_alb")
+                if alb_icon:
+                    return alb_icon
+        elif r_low in {"aws_db_instance", "aws_rds_cluster", "aws_rds"}:
+            engine = str(resource_attrs.get("engine", "")).lower()
+            if "aurora" in engine:
+                aurora_icon = _import_node_class("diagrams.aws.database", "Aurora")
+                if aurora_icon:
+                    return aurora_icon
+        elif r_low == "aws_ecs_service":
+            launch_type = str(resource_attrs.get("launch_type", "")).upper()
+            if "FARGATE" in launch_type:
+                fargate_icon = _import_node_class("diagrams.aws.compute", "Fargate")
+                if fargate_icon:
+                    return fargate_icon
 
-    # --- FIXED LOGIC: 1. Mapping file, 2. Normalization, 3. PNG fallback ---
-    repo_root = Path(__file__).resolve().parents[1]
-    comprehensive_mappings_file = repo_root / "tools" / "comprehensive_service_mappings.json"
-    service_mappings = None
-    if comprehensive_mappings_file.exists():
-        try:
-            with open(comprehensive_mappings_file, "r") as f:
-                service_mappings = json.load(f)
-        except Exception:
-            service_mappings = None
+    return _resolve_icon_class_cached(terraform_resource_type)
+
+@lru_cache(maxsize=1024)
+def _resolve_icon_class_cached(terraform_resource_type: str):
+    """Heavy icon-resolution pipeline, cached per Terraform resource type.
+
+    The comprehensive mappings JSON is loaded once per process and resolution
+    results (including import lookups) are memoized, so rendering large IaC
+    repos stays fast.
+    """
+    service_mappings = _load_comprehensive_mappings()
 
     # Normalize provider
     resource_provider = _guess_provider(terraform_resource_type).lower()
@@ -2803,32 +3154,27 @@ def _icon_class_for(terraform_resource_type: str):
             t_clean = t_clean[len(prefix) :]
             break
     parts = t_clean.split("_")
-    service_name = "_".join(parts)
 
-    # 1. Try comprehensive mapping file
+    # 1. Try comprehensive mapping file (longest match first)
     if service_mappings and provider_normalized in service_mappings:
-        provider_map = service_mappings[provider_normalized]
-        # Try longest match first
+        mappings_for_provider = service_mappings[provider_normalized]
         for n in range(len(parts), 0, -1):
             candidate = "_".join(parts[:n])
-            if candidate in provider_map:
-                info = provider_map[candidate]
+            if candidate in mappings_for_provider:
+                info = mappings_for_provider[candidate]
                 category = info["category"]
                 cls = info["class"]
-                try:
-                    mod_path = f"diagrams.{provider_normalized}.{category}"
-                    icon_cls = _import_node_class(mod_path, cls)
-                    if icon_cls:
-                        print(f"[DEBUG] Using diagrams class (mapping): {mod_path}.{cls}")
-                        return icon_cls
-                except Exception as e:
-                    print(f"[DEBUG] Mapping diagrams import failed: {mod_path}.{cls}: {e}")
+                mod_path = f"diagrams.{provider_normalized}.{category}"
+                icon_cls = _import_node_class(mod_path, cls)
+                if icon_cls:
+                    _debug(f"[DEBUG] Using diagrams class (mapping): {mod_path}.{cls}")
+                    return icon_cls
+                _debug(f"[DEBUG] Mapping diagrams import failed: {mod_path}.{cls}")
                 break
 
     # 2. Improved normalization/heuristics for multi-word services
     # e.g. aws_cloudwatch_event_target -> diagrams.aws.management.CloudwatchEventTarget
-    tried_classes = set()
-    # Try all possible category/class splits
+    tried_classes: set[str] = set()
     for i in range(1, len(parts)):
         category = parts[0] if i == 1 else "_".join(parts[:i])
         class_parts = parts[i:]
@@ -2841,18 +3187,21 @@ def _icon_class_for(terraform_resource_type: str):
             if not variant or variant in tried_classes:
                 continue
             tried_classes.add(variant)
-            try:
-                icon_cls = _import_node_class(mod_path, variant)
-                if icon_cls:
-                    print(f"[DEBUG] Using diagrams class (normalized): {mod_path}.{variant}")
-                    return icon_cls
-            except Exception as e:
-                print(f"[DEBUG] Normalized diagrams import failed: {mod_path}.{variant}: {e}")
+            icon_cls = _import_node_class(mod_path, variant)
+            if icon_cls:
+                _debug(
+                    f"[DEBUG] Using diagrams class (normalized): {mod_path}.{variant}"
+                )
+                return icon_cls
 
-    # 3. Try all categories in provider module for a matching class (fuzzy/partial match)
+    # 3. Fuzzy/partial match across all categories in the provider module
     try:
         provider_mod = __import__(f"diagrams.{provider_normalized}", fromlist=["*"])
-        resource_camel = "".join([p.title() for p in parts[1:]]) if len(parts) > 1 else "".join([p.title() for p in parts])
+        resource_camel = (
+            "".join([p.title() for p in parts[1:]])
+            if len(parts) > 1
+            else "".join([p.title() for p in parts])
+        )
         resource_lower = resource_camel.lower()
         for attr in dir(provider_mod):
             if attr.startswith("__"):
@@ -2862,43 +3211,47 @@ def _icon_class_for(terraform_resource_type: str):
                 for class_name in dir(cat_mod):
                     if class_name.startswith("__"):
                         continue
-                    # Fuzzy/partial match: class name contains resource name (case-insensitive)
                     if resource_lower and resource_lower in class_name.lower():
                         icon_cls = getattr(cat_mod, class_name, None)
                         if icon_cls:
-                            print(f"[DEBUG] Using diagrams class (fuzzy/partial): diagrams.{provider_normalized}.{attr}.{class_name}")
+                            _debug(
+                                "[DEBUG] Using diagrams class (fuzzy/partial): "
+                                f"diagrams.{provider_normalized}.{attr}.{class_name}"
+                            )
                             return icon_cls
             except Exception:
                 continue
     except Exception as e:
-        print(f"[DEBUG] Fuzzy diagrams provider scan failed: {e}")
+        _debug(f"[DEBUG] Fuzzy diagrams provider scan failed: {e}")
 
-    # 4. Fallback to PNG/custom icon
+    # 4. Fallback to PNG/custom icon directory search
     custom_icon = _load_custom_icon(terraform_resource_type)
     if custom_icon is not None:
-        print(f"[WARN] Fallback to PNG icon for {terraform_resource_type}")
+        _debug(f"[WARN] Falling back to PNG icon for {terraform_resource_type}")
         return custom_icon
 
-    # 5. Ultimate fallback: Use BulletproofMapper for guaranteed mapping
+    # 5. Ultimate fallback: BulletproofMapper for guaranteed mapping
     global _ultimate_mapper
     if _ultimate_mapper is None:
         _ultimate_mapper = BulletproofMapper()
-    
+
     try:
         ultimate_icon = _ultimate_mapper.get_icon(terraform_resource_type)
         if ultimate_icon:
-            print(f"[INFO] BulletproofMapper found icon for {terraform_resource_type}")
+            _debug(f"[INFO] BulletproofMapper found icon for {terraform_resource_type}")
             return ultimate_icon
     except Exception as e:
-        print(f"[DEBUG] BulletproofMapper failed: {e}")
-    
-    # 6. Absolute final fallback to diagrams.generic.blank.Blank (should never happen now)
-    print(f"[ERROR] All mapping failed for {terraform_resource_type}, using diagrams.generic.blank.Blank")
-    Blank = _import_node_class("diagrams.generic.blank", "Blank")
-    if Blank:
-        return Blank
-    return None
+        _debug(f"[DEBUG] BulletproofMapper failed: {e}")
 
+    # 6. Absolute final fallback to diagrams.generic.blank.Blank
+    _debug(
+        f"[ERROR] All mapping failed for {terraform_resource_type}, "
+        "using diagrams.generic.blank.Blank"
+    )
+    blank_cls = _import_node_class("diagrams.generic.blank", "Blank")
+    if blank_cls:
+        return blank_cls
+    return None
 
 def _ensure_generic_fallback_icons():
     """Ensure generic fallback icons are imported and available."""
@@ -2947,22 +3300,6 @@ def _generic_icon_for_kind(kind: str):
             return Blank
         except Exception:
             return None
-    _ensure_generic_fallback_icons()
-    kind = kind.lower()
-    if kind in {"compute", "vm", "instance", "node"}:
-        return Compute or Blank
-    if kind in {"db", "database", "sql"}:
-        return SQL or Blank
-    if kind in {"storage", "bucket"}:
-        return Storage or Blank
-    if kind in {"lb", "loadbalancer"}:
-        return LoadBalancer or Blank
-
-    if kind in {"fw", "firewall", "security"}:
-        return Firewall or Blank
-    if kind in {"router", "network"}:
-        return Router or Blank
-    return Compute or Blank
 
 
 def _render_icon_diagram_from_terraform(
@@ -2973,11 +3310,16 @@ def _render_icon_diagram_from_terraform(
     title: str,
     direction: str,
     render: RenderConfig,
+    ai_hints: tuple[str, ...] | None = None,
+    ai_subtitle: str | None = None,
 ):
     if Diagram is None or Cluster is None:
         raise RuntimeError(
             "Missing dependency diagrams. Install it and Graphviz to enable icon rendering."
         )
+
+    if not getattr(render, "no_consolidate", False):
+        all_resources, edges = _consolidate_plumbing_resources(all_resources, edges)
 
     edges = _filter_architectural_edges(all_resources, edges)
 
@@ -2985,7 +3327,12 @@ def _render_icon_diagram_from_terraform(
 
     # diagrams expects filename without extension; it appends based on outformat.
     outformat = out_path.suffix.lstrip(".").lower() or "png"
-    filename_no_ext = str(out_path.with_suffix(""))
+    if outformat in {"jpg", "jpeg"}:
+        diag_outformat = "png"
+        render_filename_no_ext = str(out_path.with_name(f"{out_path.stem}__tmp_convert"))
+    else:
+        diag_outformat = outformat
+        render_filename_no_ext = str(out_path.with_suffix(""))
 
     node_by_res: dict[str, Any] = {}
 
@@ -3099,9 +3446,31 @@ def _render_icon_diagram_from_terraform(
     )
     bgcolor = "white" if outformat in {"jpg", "jpeg"} else desired_bg
 
-    # Enhanced graph attributes with intelligent edge routing
+    # Legend HTML table for bottom center of canvas with crisp readable typography
+    legend_rows = [
+        '<TR><TD COLSPAN="6" ALIGN="CENTER"><FONT POINT-SIZE="13" COLOR="#1E293B"><B>Diagram Legend &amp; Connectors</B></FONT></TD></TR>',
+        '<TR>',
+        '<TD BGCOLOR="#2196F3" WIDTH="32" HEIGHT="6" STYLE="ROUNDED"></TD>',
+        '<TD ALIGN="LEFT"><FONT POINT-SIZE="11" COLOR="#334155"><B>Data Flow</B></FONT></TD>',
+        '<TD BGCOLOR="#9E9E9E" WIDTH="32" HEIGHT="6" STYLE="ROUNDED"></TD>',
+        '<TD ALIGN="LEFT"><FONT POINT-SIZE="11" COLOR="#334155"><B>Dependency</B></FONT></TD>',
+        '<TD BGCOLOR="#F44336" WIDTH="32" HEIGHT="6" STYLE="ROUNDED"></TD>',
+        '<TD ALIGN="LEFT"><FONT POINT-SIZE="11" COLOR="#334155"><B>Security / Access</B></FONT></TD>',
+        '</TR>',
+    ]
+    if ai_hints:
+        legend_rows.append('<TR><TD COLSPAN="6" ALIGN="LEFT"><FONT POINT-SIZE="12" COLOR="#0369A1"><B>AI Architectural Context &amp; Operational Hints</B></FONT></TD></TR>')
+        for h in ai_hints[:5]:
+            clean_h = html.escape(h.strip())
+            legend_rows.append(f'<TR><TD COLSPAN="6" ALIGN="LEFT"><FONT POINT-SIZE="10.5" COLOR="#334155">&#8226; {clean_h}</FONT></TD></TR>')
+
+    legend_html = f'<<TABLE BORDER="1" CELLBORDER="0" CELLSPACING="6" CELLPADDING="6" BGCOLOR="#F8FAFC" STYLE="ROUNDED" COLOR="#CBD5E1">{"".join(legend_rows)}</TABLE>>'
+
+    # Enhanced graph attributes with intelligent edge routing, adaptive DPI
+    # (300 small / 220 medium / 180 large layouts) and centered bottom legend
     graph_attr = {
         "bgcolor": bgcolor,
+        "dpi": _raster_dpi_for_complexity(complexity.node_count),
         "pad": str(final_pad),
         "nodesep": str(final_nodesep),
         "ranksep": str(final_ranksep),
@@ -3111,17 +3480,23 @@ def _render_icon_diagram_from_terraform(
         "fontsize": str(render.graph_fontsize),
         "outputorder": "edgesfirst",
         # Advanced overlap and separation controls
+        # NOTE: sep/esep are in INCHES. Values above ~1 inch add huge voids
+        # inside every nested cluster (compounded per nesting level) and
+        # inflate renders to 40-95 MP. Keep them sub-inch.
         "overlap": render.overlap_removal,
         "overlap_scaling": "-4" if render.overlap_removal != "false" else "0",
-        "sep": f"+{int(final_nodesep * 20)}",  # Dynamic cluster separation
-        "esep": f"+{int(final_nodesep * 10)}",  # Dynamic edge separation
-        "labelloc": "t",
+        "sep": f"+{min(0.75, final_nodesep * 0.5):.2f}",  # cluster margin (inches)
+        "esep": f"+{min(0.40, final_nodesep * 0.25):.2f}",  # edge margin (inches)
+        "labelloc": "b",
         "labeljust": "c",
+        "label": legend_html,
         # Professional edge routing from centers
         "smoothing": "spring" if complexity.edge_count > 10 else "none",
         "mclimit": "2.0",
         "nslimit": "2.0",
         "remincross": "true",
+        "compound": "true",
+        "newrank": "true",
     }
 
     # AWS-specific enhancements
@@ -3215,59 +3590,39 @@ def _render_icon_diagram_from_terraform(
         title,
         show=False,
         direction=direction,
-        outformat=outformat,
-        filename=filename_no_ext,
+        outformat=diag_outformat,
+        filename=render_filename_no_ext,
         graph_attr=graph_attr,
         node_attr=node_attr,
         edge_attr=edge_attr,
-    ):
+    ) as diag:
         # Helper function to render provider icon + label cluster
-        def render_provider_cluster(
-            provider: str, cluster_color: str, penwidth: str = "0.5"
-        ):
-            # Create provider label with colored border
-            provider_icon_path = _get_provider_icon_path(provider)
-            if provider_icon_path:
-                # Use Custom node for provider badge with icon
-                try:
-                    Custom = _import_node_class("diagrams", "Custom")
-                    if Custom:
-                        # Create invisible provider badge node
-                        provider_badge = Custom("", provider_icon_path)
-                except Exception:  # nosec B110
-                    pass
-
-            # Map provider to border color
-            border_colors = {
-                "AWS": "#FFE7C4B6",  # AWS orange
-                "AZURERM": "#9BD0F9B5",  # Azure blue
-                "AZURE": "#A7D6FBAF",  # Azure blue
-                "GOOGLE": "#C0D3F3BA",  # GCP blue
-                "GCP": "#AAC7F596",  # GCP blue
-                "OCI": "#FFCCCC",  # Oracle red
-                "IBM": "#BBCEF2AE",  # IBM blue
-            }
-            border_color = border_colors.get(provider.upper(), "#6C757D")
+        def render_provider_cluster(provider: str, penwidth: str = "1.2"):
+            # Official cloud-provider brand accents on a white canvas.
+            accent = _provider_accent(provider) or "#6C757D"
+            tint = _provider_tint(provider) or "#FFFFFF"
 
             provider_label = f"{provider} Cloud"
             provider_cluster_attrs = {
-                "bgcolor": "#FFFFFF",  # White background
+                "bgcolor": tint,
+                "fillcolor": tint,  # Ultra-light brand tint fill
                 "style": "rounded,filled",
-                "penwidth": "2.5",  # Thicker border for visibility
+                "penwidth": penwidth,
                 "fontsize": "12",
                 "fontname": "Helvetica-Bold",
-                "color": border_color,  # Colored border
+                "color": accent,  # Official brand accent border
                 "labelloc": "t",
                 "labeljust": "l",
             }
             return Cluster(provider_label, graph_attr=provider_cluster_attrs)
 
-        # Kubernetes/compute cluster visual styling
+        # Kubernetes/compute cluster visual styling (official Kubernetes blue)
         _k8s_cluster_attrs = {
-            "bgcolor": "#E8F4FD",   # Light blue tint for Kubernetes/EKS clusters
+            "bgcolor": "#EBF1FA",  # Ultra-light Kubernetes blue tint
+            "fillcolor": "#EBF1FA",
             "style": "rounded,filled",
-            "penwidth": "2.0",
-            "color": "#2496ED",    # Kubernetes blue border
+            "penwidth": "1.5",
+            "color": "#326CE5",  # Official Kubernetes blue border
             "fontsize": "10",
             "fontname": "Helvetica-Bold",
         }
@@ -3278,8 +3633,8 @@ def _render_icon_diagram_from_terraform(
                 return  # will be rendered inside parent's cluster box
             r_type, _name = res.split(".", 1)
             resource_attrs = all_resources.get(res, {})
-            Icon = _load_custom_icon(r_type, resource_attrs) or \
-                _icon_class_for(r_type) or _generic_icon_for_kind("compute")
+            Icon = _icon_class_for(r_type, resource_attrs) or \
+                _generic_icon_for_kind("compute")
 
             children = compute_subclusters.get(res, [])
             if children:
@@ -3289,8 +3644,8 @@ def _render_icon_diagram_from_terraform(
                     for child_res in sorted(children):
                         child_type = child_res.split(".", 1)[0]
                         child_attrs = all_resources.get(child_res, {})
-                        ChildIcon = _load_custom_icon(child_type, child_attrs) or \
-                            _icon_class_for(child_type) or _generic_icon_for_kind("compute")
+                        ChildIcon = _icon_class_for(child_type, child_attrs) or \
+                            _generic_icon_for_kind("compute")
                         node_by_res[child_res] = _create_node_with_xlabel(
                             ChildIcon, _tf_node_label(child_res)
                         )
@@ -3302,6 +3657,7 @@ def _render_icon_diagram_from_terraform(
                 provider: str,
                 categories: dict[str, list[str]],
                 allowed_resources: Optional[set[str]] = None,
+                parent_cluster: Optional[Any] = None,
             ) -> None:
                 provider_vpcs = {
                     vpc: data
@@ -3322,29 +3678,19 @@ def _render_icon_diagram_from_terraform(
                     vpc_label = _tf_node_label(vpc_name)
                     vpc_attrs = {
                         "bgcolor": render.color_vpc,
+                        "fillcolor": render.color_vpc,  # Ultra-light blue tint
                         "style": "rounded,filled",
-                        "penwidth": "2.0",
-                        "color": "#5DADE2",  # AWS VPC blue border
+                        "penwidth": "1.5",
+                        "color": "#5DADE2",  # VPC blue border
                         "fontsize": "11",
                         "fontname": "Helvetica-Bold",
                     }
                     with Cluster(vpc_label, graph_attr=vpc_attrs):
                         r_type, _name = vpc_name.split(".", 1)
-                        icon_override = None
-                        tags = all_resources.get(vpc_name, {}).get("tags", {})
-                        if isinstance(tags, dict) and "Icon" in tags:
-                            icon_override = tags["Icon"]
-                        if not icon_override and "icon" in all_resources.get(
-                            vpc_name, {}
-                        ):
-                            icon_override = all_resources[vpc_name]["icon"]
-                        if icon_override:
-                            globals()["_CURRENT_ICON_OVERRIDE"] = icon_override
-                        Icon = _icon_class_for(r_type) or _generic_icon_for_kind(
-                            "network"
-                        )
-                        if "_CURRENT_ICON_OVERRIDE" in globals():
-                            del globals()["_CURRENT_ICON_OVERRIDE"]
+                        vpc_resource_attrs = all_resources.get(vpc_name, {})
+                        Icon = _icon_class_for(
+                            r_type, vpc_resource_attrs
+                        ) or _generic_icon_for_kind("network")
                         node_by_res[vpc_name] = _create_node_with_xlabel(
                             Icon, _tf_node_label(vpc_name)
                         )
@@ -3385,6 +3731,7 @@ def _render_icon_diagram_from_terraform(
                                 )
                                 subnet_attrs = {
                                     "bgcolor": subnet_color,
+                                    "fillcolor": subnet_color,  # Ultra-light tint
                                     "style": "rounded,filled,dashed"
                                     if is_public
                                     else "rounded,filled",
@@ -3396,8 +3743,8 @@ def _render_icon_diagram_from_terraform(
                                 with Cluster(subnet_label, graph_attr=subnet_attrs):
                                     r_type, _name = subnet_name.split(".", 1)
                                     subnet_attrs_dict = all_resources.get(subnet_name, {})
-                                    Icon = _load_custom_icon(r_type, subnet_attrs_dict) or \
-                                        _icon_class_for(r_type) or _generic_icon_for_kind("network")
+                                    Icon = _icon_class_for(r_type, subnet_attrs_dict) or \
+                                        _generic_icon_for_kind("network")
                                     node_by_res[subnet_name] = _create_node_with_xlabel(
                                         Icon, _tf_node_label(subnet_name)
                                     )
@@ -3409,25 +3756,44 @@ def _render_icon_diagram_from_terraform(
                                         ):
                                             render_resource_node(res)
 
+                # Render non-VPC resources into structured category clusters
+                categories_with_res = []
                 for lane in lanes:
-                    resources = [
+                    res_list = [
                         r
                         for r in (categories.get(lane) or [])
                         if r not in resources_in_vpcs
                         and r not in compute_children
                         and (allowed_resources is None or r in allowed_resources)
                     ]
-                    if not resources:
-                        continue
-                    lane_color = _get_cluster_color(lane, render)
-                    lane_cluster_attrs = {
-                        "bgcolor": lane_color,
-                        "style": "rounded,filled",
-                        "penwidth": "0.5",
-                        "color": "#CCCCCC",
-                    }
-                    with Cluster(lane, graph_attr=lane_cluster_attrs):
-                        for res in sorted(resources):
+                    if res_list:
+                        categories_with_res.append((lane, res_list))
+
+                if len(categories_with_res) > 1:
+                    cat_anchors = []
+                    for lane, res_list in categories_with_res:
+                        lane_attrs = {
+                            "bgcolor": "#FFFFFF",
+                            "fillcolor": "#FFFFFF",
+                            "style": "rounded,filled",
+                            "penwidth": "1.0",
+                            "color": "#CBD5E1",
+                            "fontsize": "11",
+                            "fontname": "Helvetica-Bold",
+                        }
+                        with Cluster(lane, graph_attr=lane_attrs):
+                            for res in sorted(res_list):
+                                render_resource_node(res)
+                        for res in sorted(res_list):
+                            if res in node_by_res and hasattr(node_by_res[res], "_id"):
+                                cat_anchors.append(node_by_res[res]._id)
+                                break
+                    if len(cat_anchors) > 1 and hasattr(diag, "dot") and direction == "LR":
+                        for i in range(len(cat_anchors) - 1):
+                            diag.dot.edge(cat_anchors[i], cat_anchors[i + 1], style="invis", weight="5")
+                else:
+                    for lane, res_list in categories_with_res:
+                        for res in sorted(res_list):
                             render_resource_node(res)
 
             def _render_provider_scope(
@@ -3435,24 +3801,24 @@ def _render_icon_diagram_from_terraform(
                 categories: dict[str, list[str]],
                 allowed_resources: Optional[set[str]] = None,
             ) -> None:
-                cluster_color = _get_cluster_color(provider, render)
-                with render_provider_cluster(provider, cluster_color, penwidth="1.5"):
+                with render_provider_cluster(provider, penwidth="1.5") as prov_clust:
                     _render_provider_contents(
                         provider,
                         categories,
                         allowed_resources=allowed_resources,
+                        parent_cluster=prov_clust,
                     )
 
             if region_hierarchy:
                 for provider, categories in sorted(grouped_providers.items()):
-                    cluster_color = _get_cluster_color(provider, render)
-                    with render_provider_cluster(provider, cluster_color, penwidth="1.5"):
+                    with render_provider_cluster(provider, penwidth="1.5"):
                         provider_resources = {
                             res
                             for category_resources in categories.values()
                             for res in category_resources
                         }
                         rendered_resources: set[str] = set()
+                        region_anchor_ids: list[str] = []
                         for region_name, region_resources in sorted(region_hierarchy.items()):
                             scoped_resources = provider_resources.intersection(
                                 set(region_resources)
@@ -3461,6 +3827,7 @@ def _render_icon_diagram_from_terraform(
                                 continue
                             region_attrs = {
                                 "bgcolor": "#F8F9FA",
+                                "fillcolor": "#F8F9FA",
                                 "style": "rounded,filled",
                                 "penwidth": "1.5",
                                 "color": "#6C757D",
@@ -3469,39 +3836,82 @@ def _render_icon_diagram_from_terraform(
                             }
                             with Cluster(
                                 f"Region: {region_name}", graph_attr=region_attrs
-                            ):
+                            ) as reg_clust:
                                 _render_provider_contents(
                                     provider,
                                     categories,
                                     allowed_resources=scoped_resources,
+                                    parent_cluster=reg_clust,
                                 )
+                            for r in sorted(scoped_resources):
+                                if r in node_by_res and hasattr(node_by_res[r], "_id"):
+                                    region_anchor_ids.append(node_by_res[r]._id)
+                                    break
                             rendered_resources.update(scoped_resources)
 
-                        # If a provider has resources without region hints, keep them visible.
+                        if len(region_anchor_ids) > 1:
+                            _align_provider_clusters(diag.dot, region_anchor_ids, direction=direction, max_per_row=2)
+                        # If a provider has resources without region hints, wrap into a clean Global / Shared Services cluster
                         unscoped_resources = provider_resources - rendered_resources
                         if unscoped_resources:
-                            _render_provider_contents(
-                                provider,
-                                categories,
-                                allowed_resources=unscoped_resources,
-                            )
+                            shared_attrs = {
+                                "bgcolor": "#F8F9FA",
+                                "fillcolor": "#F8F9FA",
+                                "style": "rounded,filled",
+                                "penwidth": "1.2",
+                                "color": "#78909C",
+                                "fontsize": "12",
+                                "fontname": "Helvetica-Bold",
+                            }
+                            with Cluster("Global / Shared Services", graph_attr=shared_attrs) as shared_clust:
+                                _render_provider_contents(
+                                    provider,
+                                    categories,
+                                    allowed_resources=unscoped_resources,
+                                    parent_cluster=shared_clust,
+                                )
             else:
+                provider_anchor_ids: list[str] = []
                 for provider, categories in sorted(grouped_providers.items()):
                     _render_provider_scope(provider, categories)
+                    for cat_resources in categories.values():
+                        found = False
+                        for r in sorted(cat_resources):
+                            if r in node_by_res and hasattr(node_by_res[r], "_id"):
+                                provider_anchor_ids.append(node_by_res[r]._id)
+                                found = True
+                                break
+                        if found:
+                            break
+                if len(provider_anchor_ids) > 1:
+                    _align_provider_clusters(diag.dot, provider_anchor_ids, direction=direction, max_per_row=2)
         else:
             # Category lanes (industry-friendly default): Network -> Security -> Compute -> Data...
             for lane in lanes:
                 providers = grouped_lanes.get(lane) or {}
                 if not providers:
                     continue
-                lane_color = _get_cluster_color(lane, render)
+                # Single-provider lanes carry that provider's official accent;
+                # mixed-provider lanes stay neutral on the white canvas.
+                lane_provider_names = sorted(providers.keys())
+                lane_accent = (
+                    _provider_accent(lane_provider_names[0])
+                    if len(lane_provider_names) == 1
+                    else None
+                )
+                lane_tint = (
+                    _provider_tint(lane_provider_names[0])
+                    if len(lane_provider_names) == 1
+                    else None
+                )
                 lane_cluster_attrs = {
-                    "bgcolor": "#FFFFFF",  # White background
+                    "bgcolor": "#FFFFFF",  # White canvas
+                    "fillcolor": lane_tint or "#FFFFFF",
                     "style": "rounded,filled",
-                    "penwidth": "1.0",
+                    "penwidth": "1.2",
                     "fontsize": "14",
                     "fontname": "Helvetica-Bold",
-                    "color": "#CCCCCC",  # Light gray border
+                    "color": lane_accent or "#CCCCCC",  # Brand accent border
                 }
                 with Cluster(lane, graph_attr=lane_cluster_attrs):
                     for provider, resources in sorted(providers.items()):
@@ -3521,26 +3931,24 @@ def _render_icon_diagram_from_terraform(
                         if not provider_resources and not provider_vpcs:
                             continue
 
-                        cluster_color = _get_cluster_color(provider, render)
-                        with render_provider_cluster(
-                            provider, cluster_color, penwidth="0.5"
-                        ):
+                        with render_provider_cluster(provider, penwidth="1.0"):
                             # First render VPCs with their hierarchies
                             for vpc_name, subnets_dict in sorted(provider_vpcs.items()):
                                 vpc_label = _tf_node_label(vpc_name)
                                 vpc_attrs = {
                                     "bgcolor": render.color_vpc,
+                                    "fillcolor": render.color_vpc,  # Ultra-light blue tint
                                     "style": "rounded,filled",
-                                    "penwidth": "2.0",
-                                    "color": "#5DADE2",  # AWS VPC blue border
+                                    "penwidth": "1.5",
+                                    "color": "#5DADE2",  # VPC blue border
                                     "fontsize": "11",
                                     "fontname": "Helvetica-Bold",
                                 }
                                 with Cluster(vpc_label, graph_attr=vpc_attrs):
                                     r_type, _name = vpc_name.split(".", 1)
-                                    Icon = _icon_class_for(
-                                        r_type
-                                    ) or _generic_icon_for_kind("network")
+                                    vpc_attrs_dict = all_resources.get(vpc_name, {})
+                                    Icon = _icon_class_for(r_type, vpc_attrs_dict) or \
+                                        _generic_icon_for_kind("network")
                                     node_by_res[vpc_name] = _create_node_with_xlabel(
                                         Icon, _tf_node_label(vpc_name)
                                     )
@@ -3575,6 +3983,7 @@ def _render_icon_diagram_from_terraform(
                                             )
                                             subnet_attrs = {
                                                 "bgcolor": subnet_color,
+                                                "fillcolor": subnet_color,  # Ultra-light tint
                                                 "style": "rounded,filled,dashed"
                                                 if is_public
                                                 else "rounded,filled",
@@ -3590,7 +3999,7 @@ def _render_icon_diagram_from_terraform(
                                                     ".", 1
                                                 )
                                                 Icon = _icon_class_for(
-                                                    r_type
+                                                    r_type, subnet_attrs_dict
                                                 ) or _generic_icon_for_kind("network")
                                                 node_by_res[subnet_name] = (
                                                     _create_node_with_xlabel(
@@ -3627,23 +4036,55 @@ def _render_icon_diagram_from_terraform(
                     # Fallback to simple connection if Edge styling not supported
                     node_by_res[src_res] >> node_by_res[dst_res]
 
+
+
+    # Cap oversized rasters before SVG embedding / JPEG conversion
+    if outformat in {"png", "jpg", "jpeg"}:
+        _downscale_raster_if_needed(Path(render_filename_no_ext + ".png"))
+        _downscale_raster_if_needed(out_path)
+
     # Embed images in SVG after the diagram has been generated
     if outformat == "svg":
         _embed_images_in_svg(out_path)
 
+    # Convert high-resolution PNG to pristine 300 DPI JPEG with Pillow
+    if outformat in {"jpg", "jpeg"}:
+        try:
+            from PIL import Image
+
+            tmp_png = Path(render_filename_no_ext + ".png")
+            if tmp_png.exists():
+                with Image.open(tmp_png) as img:
+                    rgb_img = Image.new("RGB", img.size, (255, 255, 255))
+                    if img.mode in ("RGBA", "LA"):
+                        rgb_img.paste(img, mask=img.split()[-1])
+                    else:
+                        rgb_img.paste(img)
+                    rgb_img.save(out_path, format="JPEG", quality=95, subsampling=0)
+                tmp_png.unlink(missing_ok=True)
+        except Exception:
+            pass
+
 
 def _static_terraform_mermaid(
-    files: list[Path], direction: str, limits: Limits
+    files: list[Path],
+    direction: str,
+    limits: Limits,
+    parsed_inputs: tuple[
+        dict[str, dict[str, Any]],
+        dict[str, dict[str, str]],
+        dict[str, dict[str, str]],
+    ]
+    | None = None,
 ) -> tuple[str, str, str]:
     if hcl2 is None:
         raise RuntimeError(
             "Missing dependency python-hcl2. Install it to enable Terraform static diagrams."
         )
 
-    repo_root = Path.cwd()
-    all_resources, module_ref_maps, env_ref_maps = _terraform_resources_from_files(
-        files, limits, repo_root
-    )
+    if parsed_inputs is None:
+        parsed_inputs = _terraform_resources_from_files(files, limits, Path.cwd())
+    all_resources, module_ref_maps, env_ref_maps = parsed_inputs
 
     if not all_resources:
         raise RuntimeError("No Terraform resources parsed from the changed files.")
@@ -3799,17 +4240,23 @@ def _static_terraform_mermaid(
 
 
 def _static_terraform_graph(
-    files: list[Path], limits: Limits
+    files: list[Path],
+    limits: Limits,
+    parsed_inputs: tuple[
+        dict[str, dict[str, Any]],
+        dict[str, dict[str, str]],
+        dict[str, dict[str, str]],
+    ]
+    | None = None,
 ) -> tuple[dict[str, dict[str, Any]], set[tuple[str, str]]]:
     if hcl2 is None:
         raise RuntimeError(
             "Missing dependency python-hcl2. Install it to enable Terraform static diagrams."
         )
 
-    repo_root = Path.cwd()
-    all_resources, module_ref_maps, env_ref_maps = _terraform_resources_from_files(
-        files, limits, repo_root
-    )
+    if parsed_inputs is None:
+        parsed_inputs = _terraform_resources_from_files(files, limits, Path.cwd())
+    all_resources, module_ref_maps, env_ref_maps = parsed_inputs
 
     if not all_resources:
         raise RuntimeError("No Terraform resources parsed from the changed files.")
@@ -4421,14 +4868,14 @@ def _create_cfn_node(
     # Use professional node creation like Terraform
     if Icon:
         node_by_res[rid] = _create_node_with_xlabel(
-            Icon, _wrap_text(rid, max_width=14, max_lines=2)
+            Icon, _wrap_text(rid, max_width=20, max_lines=2)
         )
     else:
         # Fallback to text node with professional styling
         from diagrams.generic.blank import Blank
 
         node_by_res[rid] = Blank(
-            _wrap_text(rid, max_width=14, max_lines=2), height="1.2", labelloc="b"
+            _wrap_text(rid, max_width=20, max_lines=2), height="1.2", labelloc="b"
         )
 
 
@@ -4584,11 +5031,11 @@ def _render_cfn_diagram(
         "fontname": render.fontname,
         "fontsize": str(render.graph_fontsize),
         "outputorder": "edgesfirst",
-        # Advanced overlap and separation controls
+        # Advanced overlap and separation controls (sep/esep in inches - keep sub-inch)
         "overlap": render.overlap_removal,
         "overlap_scaling": "-4" if render.overlap_removal != "false" else "0",
-        "sep": f"+{int(final_nodesep * 20)}",  # Dynamic cluster separation
-        "esep": f"+{int(final_nodesep * 10)}",  # Dynamic edge separation
+        "sep": f"+{min(0.75, final_nodesep * 0.5):.2f}",  # cluster margin (inches)
+        "esep": f"+{min(0.40, final_nodesep * 0.25):.2f}",  # edge margin (inches)
         "labelloc": "t",
         "labeljust": "c",
         # Professional edge routing from centers
@@ -4659,10 +5106,11 @@ def _render_cfn_diagram(
                     with Cluster(
                         f"{provider_name} Cloud",
                         graph_attr={
-                            "bgcolor": "#f8f9fa",
+                            "bgcolor": _provider_tint(provider_name) or "#f8f9fa",
+                            "fillcolor": _provider_tint(provider_name) or "#f8f9fa",
                             "style": "rounded,filled",
-                            "penwidth": "2.0",
-                            "color": "#6c757d",
+                            "penwidth": "1.5",
+                            "color": _provider_accent(provider_name) or "#6c757d",
                             "fontsize": "14",
                             "fontname": render.fontname,
                         },
@@ -4679,7 +5127,8 @@ def _render_cfn_diagram(
                                 with Cluster(
                                     category,
                                     graph_attr={
-                                        "bgcolor": "#e9ecef",
+                                        "bgcolor": "#FFFFFF",
+                                        "fillcolor": "#e9ecef",
                                         "style": "rounded,filled",
                                         "penwidth": "1.5",
                                         "color": "#adb5bd",
@@ -4697,9 +5146,10 @@ def _render_cfn_diagram(
                 if category in grouped_resources and grouped_resources[category]:
                     # Professional cluster styling like Terraform
                     cluster_attrs = {
-                        "bgcolor": "#cccccc",
+                        "bgcolor": "#FFFFFF",
+                        "fillcolor": "#F8F9FA",
                         "style": "rounded,filled",
-                        "penwidth": "2.0",
+                        "penwidth": "1.2",
                         "color": "#aeb6be",
                         "fontsize": "14",
                         "fontname": render.fontname,
@@ -4727,6 +5177,658 @@ def _render_cfn_diagram(
     # Embed images in SVG files
     if outformat == "svg":
         _embed_images_in_svg(out_path)
+    elif outformat in {"png", "jpg", "jpeg"}:
+        _downscale_raster_if_needed(out_path)
+
+
+_IAC_PROVIDER_LABELS = {
+    "aws": "AWS",
+    "azurerm": "Azure",
+    "azure": "Azure",
+    "azuread": "Azure AD",
+    "google": "GCP",
+    "gcp": "GCP",
+    "oci": "OCI",
+    "ibm": "IBM",
+    "kubernetes": "Kubernetes",
+    "helm": "Helm",
+    "docker": "Docker",
+    "random": "Random",
+}
+
+
+def _camel_to_snake(name: str) -> str:
+    s = re.sub(r"(.)([A-Z][a-z]+)", r"\1_\2", name)
+    return re.sub(r"([a-z0-9])([A-Z])", r"\1_\2", s).lower()
+
+
+def _singularize_tokens(name: str) -> str:
+    return "_".join(
+        p[:-1] if len(p) > 3 and p.endswith("s") and not p.endswith("ss") else p
+        for p in name.split("_")
+    )
+
+
+def _derive_tf_resource_name(kind: str, res_type: Any) -> str:
+    """Map a Bicep/Pulumi resource type to a Terraform-style name for icon lookup.
+
+    Examples:
+      bicep  "Microsoft.Storage/storageAccounts@2022-09-01" -> azurerm_storage_accounts
+      pulumi "aws:s3:Bucket"                                -> aws_s3_bucket
+      pulumi "gcp:storage:Bucket"                           -> google_storage_bucket
+    """
+    if not isinstance(res_type, str) or not res_type.strip():
+        return "generic_resource"
+
+    if kind == "bicep":
+        base = res_type.split("@", 1)[0]
+        segments = [s for s in base.split("/") if s]
+        provider_token = segments[0].split(".")[0].lower() if segments else "microsoft"
+        resource_token = segments[-1] if segments else base
+        prefix = "azurerm" if provider_token in {"microsoft", "windows"} else provider_token
+        return f"{prefix}_{_camel_to_snake(resource_token)}"
+
+    if kind == "pulumi":
+        segments = [s for s in res_type.split(":") if s]
+        if not segments:
+            return "generic_resource"
+        provider = segments[0].lower()
+        prefix = _IAC_PROVIDER_LABELS.get(provider, provider).lower()
+        if prefix in {"aws", "azurerm", "google", "oci", "ibm"} and len(segments) >= 3:
+            service, resource = segments[1], segments[-1]
+            return f"{prefix}_{_camel_to_snake(service)}_{_camel_to_snake(resource)}"
+        return _camel_to_snake(segments[-1])
+
+    return _camel_to_snake(res_type.replace("/", "_"))
+
+
+def _resolve_iac_icon(kind: str, res_type: str):
+    """Resolve an icon class for a Bicep/Pulumi resource type.
+
+    Tries increasingly generic Terraform-style names (most specific first) so
+    e.g. "Microsoft.Cdn/profiles" resolves via azurerm_cdn_profile before the
+    vaguer azurerm_profiles guess. Returns (icon_cls_or_None, matched_name).
+    """
+    tf_name = _derive_tf_resource_name(kind, res_type)
+    candidates = [tf_name]
+
+    singular = _singularize_tokens(tf_name)
+    if singular != tf_name:
+        candidates.append(singular)
+
+    # Less-specific fallback: drop the service segment (bicep), keeping
+    # provider + resource, e.g. azurerm_cdn_profiles -> azurerm_profiles.
+    parts = tf_name.split("_")
+    if kind == "bicep" and len(parts) > 2:
+        short = "_".join([parts[0]] + parts[2:])
+        candidates.append(_singularize_tokens(short))
+        candidates.append(short)
+
+    for candidate in candidates:
+        icon = _icon_class_for(candidate)
+        if icon is not None:
+            return icon, candidate
+    return None, tf_name
+
+
+def _render_generic_iac_diagram(
+    resources: dict[str, dict[str, Any]],
+    edges: set[tuple[str, str]],
+    *,
+    out_path: Path,
+    title: str,
+    direction: str,
+    render: RenderConfig,
+) -> None:
+    """Render an icon-based architecture diagram for Bicep/Pulumi YAML graphs.
+
+    Mirrors the Terraform/CloudFormation rendering quality: provider clusters,
+    category sub-clusters, official icons where resolvable, and typed edges.
+    """
+    if Diagram is None or Cluster is None:
+        raise RuntimeError(
+            "Missing dependency diagrams. Install it and Graphviz to enable icon rendering."
+        )
+
+    outformat = out_path.suffix.lstrip(".").lower() or "png"
+    filename_no_ext = str(out_path.with_suffix(""))
+
+    desired_bg = (
+        (os.getenv("AUTO_ARCH_RENDER_BG") or render.background or "transparent")
+        .strip()
+        .lower()
+    )
+    desired_bg = (
+        "transparent" if desired_bg not in {"transparent", "white"} else desired_bg
+    )
+    bgcolor = "white" if outformat in {"jpg", "jpeg"} else desired_bg
+
+    grouped_simple = {"IaC": {"Mixed": list(resources.keys())}}
+    complexity = _analyze_diagram_complexity(resources, edges, grouped_simple)
+    if direction.upper() == "AUTO":
+        direction = _determine_optimal_direction(complexity, grouped_simple, "providers")
+    spacing = _calculate_dynamic_spacing(complexity, render, direction)
+    final_pad = spacing["pad"] if render.pad == "auto" else float(render.pad)
+    final_nodesep = (
+        spacing["nodesep"] if render.nodesep == "auto" else float(render.nodesep)
+    )
+    final_ranksep = (
+        spacing["ranksep"] if render.ranksep == "auto" else float(render.ranksep)
+    )
+
+    graph_attr = {
+        "bgcolor": bgcolor,
+        "pad": str(final_pad),
+        "nodesep": str(final_nodesep),
+        "ranksep": str(final_ranksep),
+        "splines": render.edge_routing,
+        "concentrate": "true" if render.concentrate else "false",
+        "fontname": render.fontname,
+        "fontsize": str(render.graph_fontsize),
+        "outputorder": "edgesfirst",
+        "overlap": render.overlap_removal,
+        "overlap_scaling": "-4" if render.overlap_removal != "false" else "0",
+        "labelloc": "t",
+        "labeljust": "c",
+        "remincross": "true",
+    }
+
+    # Resolve providers and Terraform-style names up front.
+    providers: dict[str, list[str]] = {}
+    tf_names: dict[str, str] = {}
+    icons: dict[str, Any] = {}
+    for rid, body in resources.items():
+        kind = str((body or {}).get("Kind", ""))
+        res_type = (body or {}).get("Type", "")
+        icon, tf_name = _resolve_iac_icon(kind, res_type)
+        tf_names[rid] = tf_name
+        icons[rid] = icon
+        provider = str((body or {}).get("Provider") or "other").lower()
+        providers.setdefault(provider, []).append(rid)
+
+    category_order = [
+        "Network",
+        "Security",
+        "Containers",
+        "Compute",
+        "Data",
+        "Storage",
+        "Integration",
+        "Management",
+        "Other",
+    ]
+
+    node_by_res: dict[str, Any] = {}
+
+    with Diagram(
+        title,
+        show=False,
+        direction=direction,
+        outformat=outformat,
+        filename=filename_no_ext,
+        graph_attr=graph_attr,
+    ):
+        for provider in sorted(providers):
+            provider_label = _IAC_PROVIDER_LABELS.get(
+                provider, provider.replace("_", " ").title() or "Other"
+            )
+            provider_attrs = {
+                "bgcolor": _provider_tint(provider_label) or "#FFFFFF",
+                "fillcolor": _provider_tint(provider_label) or "#FFFFFF",
+                "style": "rounded,filled",
+                "penwidth": "1.5",
+                "fontsize": "12",
+                "fontname": "Helvetica-Bold",
+                "color": _provider_accent(provider_label) or "#6C757D",
+                "labelloc": "t",
+                "labeljust": "l",
+            }
+            with Cluster(provider_label, graph_attr=provider_attrs):
+                by_category: dict[str, list[str]] = {}
+                for rid in providers[provider]:
+                    by_category.setdefault(_tf_category(tf_names[rid]), []).append(rid)
+
+                for category in category_order:
+                    rids = sorted(by_category.get(category, []))
+                    if not rids:
+                        continue
+                    category_attrs = {
+                        "bgcolor": "#FFFFFF",
+                        "fillcolor": _get_cluster_color(category, render),
+                        "style": "rounded,filled",
+                        "penwidth": "1.0",
+                        "fontsize": "11",
+                        "fontname": "Helvetica-Bold",
+                        "color": "#CCCCCC",
+                    }
+                    with Cluster(category, graph_attr=category_attrs):
+                        for rid in rids:
+                            icon = icons.get(rid) or _generic_icon_for_kind(
+                                category.lower()
+                            )
+                            label = _wrap_text(rid, max_width=20, max_lines=2)
+                            node_by_res[rid] = _create_node_with_xlabel(icon, label)
+
+        for src, dst in sorted(edges):
+            if src in node_by_res and dst in node_by_res:
+                edge_type = _detect_edge_type(src, dst, resources)
+                edge_style_attrs = _get_edge_style_attrs(edge_type, render)
+                try:
+                    from diagrams import Edge
+
+                    node_by_res[src] >> Edge(**edge_style_attrs) >> node_by_res[dst]
+                except (ImportError, TypeError, AttributeError):
+                    node_by_res[src] >> node_by_res[dst]
+
+    if outformat == "svg":
+        _embed_images_in_svg(out_path)
+    elif outformat in {"png", "jpg", "jpeg"}:
+        _downscale_raster_if_needed(out_path)
+
+
+# Contextual display-label overrides applied ONLY to AI-refined renders.
+# Keyed by full resource id or its name part; populated from validated model
+# suggestions and cleared right after the refined render completes.
+_CURRENT_LABEL_OVERRIDES: dict[str, str] = {}
+
+
+def _sanitize_label(text: Any, max_len: int = 32) -> str | None:
+    """Normalize a model-proposed label to a safe single-line string."""
+    if not isinstance(text, str):
+        return None
+    cleaned = re.sub(r"\s+", " ", text).strip()
+    cleaned = re.sub(r"[^\w\s\-+()/&.:]", "", cleaned)
+    if not cleaned or not any(ch.isalnum() for ch in cleaned):
+        return None
+    return cleaned[:max_len].rstrip()
+
+
+def _extract_label_overrides(
+    critique: dict[str, Any], resources: dict[str, dict[str, Any]]
+) -> dict[str, str]:
+    """Validate model-suggested labels against real resource ids."""
+    proposed = critique.get("labels")
+    if not isinstance(proposed, dict):
+        return {}
+    overrides: dict[str, str] = {}
+    resource_ids = list(resources.keys())
+    for key, value in list(proposed.items())[:24]:
+        clean_value = _sanitize_label(value)
+        if not clean_value or not isinstance(key, str):
+            continue
+        key = key.strip()
+        matches = [rid for rid in resource_ids if rid == key]
+        if not matches:
+            matches = [rid for rid in resource_ids if rid.split(".", 1)[-1] == key]
+        if not matches:
+            continue
+        for rid in matches:
+            overrides[rid] = clean_value
+    return overrides
+
+
+def _build_ai_annotations(critique: dict[str, Any]) -> tuple[str, ...]:
+    """Distill an AI critique into short on-diagram hint lines.
+
+    Hints are IaC-contextual (functional roles, secret flows, encryption
+    scope) rather than visual commentary, so the diagram is self-explanatory.
+    """
+    hints: list[str] = []
+    for h in (critique.get("hints") or [])[:6]:
+        if not isinstance(h, dict):
+            continue
+        tag = str(h.get("tag", "general")).strip().upper() or "INFO"
+        text = str(h.get("text", "")).strip()
+        if text:
+            hints.append(f"[{tag}] {text}")
+    if not hints:  # legacy fallback for models that skip the hints array
+        insights = str(critique.get("insights_md") or "").strip()
+        if insights:
+            first_lines = [
+                ln.strip().lstrip("-* ")
+                for ln in insights.splitlines()
+                if ln.strip() and not ln.strip().startswith(("#", "```"))
+            ]
+            hints.extend(first_lines[:2])
+        for s in (critique.get("strengths") or [])[:2]:
+            hints.append(f"+ {s}")
+        for i in (critique.get("issues") or [])[:2]:
+            hints.append(f"! [{i.get('type', 'general')}] {i.get('detail', '')}")
+    return tuple(h for h in hints if h)[:6]
+
+
+def _wrap_hint(text: str, width: int = 46) -> str:
+    lines: list[str] = []
+    for paragraph in text.splitlines():
+        if not paragraph.strip():
+            lines.append("")
+            continue
+        current = ""
+        for word in paragraph.split():
+            candidate = f"{current} {word}".strip()
+            if len(candidate) <= width:
+                current = candidate
+            else:
+                lines.append(current)
+                current = word
+        if current:
+            lines.append(current)
+    return "\n".join(lines)
+
+
+def _render_guide_png(
+    render: RenderConfig,
+    ai_annotations: tuple[str, ...],
+    out_path: Path,
+) -> bool:
+    """Render a COMPACT standalone guide (legend + AI review hints).
+
+    The guide must stay tiny relative to the diagram: two legend columns sit
+    side by side (edge samples left, zone chips right), fonts are small and
+    spacing tight. Callers additionally cap its stitched area at
+    _MAX_GUIDE_AREA_FRACTION of the page.
+    """
+    try:
+        import graphviz  # type: ignore[import-not-found]
+    except ImportError:
+        return False
+
+    entry_font = "7"
+    title_font = "8"
+    font = "Helvetica"
+
+    g = graphviz.Digraph(
+        "guide",
+        graph_attr={
+            "rankdir": "TB",
+            "bgcolor": "#FFFFFF",
+            "pad": "0.08",
+            "nodesep": "0.12",
+            "ranksep": "0.14",
+            "newrank": "true",  # allow rank=same pairing across clusters
+        },
+    )
+
+    # ------------------------------------------- horizontal single-row legend
+    # All edge samples share one graphviz rank so they align side by side;
+    # same-rank endpoints make each sample arrow draw horizontally.
+    samples = [
+        ("Security / boundary", "security"),
+        ("Data flow", "data"),
+        ("Dependency", "dependency"),
+        ("Network link", "network"),
+    ]
+    zones = [
+        ("VPC boundary", render.color_vpc, "#5DADE2"),
+        ("Public subnet", render.color_public_subnet, "#28A745"),
+        ("Private subnet", render.color_private_subnet, "#FFC107"),
+        ("Security zone", render.color_security, "#F44336"),
+    ]
+
+    with g.subgraph(name="cluster_legend") as leg:
+        leg.attr(
+            label="Legend",
+            style="rounded,filled",
+            fillcolor="#FFFFFF",
+            color="#CCCCCC",
+            fontsize=title_font,
+            fontname="Helvetica-Bold",
+            labelloc="t",
+            margin="0.08",
+        )
+        sample_ids: list[str] = []
+        chain_prev: str | None = None
+        for row, (name, edge_type) in enumerate(samples):
+            sid, did = f"lg_s{row}", f"lg_d{row}"
+            leg.node(
+                sid,
+                "",
+                shape="point",
+                width="0.03",
+                height="0.03",
+                fixedsize="true",
+            )
+            leg.node(
+                did,
+                name,
+                shape="box",
+                style="rounded,filled",
+                fillcolor="#FFFFFF",
+                color="#B9BEC6",
+                fontsize=entry_font,
+                fontname=font,
+                height="0.16",
+                margin="0.02,0.01",
+            )
+            edge_attrs = _get_edge_style_attrs(edge_type, render)
+            edge_attrs["arrowsize"] = "0.5"
+            leg.edge(sid, did, **edge_attrs)
+            if chain_prev:
+                leg.edge(chain_prev, sid, style="invis")
+            chain_prev = did
+            sample_ids.extend([sid, did])
+
+        zone_first: str | None = None
+        zone_ids: list[str] = []
+        for row, (name, fill, border) in enumerate(zones):
+            zid = f"lg_z{row}"
+            leg.node(
+                zid,
+                name,
+                shape="box",
+                style="rounded,filled",
+                fillcolor=fill,
+                color=border,
+                fontsize=entry_font,
+                fontname=font,
+                height="0.16",
+                margin="0.02,0.01",
+            )
+            if chain_prev:
+                leg.edge(chain_prev, zid, style="invis")
+            chain_prev = zid
+            zone_ids.append(zid)
+        # One shared rank => every entry sits side by side in a single strip.
+        if sample_ids or zone_ids:
+            with g.subgraph() as same_rank:
+                same_rank.attr(rank="same")
+                for nid in sample_ids + zone_ids:
+                    same_rank.node(nid)
+
+    # --------------------------------------------- compact AI hints panel
+    if ai_annotations:
+        with g.subgraph(name="cluster_hints") as hints:
+            hints.attr(
+                label="AI Review Hints",
+                style="rounded,filled",
+                fillcolor="#FFFDF0",
+                color="#D8C689",
+                fontsize=title_font,
+                fontname="Helvetica-Bold",
+                labelloc="t",
+                margin="0.06",
+            )
+            prev_hint: str | None = None
+            for row, hint in enumerate(ai_annotations[:4]):
+                hid = f"hint{row}"
+                hints.node(
+                    hid,
+                    _wrap_hint(hint, width=40),
+                    shape="plaintext",
+                    fontsize=entry_font,
+                    fontname=font,
+                )
+                if prev_hint:
+                    hints.edge(prev_hint, hid, style="invis")
+                prev_hint = hid
+
+    try:
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        g.render(str(out_path.with_suffix("")), format="png", cleanup=True)
+        rendered = out_path.with_suffix(".png")
+        if rendered.exists() and rendered != out_path:
+            shutil.move(str(rendered), str(out_path))
+        return out_path.exists()
+    except Exception:  # nosec B112 - guide is best-effort
+        return False
+
+
+def _flatten_on_white(img: Any) -> Any:
+    """Composite a possibly-transparent image onto a solid white RGB canvas."""
+    from PIL import Image  # type: ignore[import-not-found]  # noqa: PLC0415
+
+    rgba = img.convert("RGBA")
+    flattened = Image.new("RGB", rgba.size, "#FFFFFF")
+    flattened.paste(rgba, (0, 0), rgba)
+    return flattened
+
+
+# The stitched guide (legend + hints) must stay a footnote on the page:
+# at most 8% of the final canvas area (diagram + gap + guide).
+_MAX_GUIDE_AREA_FRACTION = 0.08
+_BUDGET_FACTOR = _MAX_GUIDE_AREA_FRACTION / (1 - _MAX_GUIDE_AREA_FRACTION)
+
+
+def _guide_area_scale(
+    diagram_w: float, diagram_h: float, guide_w: float, guide_h: float
+) -> float:
+    """Scale factor shrinking the guide into the page-area budget (<=1.0)."""
+    diagram_area = diagram_w * diagram_h
+    guide_area = guide_w * guide_h
+    if diagram_area <= 0 or guide_area <= 0:
+        return 1.0
+    max_guide_area = diagram_area * _BUDGET_FACTOR
+    if guide_area <= max_guide_area:
+        return 1.0
+    return math.sqrt(max_guide_area / guide_area)
+
+
+def _stitch_guide_below(diagram_path: Path, guide_path: Path) -> bool:
+    """Append the standalone guide image below a rendered diagram, in place.
+
+    Raster formats are stitched with PIL on a white canvas; SVGs get their
+    canvas extended downward with the guide embedded as a data URI.
+    """
+    if not diagram_path.exists() or not guide_path.exists():
+        return False
+
+    suffix = diagram_path.suffix.lower()
+    if suffix == ".svg":
+        return _append_guide_to_svg(diagram_path, guide_path)
+    if suffix not in {".png", ".jpg", ".jpeg"}:
+        return False
+
+    try:
+        from PIL import Image  # type: ignore[import-not-found]
+    except ImportError:
+        return False
+
+    try:
+        with Image.open(guide_path) as guide_src:
+            guide = _flatten_on_white(guide_src)
+        with Image.open(diagram_path) as diagram_src:
+            diagram = _flatten_on_white(diagram_src)
+
+        if guide.width > diagram.width > 0:
+            scale = diagram.width / guide.width
+            guide = guide.resize(
+                (diagram.width, max(1, round(guide.height * scale))),
+                getattr(Image, "LANCZOS", Image.BICUBIC),
+            )
+        # Keep the guide a footnote: cap it at 8% of the final page area.
+        shrink = _guide_area_scale(
+            diagram.width, diagram.height, guide.width, guide.height
+        )
+        if shrink < 1.0:
+            guide = guide.resize(
+                (
+                    max(1, round(guide.width * shrink)),
+                    max(1, round(guide.height * shrink)),
+                ),
+                getattr(Image, "LANCZOS", Image.BICUBIC),
+            )
+        gap = max(8, round(diagram.width * 0.005))
+        x_off = max(0, (diagram.width - guide.width) // 2)
+        canvas = Image.new(
+            "RGB",
+            (diagram.width, diagram.height + gap + guide.height),
+            "#FFFFFF",
+        )
+        canvas.paste(diagram, (0, 0))
+        canvas.paste(guide, (x_off, diagram.height + gap))
+
+        save_kwargs: dict[str, Any] = {}
+        if suffix in {".jpg", ".jpeg"}:
+            save_kwargs["quality"] = 92
+        canvas.save(diagram_path, **save_kwargs)
+        return True
+    except Exception:  # nosec B112 - stitching is best-effort
+        return False
+
+
+def _append_guide_to_svg(svg_path: Path, guide_png_path: Path) -> bool:
+    """Extend an SVG canvas downward and embed the guide PNG as a data URI."""
+    import struct
+
+    from xml.etree import ElementTree as ET  # noqa: PLC0415
+
+    svg_ns = "http://www.w3.org/2000/svg"
+    xlink_ns = "http://www.w3.org/1999/xlink"
+    ET.register_namespace("", svg_ns)
+    ET.register_namespace("xlink", xlink_ns)
+
+    def _length(value: Any) -> float | None:
+        match = re.match(r"(-?[0-9]*\.?[0-9]+)", str(value or "").strip())
+        return float(match.group(1)) if match else None
+
+    try:
+        png_bytes = guide_png_path.read_bytes()
+        if len(png_bytes) < 24 or not png_bytes.startswith(b"\x89PNG\r\n\x1a\n"):
+            return False
+        guide_w, guide_h = struct.unpack(">II", png_bytes[16:24])
+        if guide_w <= 0 or guide_h <= 0:
+            return False
+
+        tree = ET.parse(svg_path)
+        root = tree.getroot()
+        svg_w = _length(root.get("width"))
+        svg_h = _length(root.get("height"))
+        viewBox = (root.get("viewBox") or "").replace(",", " ").split()
+        if svg_w is None and len(viewBox) == 4:
+            svg_w = _length(viewBox[2])
+        if svg_h is None and len(viewBox) == 4:
+            svg_h = _length(viewBox[3])
+        if svg_w is None or svg_h is None:
+            return False
+
+        gap = max(8.0, svg_w * 0.005)
+        # Cap the embedded guide at 8% of the final page area, then center it.
+        # The scale factor applies to the GUIDE's native size, not the canvas.
+        shrink = _guide_area_scale(svg_w, svg_h, guide_w, guide_h)
+        display_w = min(float(svg_w), guide_w * shrink)
+        scaled_guide_h = display_w * (guide_h / guide_w)
+        total_h = svg_h + gap + scaled_guide_h
+
+        root.set("width", f"{svg_w:.0f}pt")
+        root.set("height", f"{total_h:.0f}pt")
+        if len(viewBox) == 4:
+            root.set("viewBox", f"0 0 {svg_w:g} {total_h:g}")
+
+        image_el = ET.SubElement(root, f"{{{svg_ns}}}image")
+        image_el.set("x", f"{max(0.0, (svg_w - display_w) / 2):g}")
+        image_el.set("y", f"{svg_h + gap:g}")
+        image_el.set("width", f"{display_w:g}")
+        image_el.set("height", f"{scaled_guide_h:g}")
+        image_el.set("preserveAspectRatio", "xMidYMin meet")
+        data_uri = "data:image/png;base64," + base64.b64encode(png_bytes).decode(
+            "ascii"
+        )
+        image_el.set(f"{{{xlink_ns}}}href", data_uri)
+
+        tree.write(svg_path, encoding="utf-8", xml_declaration=False)
+        return True
+    except Exception:  # nosec B110 - embedding is best-effort
+        return False
 
 
 def _static_markdown(
@@ -4737,7 +5839,14 @@ def _static_markdown(
     out_png: Path | None,
     out_jpg: Path | None,
     out_svg: Path | None,
+    out_md: Path | None = None,
+    out_drawio: Path | None = None,
+    out_html: Path | None = None,
     render: RenderConfig,
+    ai_enhance: bool = False,
+    ai_backend: str = "auto",
+    gemini_model: str | None = None,
+    openrouter_model: str | None = None,
 ) -> tuple[str, str]:
     # Prefer Terraform first, then CloudFormation, then Bicep, then Pulumi YAML.
     mermaid = None
@@ -4754,14 +5863,36 @@ def _static_markdown(
     pulumi_resources: dict[str, dict[str, Any]] | None = None
     pulumi_edges: set[tuple[str, str]] | None = None
 
-    try:
-        tf_resources, tf_edges = _static_terraform_graph(changed_paths, limits)
-        mermaid, summary, assumptions = _static_terraform_mermaid(
-            changed_paths, direction, limits
-        )
-        diag_kind = "terraform"
-    except Exception:  # nosec B110
-        pass
+    # Pre-generated plan support
+    if render.planfile:
+        try:
+            plan_path = Path(render.planfile)
+            graph_path = Path(render.graphfile) if render.graphfile else None
+            parsed_tf = _parse_terraform_plan_json(plan_path, graph_path)
+            all_res, _, _ = parsed_tf
+            tf_resources = all_res
+            tf_edges = set()
+            mermaid = "graph LR\n" + "\n".join(f"  {r}" for r in all_res.keys())
+            summary = f"{len(all_res)} resources parsed from plan file."
+            assumptions = "Parsed from pre-generated plan JSON."
+            diag_kind = "terraform"
+        except Exception as exc:
+            _debug(f"[DEBUG] Plan file parse error: {exc}")
+
+    if diag_kind is None:
+        try:
+            # Parse the Terraform files once and share the result between the
+            # graph builder and the Mermaid renderer.
+            parsed_tf = _terraform_resources_from_files(changed_paths, limits, Path.cwd())
+            tf_resources, tf_edges = _static_terraform_graph(
+                changed_paths, limits, parsed_inputs=parsed_tf
+            )
+            mermaid, summary, assumptions = _static_terraform_mermaid(
+                changed_paths, direction, limits, parsed_inputs=parsed_tf
+            )
+            diag_kind = "terraform"
+        except Exception:  # nosec B110
+            pass
 
     if mermaid is None:
         try:
@@ -4800,6 +5931,10 @@ def _static_markdown(
                         "",
                     )
 
+    # Simplified view filtering if requested
+    if render.simplified and tf_resources is not None and tf_edges is not None:
+        tf_resources, tf_edges = _simplify_architecture_graph(tf_resources, tf_edges)
+
     # Render icon-based diagrams if requested and dependencies exist.
     rendered_any = False
     if diag_kind == "terraform" and tf_resources is not None and tf_edges is not None:
@@ -4837,6 +5972,137 @@ def _static_markdown(
         except Exception:  # nosec B110
             # Keep Mermaid output even if Graphviz/diagrams fails.
             pass
+
+    # Interactive HTML Export
+    if (out_html is not None or (out_svg is not None and out_svg.exists())) and tf_resources is not None:
+        try:
+            target_html = out_html if out_html is not None else (out_svg.with_suffix(".html") if out_svg else None)
+            if target_html is not None and out_svg is not None and out_svg.exists():
+                svg_data = out_svg.read_text(encoding="utf-8")
+                export_interactive_html(
+                    svg_data,
+                    tf_resources,
+                    title=f"Architecture ({diag_kind.capitalize() if diag_kind else 'IaC'})",
+                    out_path=target_html,
+                )
+                rendered_any = True
+        except Exception as exc:
+            _debug(f"[DEBUG] Interactive HTML export failed: {exc}")
+
+    # Vision-assisted feedback loop (OpenRouter, free models only): critique
+    # the rendered diagram and refine render settings when it improves.
+    # AI-refined renders go to unique *-ai.* files (with legend + hints) so
+    # the deterministic base outputs are never overwritten.
+    ai_critique: dict[str, Any] = {}
+    ai_history: list[dict[str, Any]] = []
+    ai_model_id = ""
+    ai_refined_files: list[str] = []
+    if (
+        ai_enhance
+        and diag_kind == "terraform"
+        and tf_resources is not None
+        and tf_edges is not None
+        and Diagram is not None
+    ):
+        try:
+            from diagram_feedback import format_insights_markdown, run_feedback_loop
+
+            best_render, best_direction, ai_critique, ai_history = run_feedback_loop(
+                tf_resources,
+                tf_edges,
+                direction=direction,
+                render=render,
+                title="Architecture (Terraform)",
+                backend=ai_backend,
+                gemini_model=gemini_model,
+                openrouter_model=openrouter_model,
+            )
+            if ai_critique:
+                ai_model_id = str(
+                    ai_history[0]["model"] if ai_history else os.getenv("OPENROUTER_MODEL", "")
+                )
+                ai_hints = _build_ai_annotations(ai_critique)
+                label_overrides = _extract_label_overrides(ai_critique, tf_resources)
+                if label_overrides:
+                    _CURRENT_LABEL_OVERRIDES.clear()
+                    _CURRENT_LABEL_OVERRIDES.update(label_overrides)
+                ai_title = str(ai_critique.get("title") or "Architecture (Terraform, AI-refined)")
+                ai_subtitle = str(ai_critique.get("subtitle") or "")
+                try:
+                    # 1. Render raster and vector images
+                    ai_svg_path: Path | None = None
+                    for out in (out_png, out_jpg, out_svg):
+                        if out is None:
+                            continue
+                        ai_out = out.with_name(f"{out.stem}-ai{out.suffix}")
+                        try:
+                            _render_icon_diagram_from_terraform(
+                                tf_resources,
+                                tf_edges,
+                                out_path=ai_out,
+                                title=ai_title,
+                                direction=best_direction,
+                                render=best_render,
+                                ai_hints=ai_hints,
+                                ai_subtitle=ai_subtitle,
+                            )
+                            if ai_out.suffix == ".svg":
+                                ai_svg_path = ai_out
+                            ai_refined_files.append(ai_out.name)
+                        except Exception as render_err:
+                            _debug(f"[DEBUG] AI render failed for {ai_out}: {render_err}")
+                            continue
+
+                    # 2. Render AI-enhanced interactive HTML studio
+                    ai_html = (out_html.with_name(f"{out_html.stem}-ai{out_html.suffix}") if out_html else 
+                               (ai_svg_path.with_suffix(".html") if ai_svg_path else None))
+                    if ai_html is not None and ai_svg_path is not None and ai_svg_path.exists():
+                        try:
+                            ai_svg_data = ai_svg_path.read_text(encoding="utf-8")
+                            export_interactive_html(
+                                ai_svg_data,
+                                tf_resources,
+                                title=ai_title,
+                                out_path=ai_html,
+                            )
+                            ai_refined_files.append(ai_html.name)
+                        except Exception:
+                            pass
+
+                    # 3. Render AI-enhanced draw.io (.drawio)
+                    if out_drawio is not None:
+                        try:
+                            from drawio_exporter import export_drawio
+                            ai_drawio = out_drawio.with_name(f"{out_drawio.stem}-ai{out_drawio.suffix}")
+                            clean_res, clean_edges = _consolidate_plumbing_resources(tf_resources, tf_edges)
+                            export_drawio(clean_res, clean_edges, out_path=ai_drawio, title=ai_title)
+                            ai_refined_files.append(ai_drawio.name)
+                        except Exception:
+                            pass
+
+                    # 4. Render AI-enhanced Markdown report
+                    if out_md is not None:
+                        try:
+                            ai_md = out_md.with_name(f"{out_md.stem}-ai{out_md.suffix}")
+                            ai_md_content = format_insights_markdown(
+                                ai_critique,
+                                best_direction,
+                                best_render,
+                                tf_resources,
+                                tf_edges,
+                                model=ai_model_id,
+                            )
+                            ai_md.write_text(ai_md_content, encoding="utf-8")
+                            ai_refined_files.append(ai_md.name)
+                        except Exception:
+                            pass
+
+                finally:
+                    # Contextual labels apply to AI renders only; the
+                    # deterministic base outputs keep their generic labels.
+                    _CURRENT_LABEL_OVERRIDES.clear()
+        except Exception as exc:  # nosec B110 - enhancement is strictly optional
+            _debug(f"[DEBUG] AI enhancement skipped: {exc}")
 
     # For CloudFormation, we don't have provider-wide icon mapping yet; render a generic diagram.
     if (
@@ -4922,6 +6188,60 @@ def _static_markdown(
         except Exception:  # nosec B110
             pass
 
+    # Bicep and Pulumi YAML graphs get the same icon-based rendering quality.
+    if diag_kind in {"bicep", "pulumi"}:
+        gen_resources = bicep_resources if diag_kind == "bicep" else pulumi_resources
+        gen_edges = bicep_edges if diag_kind == "bicep" else pulumi_edges
+        if gen_resources and gen_edges is not None and Diagram is not None:
+            gen_title = f"Architecture ({diag_kind.capitalize()})"
+            for out in (out_png, out_jpg, out_svg):
+                if out is None:
+                    continue
+                try:
+                    _render_generic_iac_diagram(
+                        gen_resources,
+                        gen_edges,
+                        out_path=out,
+                        title=gen_title,
+                        direction=direction,
+                        render=render,
+                    )
+                    rendered_any = True
+                except Exception:  # nosec B110
+                    pass
+
+    # draw.io export works for every supported IaC kind: it reuses the same
+    # parsed graph and icon pipeline, so the .drawio output mirrors the
+    # rendered diagrams exactly.
+    if out_drawio is not None:
+        drawio_graphs = {
+            "terraform": (tf_resources, tf_edges),
+            "cloudformation": (cfn_resources, cfn_edges),
+            "bicep": (bicep_resources, bicep_edges),
+            "pulumi": (pulumi_resources, pulumi_edges),
+        }
+        drawio_resources, drawio_edges = drawio_graphs.get(diag_kind, (None, None))
+        if drawio_resources and drawio_edges is not None:
+            if diag_kind == "terraform" and not getattr(render, "no_consolidate", False):
+                drawio_resources, drawio_edges = _consolidate_plumbing_resources(
+                    drawio_resources,
+                    drawio_edges,
+                    expand_badges=getattr(render, "expand_badges", False),
+                )
+            try:
+                from drawio_exporter import export_drawio  # noqa: PLC0415
+
+                export_drawio(
+                    drawio_resources,
+                    drawio_edges,
+                    out_drawio,
+                    title=f"Architecture ({diag_kind.capitalize()})",
+                    render=render,
+                )
+                rendered_any = True
+            except Exception as exc:  # nosec B110
+                _debug(f"[DEBUG] draw.io export failed: {exc}")
+
     md = (
         f"{COMMENT_MARKER}\n\n"
         f"## Architecture Diagram (Auto)\n\n"
@@ -4930,6 +6250,18 @@ def _static_markdown(
         f"Assumptions: {assumptions}\n\n"
         f"Rendered diagram: {'available as workflow artifact' if rendered_any else 'not available (icons require Graphviz + diagrams)'}\n"
     )
+    if ai_critique:
+        try:
+            from diagram_feedback import format_insights_markdown
+
+            md += format_insights_markdown(ai_critique, ai_history, ai_model_id)
+            if ai_refined_files:
+                md += (
+                    "\n**AI-refined diagram files** (include legend and review "
+                    f"hints): {', '.join(ai_refined_files)}\n"
+                )
+        except Exception:  # nosec B110
+            pass
     return (md, mermaid)
 
 
@@ -5091,6 +6423,106 @@ def main() -> int:
     parser.add_argument("--out-png", default="artifacts/architecture-diagram.png")
     parser.add_argument("--out-jpg", default="artifacts/architecture-diagram.jpg")
     parser.add_argument("--out-svg", default="artifacts/architecture-diagram.svg")
+    parser.add_argument(
+        "--out-drawio",
+        default="",
+        help="Output draw.io (.drawio) file path; empty string disables export",
+    )
+    parser.add_argument(
+        "--render-engine",
+        default="auto",
+        choices=["auto", "neato", "dot"],
+        help="Rendering engine: auto (3-stage neato layout pipeline), neato, or dot",
+    )
+    parser.add_argument(
+        "--out-html",
+        default="",
+        help="Output standalone interactive HTML diagram with pan/zoom and metadata inspection",
+    )
+    parser.add_argument(
+        "--fontsize",
+        type=int,
+        default=None,
+        help="Diagram font size scaling override",
+    )
+    parser.add_argument(
+        "--iconsize",
+        type=int,
+        default=None,
+        help="Diagram icon size scaling override (in px)",
+    )
+    parser.add_argument(
+        "--simplified",
+        action="store_true",
+        help="Generate high-level simplified executive view (stripping plumbing)",
+    )
+    parser.add_argument(
+        "--planfile",
+        default="",
+        help="Path to pre-generated Terraform plan JSON (terraform show -json)",
+    )
+    parser.add_argument(
+        "--graphfile",
+        default="",
+        help="Path to pre-generated Terraform graph DOT (terraform graph)",
+    )
+    parser.add_argument(
+        "--varfile",
+        action="append",
+        default=[],
+        help="Path to .tfvars variables file (can be repeated)",
+    )
+    parser.add_argument(
+        "--workspace",
+        default="default",
+        help="Terraform workspace name",
+    )
+    parser.add_argument(
+        "--source",
+        default="",
+        help="Source files location or remote Git repository URL (https://host/repo.git//subfolder)",
+    )
+    parser.add_argument(
+        "--annotate",
+        default="",
+        help="Path to custom flow annotations YAML file",
+    )
+    parser.add_argument(
+        "--expand-badges",
+        action="store_true",
+        help="Render security groups/NSGs as standalone nodes instead of corner badges",
+    )
+    parser.add_argument(
+        "--no-consolidate",
+        action="store_true",
+        help="Disable automatic consolidation of repeated resource instances",
+    )
+    parser.add_argument(
+        "--ai-backend",
+        default="auto",
+        choices=["auto", "gemini", "openrouter", "ollama", "bedrock", "restapi"],
+        help="AI vision enhancement backend (auto, gemini, openrouter)",
+    )
+    parser.add_argument(
+        "--gemini-model",
+        default="gemini-1.5-flash",
+        help="Google Gemini vision model name (default: gemini-1.5-flash)",
+    )
+    parser.add_argument(
+        "--openrouter-model",
+        default=None,
+        help="OpenRouter vision model override",
+    )
+    parser.add_argument(
+        "--ollama-model",
+        default="llama3",
+        help="Ollama model name when using --ai-backend ollama",
+    )
+    parser.add_argument(
+        "--ai-enhance",
+        action="store_true",
+        help="Enable vision-assisted refinement (Gemini or OpenRouter free models)",
+    )
     args = parser.parse_args()
 
     repo_root = Path.cwd()
@@ -5107,6 +6539,59 @@ def main() -> int:
             direction_override = "LR"
         direction = direction_override
 
+    # Merge CLI parameters into RenderConfig
+    render = RenderConfig(
+        layout=render.layout,
+        lanes=render.lanes,
+        pad=render.pad,
+        nodesep=render.nodesep,
+        ranksep=render.ranksep,
+        splines=render.splines,
+        concentrate=render.concentrate,
+        edge_routing=render.edge_routing,
+        overlap_removal=render.overlap_removal,
+        edge_style_security=render.edge_style_security,
+        edge_style_data=render.edge_style_data,
+        edge_style_dependency=render.edge_style_dependency,
+        edge_style_network=render.edge_style_network,
+        color_aws=render.color_aws,
+        color_azure=render.color_azure,
+        color_gcp=render.color_gcp,
+        color_oci=render.color_oci,
+        color_ibm=render.color_ibm,
+        color_vpc=render.color_vpc,
+        color_public_subnet=render.color_public_subnet,
+        color_private_subnet=render.color_private_subnet,
+        color_security=render.color_security,
+        min_pad=render.min_pad,
+        min_nodesep=render.min_nodesep,
+        min_ranksep=render.min_ranksep,
+        complexity_scale=render.complexity_scale,
+        edge_density_scale=render.edge_density_scale,
+        background=render.background,
+        fontname=render.fontname,
+        graph_fontsize=render.graph_fontsize,
+        node_fontsize=render.node_fontsize,
+        node_width=render.node_width,
+        node_height=render.node_height,
+        edge_color=render.edge_color,
+        edge_penwidth=render.edge_penwidth,
+        edge_arrowsize=render.edge_arrowsize,
+        render_engine=args.render_engine,
+        fontsize=args.fontsize,
+        iconsize=args.iconsize,
+        simplified=args.simplified,
+        expand_badges=args.expand_badges,
+        no_consolidate=args.no_consolidate,
+        planfile=args.planfile,
+        graphfile=args.graphfile,
+        varfiles=tuple(args.varfile),
+        workspace=args.workspace,
+        annotate=args.annotate,
+        ai_backend=args.ai_backend,
+        ollama_model=args.ollama_model,
+    )
+
     # Allow env override for publish mode (useful for local/example generation).
     publish_override = _parse_env_bool(os.getenv("AUTO_ARCH_PUBLISH_ENABLED"))
     if publish_override is not None:
@@ -5117,13 +6602,27 @@ def main() -> int:
             png=publish.png,
             jpg=publish.jpg,
             svg=publish.svg,
+            drawio=publish.drawio,
+            html=publish.html,
         )
 
     mode = (os.getenv("AUTO_ARCH_MODE") or config_mode or DEFAULT_MODE).strip().lower()
     model = (os.getenv("AUTO_ARCH_MODEL") or config_model or DEFAULT_MODEL).strip()
     changed_files = _split_changed_files(args.changed_files)
 
-    iac_root = (repo_root / args.iac_root).resolve()
+    # Handle remote git source if specified
+    temp_git_dir = None
+    if args.source:
+        source_path, temp_git_dir = _handle_git_source(args.source)
+        iac_root = source_path.resolve()
+        if not changed_files:
+            # Auto-discover IaC files in cloned source
+            changed_files = [
+                str(p.relative_to(iac_root))
+                for p in sorted(iac_root.rglob("*.tf"))
+            ]
+    else:
+        iac_root = (repo_root / args.iac_root).resolve()
 
     out_md = repo_root / args.out_md
     out_mmd = repo_root / args.out_mmd
@@ -5131,9 +6630,13 @@ def main() -> int:
     out_png_raw = (args.out_png or "").strip()
     out_jpg_raw = (args.out_jpg or "").strip()
     out_svg_raw = (args.out_svg or "").strip()
+    out_drawio_raw = (args.out_drawio or "").strip()
+    out_html_raw = (args.out_html or "").strip()
     out_png = (repo_root / out_png_raw) if out_png_raw else None
     out_jpg = (repo_root / out_jpg_raw) if out_jpg_raw else None
     out_svg = (repo_root / out_svg_raw) if out_svg_raw else None
+    out_drawio = (repo_root / out_drawio_raw) if out_drawio_raw else None
+    out_html = (repo_root / out_html_raw) if out_html_raw else None
 
     out_md.parent.mkdir(parents=True, exist_ok=True)
     out_mmd.parent.mkdir(parents=True, exist_ok=True)
@@ -5143,6 +6646,8 @@ def main() -> int:
         out_jpg.parent.mkdir(parents=True, exist_ok=True)
     if out_svg is not None:
         out_svg.parent.mkdir(parents=True, exist_ok=True)
+    if out_drawio is not None:
+        out_drawio.parent.mkdir(parents=True, exist_ok=True)
 
     if not changed_files:
         out_md.write_text(
@@ -5155,6 +6660,8 @@ def main() -> int:
             out_jpg.write_bytes(b"")
         if out_svg is not None:
             out_svg.write_text("", encoding="utf-8")
+        if out_drawio is not None:
+            out_drawio.write_text("", encoding="utf-8")
         return 0
 
     selected = changed_files[: limits.max_files]
@@ -5185,6 +6692,9 @@ def main() -> int:
     mermaid_direction = _normalize_mermaid_direction(direction)
 
     if mode != "ai":
+        ai_enhance_enabled = args.ai_enhance or bool(
+            _parse_env_bool(os.getenv("AUTO_ARCH_AI_ENHANCE"))
+        )
         md, mermaid = _static_markdown(
             changed_paths,
             mermaid_direction,
@@ -5192,7 +6702,14 @@ def main() -> int:
             out_png=out_png,
             out_jpg=out_jpg,
             out_svg=out_svg,
+            out_md=out_md,
+            out_drawio=out_drawio,
+            out_html=out_html,
             render=render,
+            ai_enhance=ai_enhance_enabled,
+            ai_backend=args.ai_backend,
+            gemini_model=args.gemini_model,
+            openrouter_model=args.openrouter_model,
         )
         out_md.write_text(md, encoding="utf-8")
         out_mmd.write_text(mermaid, encoding="utf-8")
@@ -5205,6 +6722,7 @@ def main() -> int:
             out_png=out_png,
             out_jpg=out_jpg,
             out_svg=out_svg,
+            out_drawio=out_drawio,
         )
         return 0
 
@@ -5273,8 +6791,6 @@ def main() -> int:
 
 if __name__ == "__main__":
     # Check for Confluence publishing env/config
-    import os
-
     confluence_url = os.getenv("CONFLUENCE_URL")
     confluence_user = os.getenv("CONFLUENCE_USER")
     confluence_token = os.getenv("CONFLUENCE_TOKEN")

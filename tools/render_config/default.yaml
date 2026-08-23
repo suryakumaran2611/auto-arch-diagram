@@ -1,0 +1,40 @@
+# Default Render Configuration for auto-arch-diagram
+provider_name: "Default"
+provider_prefix: []
+
+draw_order:
+  - outer_nodes
+  - edge_nodes
+  - group_nodes
+  - consolidated_nodes
+  - default
+
+outer_nodes:
+  - tv_users
+  - tv_internet
+  - tv_onprem
+
+edge_nodes:
+  - dns
+  - cdn
+  - gateway
+  - load_balancer
+
+group_nodes:
+  - cloud
+  - region
+  - vpc
+  - subnet
+
+auto_annotations: []
+node_variants: {}
+reverse_arrow_list: []
+bidirectional_nodes:
+  - tv_internet
+  - tv_onprem
+
+always_draw_line: []
+never_draw_line: []
+shared_services: []
+hide_nodes: []
+group_links: []

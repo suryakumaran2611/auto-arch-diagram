@@ -47,6 +47,15 @@ wsl -d Ubuntu bash -c "cd /home/suryakumaran/GitHub/auto-arch-diagram && source 
 - **`tools/cloud_icons_util.py`** - Loads cloud icon catalogs
 - **`tools/cloud_services_util.py`** - Loads dynamic cloud service lists
 
+#### **Native draw.io Shape Mappings**
+- **`tools/drawio_native_shapes.py`** - Maps Terraform types to official draw.io native shapes so `.drawio` exports render with the built-in icon packs (fully editable, no embedded PNGs):
+  - AWS: `mxgraph.aws4.resourceIcon;resIcon=...` + official category fill colours (extracted from jgraph/drawio `Sidebar-AWS4.js`, the current "AWS 2026" pack, v29.6.1+)
+  - Azure: `image=img/lib/azure2/<category>/<File>.svg` (current draw.io Azure SVG library)
+  - GCP: `shape=mxgraph.gcp2.<Name>` with brand fills
+  - Public API: `native_style_for(r_type)`, `native_icon_size(r_type)` (resIcons are 78px tiles, direct shapes 48px)
+  - Unknown types fall back to the PNG pipeline in `drawio_exporter._add_resource_node`
+  - Data extracted from jgraph/drawio sources (Apache-2.0); regenerate rather than hand-edit
+
 #### **Custom Icon Processing**
 - **`icons/custom/generate_icons.py`** - Generates custom programmatic icons for data processing services
 - **`icons/custom/`** - Directory for storing custom icons
@@ -180,7 +189,7 @@ When working on this project, ALWAYS:
 
 ### 1. Generate Architecture Diagrams
 - **Script:** `tools/generate_arch_diagram.py`
-- **Functionality:** Generates Mermaid, PNG, SVG, JPG, and Markdown architecture diagrams from IaC files.
+- **Functionality:** Generates Mermaid, PNG, SVG, JPG, Markdown, `.drawio`, and interactive HTML architecture diagrams from IaC files.
 - **Supported Arguments:**
   - `--changed-files <files>`: Space/newline-separated list of changed IaC files
   - `--iac-root <dir>`: Root directory to read IaC files from
@@ -190,15 +199,59 @@ When working on this project, ALWAYS:
   - `--out-png <file>`: Output PNG file path
   - `--out-jpg <file>`: Output JPG file path
   - `--out-svg <file>`: Output SVG file path
+  - `--out-drawio <file>`: Output draw.io (.drawio) file path; empty string disables export
+  - `--out-html <file>`: Output standalone interactive HTML diagram path (with pan/zoom and metadata drawer)
+  - `--render-engine <auto|neato|dot>`: Rendering pipeline engine (`auto` = 3-stage postprocessing with `neato -n2`)
+  - `--fontsize <int>`: Scale diagram font size
+  - `--iconsize <int>`: Scale icon size (in px)
+  - `--simplified`: Simplified high-level executive view (stripping plumbing)
+  - `--planfile <plan.json>`: Direct input of `terraform show -json` plan
+  - `--graphfile <graph.dot>`: Direct input of `terraform graph` DOT
+  - `--varfile <path>`: Variable definitions file (repeatable)
+  - `--workspace <name>`: Terraform workspace name
+  - `--source <git-url>`: Clone and diagram remote git repository
+  - `--annotate <flows.yaml>`: Custom numbered flow annotations
+  - `--expand-badges`: Expand security group shield badges into standalone nodes
+  - `--no-consolidate`: Disable automatic resource instance consolidation
+  - `--ai-backend <auto|gemini|openrouter|ollama|bedrock|restapi>`: AI refinement backend (default `auto`)
+  - `--gemini-model <model>`: Gemini vision model (default `gemini-1.5-flash`)
+  - `--openrouter-model <model>`: OpenRouter vision model override
+  - `--ollama-model <model>`: Model name when using `--ai-backend ollama`
+  - `--ai-enhance`: Vision-assisted refinement (Gemini or OpenRouter free models); writes `*-ai.*` outputs
+- **AI enhancement environment variables:**
+  - `GEMINI_API_KEY` or key file `~/.config/auto-arch-diagram/gemini_key` (chmod 600)
+  - `OPENROUTER_API_KEY` or key file `~/.config/auto-arch-diagram/openrouter_key` (chmod 600)
+  - `AUTO_ARCH_AI_ENHANCE=true` - env equivalent of `--ai-enhance`
+  - `AUTO_ARCH_AI_BACKEND=gemini` - env equivalent of `--ai-backend`
+  - `GEMINI_MODEL=gemini-1.5-flash` - Gemini model override
+  - `AUTO_ARCH_AI_ITERATIONS` - max feedback iterations 1-5 (plateau early-stop built in)
 - **Example:**
   ```bash
-  python tools/generate_arch_diagram.py --changed-files examples/terraform/custom-icons-demo/main.tf --out-png artifacts/architecture-diagram.png --direction AUTO
+  python tools/generate_arch_diagram.py --changed-files examples/terraform/custom-icons-demo/main.tf --out-png artifacts/architecture-diagram.png --out-html artifacts/architecture-diagram.html --direction AUTO
   ```
+
+### 1b. Model Context Protocol (MCP) Server
+- **Script:** `tools/mcp_server.py`
+- **Functionality:** Stdio JSON-RPC 2.0 interface providing MCP tools for AI agents (`list_resources`, `explain_graph`, `generate_diagram`).
+- **Example:**
+  ```bash
+  python tools/mcp_server.py
+  ```
+
+### 1c. Rendering Style Guarantees
+- White canvas everywhere (`RenderConfig.background` defaults to `white`; JPEG always white).
+- Official provider accents on cluster borders: AWS `#FF9900`, Azure `#0078D4`, GCP `#4285F4`, OCI `#C74634`, IBM `#0F62FE`, with matching ultra-light tint fills (`PROVIDER_ACCENT_COLORS` / `PROVIDER_TINT_COLORS`).
+- Category Subclusters: Non-VPC resources wrap cleanly into structured category subclusters (`Security`, `Compute`, `Storage`, `Integration`, `Management`) with `#CBD5E1` borders and `#FFFFFF` background.
+- Guaranteed 100% Bottom-Centered Legend: Root graph HTML table with `labelloc="b"` and `labeljust="c"` across all PNG, SVG, JPG, HTML, and draw.io exports.
+- Native draw.io Export: Official AWS 2026, Azure SVG, GCP shape libraries with centered legend card.
+- Interactive HTML Studio: Standalone offline studio with Path Tracing, Impact Analysis, Live Tier Filter Chips, Radar Mini-Map, Resource Inspector Drawer, and In-Browser PNG/JSON Export.
+- AI Multi-Format Generation: Dedicated `*-ai.*` suite (`.png`, `.svg`, `.html`, `.drawio`, `.md`) with executive titles, subtitles, operational tooltips, and flow step numbers.
 
 ### 2. Regenerate All Example Diagrams
 - **Script:** `tools/regenerate_examples.py`
 - **Functionality:** Recursively finds all example IaC files and regenerates their diagrams using the main generator.
 - **Arguments:** None (auto-discovers examples)
+- **AI-assisted regeneration:** set `AUTO_ARCH_AI_ENHANCE=true` in the environment, or loop the direct CLI with `--ai-enhance` per example (see section 1). OpenRouter free tier allows 50 vision requests/day; the enhancement degrades gracefully when the quota is exhausted.
 - **Example:**
   ```bash
   python tools/regenerate_examples.py

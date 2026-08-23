@@ -1,0 +1,62 @@
+# Azure Render Configuration for auto-arch-diagram
+provider_name: "Azure"
+provider_prefix: ["azurerm_"]
+
+draw_order:
+  - outer_nodes
+  - edge_nodes
+  - group_nodes
+  - consolidated_nodes
+  - default
+
+outer_nodes:
+  - tv_azure_users
+  - tv_azure_internet
+  - tv_azure_onprem
+
+edge_nodes:
+  - azurerm_traffic_manager_profile
+  - azurerm_frontdoor
+  - azurerm_application_gateway
+  - azurerm_public_ip
+  - azurerm_dns_zone
+
+group_nodes:
+  - azurerm_resource_group
+  - azurerm_virtual_network
+  - azurerm_subnet
+  - azurerm_network_security_group
+
+auto_annotations:
+  - resource: "azurerm_traffic_manager_profile"
+    link: ["tv_azure_users.users"]
+    arrow: "reverse"
+  - resource: "azurerm_frontdoor"
+    link: ["tv_azure_users.users"]
+    arrow: "reverse"
+
+node_variants:
+  azurerm_linux_virtual_machine:
+    Standard: "azurerm_virtual_machine"
+  azurerm_windows_virtual_machine:
+    Standard: "azurerm_virtual_machine"
+
+bidirectional_nodes:
+  - tv_azure_internet
+  - tv_azure_onprem
+
+shared_services:
+  - azurerm_key_vault
+  - azurerm_log_analytics_workspace
+  - azurerm_container_registry
+
+hide_nodes:
+  - azurerm_network_security_rule
+  - azurerm_subnet_network_security_group_association
+  - azurerm_subnet_route_table_association
+
+group_links:
+  - resource_type: "azurerm_virtual_network_peering"
+    local_attribute: "virtual_network_name"
+    remote_attribute: "remote_virtual_network_id"
+    label: "vnet-peering"

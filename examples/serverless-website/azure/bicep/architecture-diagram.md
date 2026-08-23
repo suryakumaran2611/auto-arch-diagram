@@ -17,4 +17,4 @@ bicep_stg --> bicep_cdnEndpoint
 
 Assumptions: Connections represent explicit dependsOn/parent references; implicit property references are not fully resolved.
 
-Rendered diagram: not available (icons require Graphviz + diagrams)
+Rendered diagram: available as workflow artifact

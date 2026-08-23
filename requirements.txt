@@ -1,10 +1,12 @@
 
 # Core requirements for auto-arch-diagram
-pyyaml
-requests
-diagrams
-graphviz
-python-hcl2
+# python-hcl2: v7 and v8 both supported via the output normalizer; v8 is the
+# actively maintained line from amplify-education.
+pyyaml>=6.0.1
+requests>=2.32
+diagrams>=0.23.4
+graphviz>=0.20.3
+python-hcl2>=7.0,<9
 boto3
 botocore
 pytest

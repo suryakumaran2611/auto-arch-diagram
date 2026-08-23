@@ -2,18 +2,18 @@
 
 # 🏗️ auto-arch-diagram
 
-**Transform Infrastructure-as-Code into Beautiful Architecture Diagrams**
+**Transform Infrastructure-as-Code into Interactive HTML Studios, Native draw.io Vectors & AI-Enhanced Diagrams**
 
 [![Python Tests](https://github.com/suryakumaran2611/auto-arch-diagram/actions/workflows/python-tests.yml/badge.svg)](https://github.com/suryakumaran2611/auto-arch-diagram/actions/workflows/python-tests.yml)
 [![Secret Scan](https://github.com/suryakumaran2611/auto-arch-diagram/actions/workflows/secret-scan.yml/badge.svg)](https://github.com/suryakumaran2611/auto-arch-diagram/actions/workflows/secret-scan.yml)
 [![License: CC BY-NC 4.0](https://img.shields.io/badge/License-CC%20BY--NC%204.0-red.svg)](https://creativecommons.org/licenses/by-nc/4.0/)
-[📖 User Guide](docs/USER_GUIDE.md) • [🛠️ Update Scripts](UPDATE_GITHUB_PAGES_README.md) • [🌐 GitHub Pages](https://suryakumaran2611.github.io/auto-arch-diagram/)
+[📖 User Guide](docs/USER_GUIDE.md) • [🌐 Live Interactive Showcase](https://suryakumaran2611.github.io/auto-arch-diagram/) • [🤖 MCP Server](tools/mcp_server.py)
 
-*Automatically generate professional diagrams from Terraform, CloudFormation, Bicep, and Pulumi with 100+ supported services*
+*Automatically generate professional, interactive, and fully editable architecture diagrams from Terraform, CloudFormation, Bicep, and Pulumi.*
 
 ---
 
-### 🌟 See It In Action
+### 🌟 Enterprise Showcase
 
 </div>
 
@@ -21,96 +21,129 @@
 <tr>
 <td width="50%">
 
-**Multi-Cloud Storage** (7 resources - Network Segregation)
+**Enterprise MLOps Multi-Region Platform (AWS)**
+[![MLOps Multi-Region](examples/terraform/mlops-multi-region-aws/architecture-diagram.png)](https://suryakumaran2611.github.io/auto-arch-diagram/demos/mlops-aws.html)
+*Primary + DR VPCs, SageMaker, EKS, RDS Aurora, ElastiCache, and VPC peering.*
 
-![MLOps Multi-Cloud](examples/terraform/mlops-multi-cloud/architecture-diagram.png)
-
-*AWS S3 + Azure Blob + GCP Cloud Storage with network-aware labels*
-
-</td>
-<td width="50%">
-
-**Custom Icons Demo** (40+ resources)
-
-![Custom Icons Demo](examples/terraform/custom-icons-demo/architecture-diagram.png)
-
-*Event-driven serverless with 11 custom icons*
-
-</td>
-</tr>
-<tr>
-<td width="50%">
-
-**MLOps Multi-Region AWS** (46 resources)
-
-![MLOps Multi-Region](examples/terraform/mlops-multi-region-aws/architecture-diagram.png)
-
-*Primary + DR with VPC peering*
+[🌐 Live HTML Studio ↗](https://suryakumaran2611.github.io/auto-arch-diagram/demos/mlops-aws.html) • [📊 Open in draw.io ↗](https://viewer.diagrams.net/?highlight=0000ff&edit=_blank&layers=1&nav=1#Uhttps%3A%2F%2Fraw.githubusercontent.com%2Fsuryakumaran2611%2Fauto-arch-diagram%2Fmain%2Fdocs%2Fdemos%2Fmlops-aws.drawio) • [💾 .drawio](docs/demos/mlops-aws.drawio) • [📐 .svg](docs/demos/mlops-aws.svg)
 
 </td>
 <td width="50%">
 
-**AWS Serverless Website**
+**Secure 3-Tier Enterprise Web Platform**
+[![Secure 3-Tier Web App](examples/terraform/multi-tier-web-app/architecture-diagram.png)](https://suryakumaran2611.github.io/auto-arch-diagram/demos/multi-tier-web-app.html)
+*AWS WAF, Public ALB, AutoScaling EC2 subnets, Multi-AZ RDS MySQL, and KMS keys.*
 
-![AWS Serverless](examples/serverless-website/aws/terraform/architecture-diagram.png)
-
-*S3 + CloudFront + ACM*
+[🌐 Live HTML Studio ↗](https://suryakumaran2611.github.io/auto-arch-diagram/demos/multi-tier-web-app.html) • [📊 Open in draw.io ↗](https://viewer.diagrams.net/?highlight=0000ff&edit=_blank&layers=1&nav=1#Uhttps%3A%2F%2Fraw.githubusercontent.com%2Fsuryakumaran2611%2Fauto-arch-diagram%2Fmain%2Fdocs%2Fdemos%2Fmulti-tier-web-app.drawio) • [💾 .drawio](docs/demos/multi-tier-web-app.drawio) • [📐 .svg](docs/demos/multi-tier-web-app.svg)
 
 </td>
 </tr>
 <tr>
 <td width="50%">
 
-**AWS AI/ML + Blockchain Services**
+**Hybrid Multi-Cloud Data Analytics**
+[![Hybrid Multi-Cloud](examples/terraform/mlops-multi-cloud/architecture-diagram.png)](https://suryakumaran2611.github.io/auto-arch-diagram/demos/mlops-multi-cloud.html)
+*Unified AWS S3 + Azure Blob + GCP BigQuery with network segregation.*
 
-![AWS AI/ML + Blockchain](examples/test-ai-ml-blockchain/aws/terraform/architecture-diagram.jpg)
-
-*SageMaker, Bedrock, QLDB, and related services*
+[🌐 Live HTML Studio ↗](https://suryakumaran2611.github.io/auto-arch-diagram/demos/mlops-multi-cloud.html) • [📊 Open in draw.io ↗](https://viewer.diagrams.net/?highlight=0000ff&edit=_blank&layers=1&nav=1#Uhttps%3A%2F%2Fraw.githubusercontent.com%2Fsuryakumaran2611%2Fauto-arch-diagram%2Fmain%2Fdocs%2Fdemos%2Fmlops-multi-cloud.drawio) • [💾 .drawio](docs/demos/mlops-multi-cloud.drawio) • [📐 .svg](docs/demos/mlops-multi-cloud.svg)
 
 </td>
 <td width="50%">
 
-**More Examples**
+**Serverless Event Pipeline (Custom Icons)**
+[![Custom Icons Demo](examples/terraform/custom-icons-demo/architecture-diagram.png)](https://suryakumaran2611.github.io/auto-arch-diagram/demos/custom-icons-demo.html)
+*Event-driven ETL workflows using 11 custom programmatic icons with SQS, SNS, and Step Functions.*
 
-[View the full gallery →](examples/README.md)
-
-*Browse all example diagrams in the repo and on GitHub Pages.*
+[🌐 Live HTML Studio ↗](https://suryakumaran2611.github.io/auto-arch-diagram/demos/custom-icons-demo.html) • [📊 Open in draw.io ↗](https://viewer.diagrams.net/?highlight=0000ff&edit=_blank&layers=1&nav=1#Uhttps%3A%2F%2Fraw.githubusercontent.com%2Fsuryakumaran2611%2Fauto-arch-diagram%2Fmain%2Fdocs%2Fdemos%2Fcustom-icons-demo.drawio) • [💾 .drawio](docs/demos/custom-icons-demo.drawio) • [📐 .svg](docs/demos/custom-icons-demo.svg)
 
 </td>
 </tr>
 </table>
 
+<div align="center">
+
+👉 **[Explore all 25+ real-world examples with live HTML & draw.io previews on GitHub Pages →](https://suryakumaran2611.github.io/auto-arch-diagram/)**
+
+</div>
+
 ---
 
-## ✨ Key Features
+## ✨ Key Capabilities
 
-- 🎯 **VPC/Network Grouping** - Automatic VPC organization with subnet distinction
-- 🧠 **AUTO Layout** - Intelligent orientation selection (6-factor analysis)
-- 🏗️ **Multi-Cloud** - 100+ services supported across AWS (38), Azure (13), GCP (12)
-- 📤 **Multiple Formats** - Mermaid, PNG, SVG, JPEG with embedded icons
-- 🎨 **Open Sans Bold Typography** - Enhanced readability with professional bold fonts
-- 🏷️ **Network-Aware Labels** - Diagrams show network segregation (aws-network, global, etc.)
-- ☁️ **Enhanced CloudFormation** - Production-ready templates with monitoring and security
-- 🔧 **Automated Updates** - Scripts for keeping documentation synchronized
-- 🚀 **GitHub Actions** - One-line workflow integration with PR comments
-- 🔒 **Security-First** - Secret scanning, redaction, minimal permissions
-- 📚 **Comprehensive Docs** - Detailed [User Guide](docs/USER_GUIDE.md) and [Update Scripts](UPDATE_GITHUB_PAGES_README.md)
+### 🌐 1. Interactive HTML Architecture Studio (`--out-html`)
+- **Zero-Dependency Standalone App**: Generates a self-contained, offline-ready HTML studio embedding full SVG vectors and metadata.
+- **Path Tracing & Blast-Radius Impact Analysis**: Click any node to highlight upstream dependencies, downstream consumers, and direct network edges.
+- **Dynamic Tier Filter Matrix**: Live toggle chips for Compute, Storage, Database, Security, Containers, and Integration layers.
+- **Radar Mini-Map & Smooth Pan/Zoom**: Fast, fluid navigation across dense 100+ node architectures.
+- **Resource Inspector Drawer**: Click nodes to inspect Terraform resource types, attributes, provider categories, and custom tags.
+- **In-Browser Export Studio**: Export custom filtered views directly to high-res PNG or JSON metadata.
 
-### 🎨 Recent Improvements
+### 📊 2. Native draw.io Vector Exporter (`--out-drawio`)
+- **Official Editable Shapes**: Uses official AWS 2026 (`mxgraph.aws4.*`), Azure SVG (`img/lib/azure2/*`), and GCP (`mxgraph.gcp2.*`) shape packs — fully editable in [draw.io](https://app.diagrams.net), no embedded raster PNGs.
+- **Obstacle-Avoiding Orthogonal Corridor Routing**: Connectors route strictly through free whitespace gutters, **never crossing over or cutting through node icons or labels**.
+- **Bridge Arc Line Jumps (`jumpStyle=arc;jumpSize=6`)**: Crisp line bridges at every crossing to eliminate 4-way intersection ambiguity.
+- **AWS Group Frames & Centered Legend**: Official `mxgraph.aws4.group` containers with bottom-centered legend cards.
 
-**63+ New Services**: Added comprehensive service mappings across AWS, Azure, and GCP including VPC endpoints, CloudFront functions, Lambda layers, and more.
+### 🤖 3. AI-Enhanced Multi-Format Suite (`--ai-enhance`)
+- **Vision-Assisted Layout Refinement**: Evaluates diagram layout and density using **Google Gemini Vision** (`gemini-1.5-flash`, `gemini-2.0-flash`) or **OpenRouter Free Models** to eliminate visual clutter.
+- **Executive Titles & Numbered Flows**: Enriches diagrams with executive subtitles, numbered operational flow badges, and IaC review hints.
+- **Dedicated Output Suite**: Emits `*-ai.png`, `*-ai.svg`, `*-ai.html`, `*-ai.drawio`, and `*-ai.md` alongside deterministic base outputs.
 
-**Network-Aware Diagrams**: Multi-cloud diagrams now display network segregation with contextual labels like "vpc aws network", "storage global", etc.
+### ⚡ 4. Model Context Protocol (MCP) Server (`tools/mcp_server.py`)
+- **Stdio JSON-RPC 2.0 Interface**: Exposes architecture analysis tools to AI coding assistants (Claude Desktop, Cursor, Copilot, Antigravity).
+- **Tools**:
+  - `list_resources(changed_files, iac_root)`: Inspect parsed resources and categories.
+  - `explain_graph(changed_files, iac_root)`: Natural language summary of architecture and connections.
+  - `generate_diagram(changed_files, iac_root, formats, direction)`: Generate full diagram suites programmatically.
 
-**Enhanced CloudFormation**: Production-ready CloudFormation templates with monitoring, security policies, rate limiting, and comprehensive resource configurations.
+### ☁️ 5. True Multi-Cloud & Structured Tiering
+- **Simultaneous Multi-Cloud**: AWS, Azure, GCP, OCI, and IBM on a single canvas with official provider brand accents (AWS `#FF9900`, Azure `#0078D4`, GCP `#4285F4`, OCI `#C74634`, IBM `#0F62FE`).
+- **Structured Category Subclusters**: Groups uncontained resources cleanly into `Security`, `Compute`, `Storage`, `Integration`, and `Management` clusters.
+- **100% Guaranteed Centered Bottom Legend**: Unified HTML table footer centered on the canvas across all formats.
 
-**Automated Maintenance**: Created update scripts (`update_github_pages_images.sh/.bat/.py`) for automatically regenerating and updating all documentation diagrams.
+---
 
-**Service Name Intelligence**: Added smart aliases for service variations (WAFv2→WAF, OpenSearch→Elasticsearch, MSK→Kinesis) to prevent missing icons.
+## 🤖 MCP Server Setup (Claude Desktop / Cursor / Antigravity)
 
-**Typography Enhancement**: Upgraded to **Open Sans Bold** font for enhanced readability and professional appearance across all diagram formats.
+Add to your `claude_desktop_config.json` or `mcp.json`:
 
-**SVG Icon Embedding**: Fixed SVG diagrams to properly embed icons as base64 data URIs, ensuring portability and correct display in all viewers.
+```json
+{
+  "mcpServers": {
+    "auto-arch-diagram": {
+      "command": "python3",
+      "args": ["/path/to/auto-arch-diagram/tools/mcp_server.py"]
+    }
+  }
+}
+```
+
+Now you can ask your AI assistant:
+> *"Analyze my terraform/ directory and generate a native draw.io architecture diagram with interactive HTML preview."*
+
+---
+
+## 🤖 AI Vision Enhancement (Google Gemini & OpenRouter)
+
+Run locally with your preferred vision provider:
+
+```bash
+# With Google Gemini (Default: gemini-1.5-flash):
+export GEMINI_API_KEY="your-gemini-key"
+python tools/generate_arch_diagram.py --changed-files path/to/main.tf \
+  --out-png out/architecture.png --out-html out/architecture.html --out-drawio out/architecture.drawio \
+  --ai-enhance --ai-backend gemini
+
+# With OpenRouter Free Models:
+export OPENROUTER_API_KEY="your-openrouter-key"
+python tools/generate_arch_diagram.py --changed-files path/to/main.tf \
+  --out-png out/architecture.png --out-html out/architecture.html --out-drawio out/architecture.drawio \
+  --ai-enhance --ai-backend openrouter
+```
+
+- **Google Gemini**: Get free keys from [Google AI Studio](https://aistudio.google.com). Fast, high-throughput multimodal analysis defaulting to `gemini-1.5-flash` with fallback to `gemini-2.0-flash` and `gemini-1.5-flash-8b`.
+- **OpenRouter Free Tier**: $0 budget model ranking filter (`OPENROUTER_API_KEY`).
+- **Outputs**: Generates dedicated `*-ai.png`, `*-ai.svg`, `*-ai.html`, `*-ai.drawio`, `*-ai.md` with operational step annotations and review insights.
 
 ## 🎯 Quick Start
 

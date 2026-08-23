@@ -136,6 +136,10 @@ celerybeat.pid
 
 # Environments
 .env
+.env.*
+*.key
+.envrc
+.secrets
 .venv
 env/
 venv/
@@ -186,3 +190,9 @@ cython_debug/
 #  refer to https://docs.cursor.com/context/ignore-files
 .cursorignore
 .cursorindexingignore
+
+# Local agent prompts (not tracked)
+IMMEDIATE_REQUIRED_IMPROVEMENTS.md
+
+# Benchmark artifacts (generated during terravision comparison work)
+benchmarks/

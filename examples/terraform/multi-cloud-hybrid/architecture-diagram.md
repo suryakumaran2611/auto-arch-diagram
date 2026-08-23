@@ -71,20 +71,13 @@ tf_azurerm_eventgrid_topic_events --> tf_azurerm_eventgrid_event_subscription_da
 tf_azurerm_linux_function_app_data_processor --> tf_azurerm_eventgrid_event_subscription_data_processor
 tf_azurerm_mssql_server_main --> tf_azurerm_mssql_database_app_db
 tf_azurerm_resource_group_main --> tf_azurerm_cosmosdb_account_main
-tf_azurerm_resource_group_main --> tf_azurerm_cosmosdb_sql_database_app_db
-tf_azurerm_resource_group_main --> tf_azurerm_eventgrid_topic_events
 tf_azurerm_resource_group_main --> tf_azurerm_linux_function_app_data_processor
-tf_azurerm_resource_group_main --> tf_azurerm_mssql_server_main
 tf_azurerm_resource_group_main --> tf_azurerm_service_plan_main
 tf_azurerm_resource_group_main --> tf_azurerm_storage_account_datalake
 tf_azurerm_service_plan_main --> tf_azurerm_linux_function_app_data_processor
-tf_azurerm_storage_account_datalake --> tf_azurerm_linux_function_app_data_processor
 tf_azurerm_storage_account_datalake --> tf_azurerm_storage_container_processed
 tf_google_cloudfunctions_function_analytics_processor --> tf_google_pubsub_subscription_events_sub
-tf_google_pubsub_topic_events --> tf_google_pubsub_subscription_events_sub
 tf_google_sql_database_instance_postgres --> tf_google_sql_database_app_db
-tf_google_storage_bucket_data_warehouse --> tf_google_cloudfunctions_function_analytics_processor
-tf_google_storage_bucket_functions --> tf_google_cloudfunctions_function_analytics_processor
 ```
 
 Assumptions: Connections represent inferred references (including depends_on and attribute references).

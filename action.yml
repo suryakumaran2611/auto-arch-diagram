@@ -68,6 +68,34 @@ inputs:
     description: Output path for SVG (relative to repo root). Overrides out_dir. Ignored unless svg requested.
     required: false
     default: ''
+  out_drawio:
+    description: Output path for draw.io (.drawio) diagram (relative to repo root).
+    required: false
+    default: ''
+  out_html:
+    description: Output path for interactive HTML diagram (relative to repo root).
+    required: false
+    default: ''
+  ai_enhance:
+    description: Enable vision-assisted layout critique (Gemini or OpenRouter free models).
+    required: false
+    default: 'false'
+  ai_backend:
+    description: AI backend for vision refinement (auto|gemini|openrouter).
+    required: false
+    default: auto
+  gemini_model:
+    description: Google Gemini model name (default gemini-1.5-flash).
+    required: false
+    default: gemini-1.5-flash
+  gemini_api_key:
+    description: Google Gemini API key.
+    required: false
+    default: ''
+  openrouter_api_key:
+    description: OpenRouter API key.
+    required: false
+    default: ''
 
 outputs:
   md_path:
@@ -85,6 +113,12 @@ outputs:
   svg_path:
     description: Path to generated SVG.
     value: ${{ steps.out.outputs.svg_path }}
+  drawio_path:
+    description: Path to generated draw.io diagram.
+    value: ${{ steps.out.outputs.drawio_path }}
+  html_path:
+    description: Path to generated interactive HTML.
+    value: ${{ steps.out.outputs.html_path }}
 
 runs:
   using: composite
@@ -127,6 +161,8 @@ runs:
         AUTO_ARCH_RENDER_LAYOUT: ${{ inputs.render_layout }}
         AUTO_ARCH_RENDER_BG: ${{ inputs.render_bg }}
         AUTO_ARCH_PUBLISH_ENABLED: ${{ inputs.publish_enabled }}
+        GEMINI_API_KEY: ${{ inputs.gemini_api_key }}
+        OPENROUTER_API_KEY: ${{ inputs.openrouter_api_key }}
       run: |
         OUT_DIR="${{ inputs.out_dir }}"
         mkdir -p "${OUT_DIR}"
@@ -138,10 +174,13 @@ runs:
         OUT_MMD='${{ inputs.out_mmd }}'
         OUT_PNG='${{ inputs.out_png }}'
         OUT_JPG='${{ inputs.out_jpg }}'
-        OUT_SVG='${{ inputs.out_svg }}'
+        OUT_DRAWIO='${{ inputs.out_drawio }}'
+        OUT_HTML='${{ inputs.out_html }}'
 
         if [ -z "${OUT_MD}" ]; then OUT_MD="${OUT_DIR}/architecture-diagram.md"; fi
         if [ -z "${OUT_MMD}" ]; then OUT_MMD="${OUT_DIR}/architecture-diagram.mmd"; fi
+        if [ -z "${OUT_DRAWIO}" ]; then OUT_DRAWIO="${OUT_DIR}/architecture-diagram.drawio"; fi
+        if [ -z "${OUT_HTML}" ]; then OUT_HTML="${OUT_DIR}/architecture-diagram.html"; fi
 
         if [ -z "${FORMATS}" ] || [ "${FORMATS}" = "none" ]; then
           WANT_PNG=0
@@ -169,6 +208,12 @@ runs:
           if [ -n "${OUT_SVG}" ]; then OUT_SVG_ARG="${OUT_SVG}"; else OUT_SVG_ARG="${OUT_DIR}/architecture-diagram.svg"; fi
         fi
 
+        extra_args=()
+        if [ "${{ inputs.ai_enhance }}" = "true" ]; then
+          extra_args+=(--ai-enhance --ai-backend "${{ inputs.ai_backend }}")
+          if [ -n "${{ inputs.gemini_model }}" ]; then extra_args+=(--gemini-model "${{ inputs.gemini_model }}"); fi
+        fi
+
         python "${GITHUB_ACTION_PATH}/tools/generate_arch_diagram.py" \
           --iac-root "${{ inputs.iac_root }}" \
           --changed-files "${{ inputs.changed_files }}" \
@@ -176,7 +221,10 @@ runs:
           --out-mmd "${OUT_MMD}" \
           --out-png "${OUT_PNG_ARG}" \
           --out-jpg "${OUT_JPG_ARG}" \
-          --out-svg "${OUT_SVG_ARG}"
+          --out-svg "${OUT_SVG_ARG}" \
+          --out-drawio "${OUT_DRAWIO}" \
+          --out-html "${OUT_HTML}" \
+          "${extra_args[@]}"
 
     - name: Export outputs
       id: out
@@ -191,9 +239,13 @@ runs:
         PNG='${{ inputs.out_png }}'
         JPG='${{ inputs.out_jpg }}'
         SVG='${{ inputs.out_svg }}'
+        DRAWIO='${{ inputs.out_drawio }}'
+        HTML='${{ inputs.out_html }}'
 
         if [ -z "${MD}" ]; then MD="${OUT_DIR}/architecture-diagram.md"; fi
         if [ -z "${MMD}" ]; then MMD="${OUT_DIR}/architecture-diagram.mmd"; fi
+        if [ -z "${DRAWIO}" ]; then DRAWIO="${OUT_DIR}/architecture-diagram.drawio"; fi
+        if [ -z "${HTML}" ]; then HTML="${OUT_DIR}/architecture-diagram.html"; fi
 
         WANT_PNG=0
         WANT_JPG=0
@@ -213,3 +265,5 @@ runs:
         echo "png_path=${PNG}" >> "$GITHUB_OUTPUT"
         echo "jpg_path=${JPG}" >> "$GITHUB_OUTPUT"
         echo "svg_path=${SVG}" >> "$GITHUB_OUTPUT"
+        echo "drawio_path=${DRAWIO}" >> "$GITHUB_OUTPUT"
+        echo "html_path=${HTML}" >> "$GITHUB_OUTPUT"

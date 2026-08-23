@@ -1,0 +1,41 @@
+# GCP Render Configuration for auto-arch-diagram
+provider_name: "GCP"
+provider_prefix: ["google_"]
+
+draw_order:
+  - outer_nodes
+  - edge_nodes
+  - group_nodes
+  - consolidated_nodes
+  - default
+
+outer_nodes:
+  - tv_gcp_users
+  - tv_gcp_internet
+  - tv_gcp_onprem
+
+edge_nodes:
+  - google_dns_managed_zone
+  - google_compute_global_forwarding_rule
+  - google_compute_forwarding_rule
+  - google_compute_router
+
+group_nodes:
+  - google_project
+  - google_compute_network
+  - google_compute_subnetwork
+
+shared_services:
+  - google_secret_manager_secret
+  - google_artifact_registry_repository
+  - google_kms_crypto_key
+
+hide_nodes:
+  - google_compute_firewall
+  - google_compute_route
+
+group_links:
+  - resource_type: "google_compute_network_peering"
+    local_attribute: "network"
+    remote_attribute: "peer_network"
+    label: "vpc-peering"

@@ -79,6 +79,14 @@ pytest tests/test_golden_examples.py -v
   - `test_static_terraform_mermaid_contains_flowchart_direction`: Ensures proper Mermaid syntax
   - `test_icon_rendering_produces_png`: Tests icon-based diagram rendering (requires Graphviz)
 
+- **test_ai_enhancement.py**: Tests the AI enhancement stack (no network required - all API calls are mocked)
+  - OpenRouter client: free-model enforcement (`ranked_free_vision_models` filtering/ranking/override validation), key resolution, model fallback on 429/5xx, JSON critique parsing
+  - Feedback loop: render suggestion mapping (`apply_suggestion`), plateau/target early-stop behavior, no-key no-op path, insights markdown rendering
+  - Label overrides: `_sanitize_label` rules, `_extract_label_overrides` matching (full id + name part), `_tf_node_label` override application
+  - Guide + stitching: standalone legend render (`_render_guide_png`), PIL raster stitch with white matte, SVG canvas extension with embedded data URI
+  - Palette: official provider accents/tints constants, white-canvas default, draw.io exporter mirroring
+  - draw.io export: `tools/drawio_native_shapes.py` resolves Terraform types to official native shapes (AWS 2026 `mxgraph.aws4.*` resourceIcons/direct shapes with official category fills, Azure `azure2` SVG library images, GCP `mxgraph.gcp2.*` brand-filled stencils); unknown types fall back to embedded PNGs
+
 ### Golden Files
 
 Golden files are reference outputs stored in `tests/golden/` directory:

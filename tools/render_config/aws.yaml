@@ -1,0 +1,160 @@
+# AWS Render Configuration for auto-arch-diagram
+provider_name: "AWS"
+provider_prefix: ["aws_"]
+
+# Node drawing order waves
+draw_order:
+  - outer_nodes
+  - edge_nodes
+  - group_nodes
+  - consolidated_nodes
+  - default
+
+outer_nodes:
+  - tv_aws_users
+  - tv_aws_internet
+  - tv_aws_device
+  - tv_aws_onprem
+  - tv_aws_mobile_client
+
+edge_nodes:
+  - aws_route53
+  - aws_cloudfront_distribution
+  - aws_internet_gateway
+  - aws_api_gateway
+  - aws_apigateway
+  - aws_cloudwatch_event
+  - aws_sns_topic
+  - aws_cognito
+  - aws_wafv2
+  - aws_waf
+  - aws_appsync
+
+group_nodes:
+  - aws_vpc
+  - aws_az
+  - aws_group
+  - aws_account
+  - aws_appautoscaling_target
+  - aws_autoscaling_group
+  - aws_subnet
+  - aws_security_group
+  - tv_aws_onprem
+  - tv_aws_region
+
+auto_annotations:
+  - resource: "aws_route53"
+    link: ["tv_aws_users.users"]
+    arrow: "reverse"
+  - resource: "aws_cloudfront_distribution"
+    link: ["tv_aws_users.users"]
+    arrow: "reverse"
+  - resource: "aws_internet_gateway"
+    link: ["tv_aws_internet.internet"]
+    arrow: "forward"
+  - resource: "aws_nat_gateway"
+    link: ["aws_internet_gateway.*"]
+    arrow: "forward"
+  - resource: "aws_ecs_service"
+    link: ["aws_ecr_repository.ecr"]
+    arrow: "forward"
+  - resource: "aws_eks_cluster"
+    link: ["aws_ecr_repository.ecr"]
+    arrow: "forward"
+  - resource: "aws_api_gateway"
+    link: ["tv_aws_mobile_client.mobile"]
+    arrow: "reverse"
+  - resource: "aws_lambda"
+    link: ["aws_cloudwatch_log_group.cloudwatch"]
+    arrow: "forward"
+
+node_variants:
+  aws_ecs_service:
+    FARGATE: "aws_fargate"
+    EC2: "aws_ec2ecs"
+  aws_lb:
+    application: "aws_alb"
+    network: "aws_nlb"
+  aws_rds:
+    aurora-mysql: "aws_rds_aurora_mysql"
+    aurora-postgresql: "aws_rds_aurora_postgres"
+    aurora: "aws_rds_aurora"
+    mysql: "aws_rds_mysql"
+    postgres: "aws_rds_postgres"
+    mariadb: "aws_rds_mariadb"
+    oracle: "aws_rds_oracle"
+    sqlserver: "aws_rds_sqlserver"
+  aws_db_instance:
+    aurora-mysql: "aws_rds_aurora_mysql"
+    aurora-postgresql: "aws_rds_aurora_postgres"
+    aurora: "aws_rds_aurora"
+    mysql: "aws_rds_mysql"
+    postgres: "aws_rds_postgres"
+    mariadb: "aws_rds_mariadb"
+    oracle: "aws_rds_oracle"
+    sqlserver: "aws_rds_sqlserver"
+
+reverse_arrow_list:
+  - aws_route53
+  - aws_cloudfront
+  - aws_cloudwatch_event
+  - aws_sfn_state_machine
+  - aws_vpc.
+  - aws_subnet.
+  - aws_appautoscaling_target
+  - aws_iam_role.
+  - aws_rds_aurora
+
+bidirectional_nodes:
+  - tv_aws_internet
+  - tv_aws_onprem
+
+always_draw_line:
+  - aws_lb
+  - aws_iam_role
+  - aws_alb
+  - aws_nlb
+  - aws_ecs_service
+  - aws_rds_aurora
+  - aws_rds_mysql
+  - aws_rds_postgres
+
+never_draw_line: []
+
+shared_services:
+  - aws_acm_certificate
+  - aws_cloudwatch_log_group
+  - aws_ecr_repository
+  - aws_efs_file_system
+  - aws_ssm_parameter
+  - aws_kms_key
+  - aws_eip
+  - aws_secretsmanager
+
+hide_nodes:
+  - aws_security_group_rule
+  - aws_route
+  - aws_route_table
+  - aws_vpc_dhcp_options
+  - aws_vpc_dhcp_options_association
+  - aws_iam_instance_profile
+  - aws_default_route_table
+  - aws_default_network_acl
+  - aws_default_security_group
+  - aws_s3_bucket_lifecycle_configuration
+  - aws_s3_bucket_logging
+  - aws_s3_bucket_policy
+  - aws_s3_bucket_server_side_encryption_configuration
+  - aws_s3_bucket_versioning
+  - aws_vpc_security_group_egress_rule
+  - aws_vpc_security_group_ingress_rule
+  - aws_appautoscaling_policy
+  - aws_ecr_lifecycle_policy
+  - random_password
+
+group_links:
+  - resource_type: "aws_vpc_peering_connection"
+    local_attribute: "vpc_id"
+    remote_attribute: "peer_vpc_id"
+    label: "peering"
+    icon: "aws/network/vpc-peering"
