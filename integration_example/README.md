@@ -4,15 +4,27 @@ Copy this `integration_example/` folder as the starting point for your own
 project. It shows how to keep an architecture diagram, PR comments, and a
 Confluence page automatically in sync using the reusable workflow.
 
+## Architecture Previews
+
+| Standard Diagram (`docs/architecture.png`) | Gemini AI-Enhanced (`docs/architecture-ai.png`) |
+|:---:|:---:|
+| [![Standard Diagram](docs/architecture.png)](docs/architecture.html) | [![AI-Enhanced Diagram](docs/architecture-ai.png)](docs/architecture-ai.html) |
+| [🌐 Standard HTML Studio ↗](docs/architecture.html) • [💾 .drawio](docs/architecture.drawio) • [📐 .svg](docs/architecture.svg) | [🌐 AI-Enhanced Studio ↗](docs/architecture-ai.html) • [💾 .drawio](docs/architecture-ai.drawio) • [📐 .svg](docs/architecture-ai.svg) |
+
+**AI Enhancements (Gemini 3.1 Flash Lite):**
+- **Executive Framing:** Adds *"Enterprise Scalable MLOps Data Platform"* title and operational subtitle.
+- **Operational Flows:** Numbered step annotations detailing data ingestion, feature store access, and model training.
+- **Context Badges:** Highlights KMS CMK encryption, auto-scaling boundaries, and data retention policies.
+
 ## What's inside
 
 ```
 integration_example/
 ├── main.tf                         # Realistic MLOps/AIOps stack (VPC → S3 → Glue → SageMaker/EKS → CloudWatch AIOps)
 ├── variables.tf / outputs.tf
-├── .auto-arch-diagram.yml          # Publish paths → docs/architecture.{md,mmd,png,jpg,svg,drawio,html}
+├── .auto-arch-diagram.yml          # Publish paths → docs/architecture.{md,mmd,png,jpg,svg,drawio,html} + AI suite
 └── .github/workflows/architecture.yml  # Boilerplate GitHub workflow (copy to your repo's .github/workflows/)
-    └── docs/                       # Generated outputs (committed, so PRs show the diff)
+    └── docs/                       # Generated standard & AI-enhanced outputs (committed, so PRs show the diff)
 ```
 
 **IaC highlights (realistic tags, naming, governance):**

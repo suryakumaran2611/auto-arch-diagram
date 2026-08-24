@@ -186,6 +186,47 @@ python tools/generate_arch_diagram.py --changed-files path/to/main.tf \
   --ai-enhance --ai-backend openrouter
 ```
 
+#### Managing & Changing API Keys Locally
+
+You can store and rotate API keys locally using persistent configuration files (recommended) or environment variables:
+
+##### Option 1: Persistent Key Files (Recommended)
+Key files are stored in `~/.config/auto-arch-diagram/` with `0600` permissions. They remain outside git tracking and work seamlessly without setting shell variables every time.
+
+```bash
+# Ensure secure directory exists
+mkdir -p ~/.config/auto-arch-diagram && chmod 700 ~/.config/auto-arch-diagram
+
+# 1. Google Gemini Key:
+# To set or update:
+echo "YOUR_GEMINI_API_KEY" > ~/.config/auto-arch-diagram/gemini_key
+chmod 600 ~/.config/auto-arch-diagram/gemini_key
+
+# 2. OpenRouter Key:
+# To set or update:
+echo "YOUR_OPENROUTER_API_KEY" > ~/.config/auto-arch-diagram/openrouter_key
+chmod 600 ~/.config/auto-arch-diagram/openrouter_key
+```
+
+> **Manual Editing:** You can view or change the keys at any time using your favorite editor:
+> ```bash
+> nano ~/.config/auto-arch-diagram/gemini_key
+> nano ~/.config/auto-arch-diagram/openrouter_key
+> ```
+
+##### Option 2: Environment Variables
+```bash
+# Session export
+export GEMINI_API_KEY="your-gemini-key"
+export OPENROUTER_API_KEY="your-openrouter-key"
+
+# Permanent bash/zsh export
+echo 'export GEMINI_API_KEY="your-gemini-key"' >> ~/.bashrc
+source ~/.bashrc
+```
+
+**Resolution Hierarchy:** Environment Variables > Secure Key Files (`~/.config/auto-arch-diagram/`).
+
 ---
 
 ### 4. 📐 Scalable Vector SVG (`--out-svg`)
