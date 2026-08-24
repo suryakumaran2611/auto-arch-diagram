@@ -260,12 +260,13 @@ def _publish_to_confluence(
     confluence_token: str,
     page_id: str,
     diagram_path: Path,
+    drawio_path: Path | None = None,
     replace: bool = True,
     image_marker: str | None = None,
     debug: bool = False,
     unique_filename: bool = False,
 ) -> bool:
-    """Publish or robustly replace a specific image in a Confluence page via REST API."""
+    """Publish or robustly replace a specific image in a Confluence page via REST API with optional draw.io attachment."""
     def _log(msg: str) -> None:
         if debug:
             print(msg, flush=True)
@@ -323,13 +324,13 @@ def _publish_to_confluence(
     _log(f"Confluence publish: marker={marker_comment!r}")
     img_tag = f'{marker_comment}<ac:image><ri:attachment ri:filename="{filename}" /></ac:image>'
 
-    def _upload_attachment() -> bool:
+    def _upload_attachment(path_to_upload: Path, target_name: str, target_mime: str) -> bool:
         upload_url = f"{confluence_url}/rest/api/content/{page_id}/child/attachment"
         headers = {"X-Atlassian-Token": "no-check"}
         params = {"minorEdit": "true"}
-        _info("Confluence publish: uploading attachment")
-        with diagram_path.open("rb") as f:
-            files = {"file": (filename, f, mime)}
+        _info(f"Confluence publish: uploading attachment {target_name}")
+        with path_to_upload.open("rb") as f:
+            files = {"file": (target_name, f, target_mime)}
             resp = requests.post(
                 upload_url,
                 auth=auth,
@@ -339,13 +340,18 @@ def _publish_to_confluence(
                 timeout=_CONFLUENCE_TIMEOUT_SECONDS,
             )
         if resp.status_code not in (200, 201):
-            print(f"Confluence publish: failed to upload attachment: {resp.text}")
+            print(f"Confluence publish: failed to upload attachment {target_name}: {resp.text}")
             return False
-        _info("Confluence publish: attachment uploaded")
+        _info(f"Confluence publish: attachment {target_name} uploaded successfully")
         return True
 
-    if not _upload_attachment():
+    if not _upload_attachment(diagram_path, filename, mime):
         return False
+
+    # Also upload draw.io vector diagram if present
+    if drawio_path and drawio_path.exists():
+        drawio_name = drawio_path.name
+        _upload_attachment(drawio_path, drawio_name, "application/xml")
 
     new_body = body
     replaced = False
@@ -6922,9 +6928,14 @@ if __name__ == "__main__":
                 confluence_smart = False
 
         if not confluence_smart:
-            # Fallback to standard single-image replacement
+            # Fallback to standard single-image replacement + optional draw.io upload
             png_path = repo_root / "artifacts/architecture-diagram.png"
             svg_path = repo_root / "artifacts/architecture-diagram.svg"
+            drawio_path = repo_root / "artifacts/architecture-diagram.drawio"
+            if not drawio_path.exists():
+                drawio_matches = list(repo_root.glob("docs/*.drawio")) or list(repo_root.glob("artifacts/*.drawio"))
+                drawio_path = drawio_matches[0] if drawio_matches else None
+
             published = False
             for path in [png_path, svg_path]:
                 if path.exists():
@@ -6934,6 +6945,7 @@ if __name__ == "__main__":
                         confluence_token,
                         confluence_page_id,
                         path,
+                        drawio_path=drawio_path,
                         replace=confluence_replace,
                         image_marker=confluence_image_marker,
                         debug=confluence_debug,

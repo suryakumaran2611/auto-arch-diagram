@@ -175,3 +175,41 @@ def test_publish_smart_confluence_page(mock_put, mock_post, mock_get, tmp_path: 
     payload = put_kwargs.get("json", {})
     assert payload["version"]["number"] == 4
     assert "Microservices Cloud Platform" in payload["body"]["storage"]["value"]
+
+
+@patch("tools.generate_arch_diagram.requests.get")
+@patch("tools.generate_arch_diagram.requests.post")
+@patch("tools.generate_arch_diagram.requests.put")
+def test_publish_standard_confluence_with_drawio(mock_put, mock_post, mock_get, tmp_path: Path):
+    """Verify regular non-AI Confluence image replacement also uploads draw.io attachment."""
+    from tools.generate_arch_diagram import _publish_to_confluence
+
+    mock_get.return_value.status_code = 200
+    mock_get.return_value.json.return_value = {
+        "title": "Standard Wiki Page",
+        "version": {"number": 1},
+        "body": {"storage": {"value": "<p>Existing wiki content</p>"}},
+    }
+    mock_post.return_value.status_code = 200
+    mock_put.return_value.status_code = 200
+
+    png_file = tmp_path / "architecture.png"
+    drawio_file = tmp_path / "architecture.drawio"
+    png_file.write_text("png-bytes")
+    drawio_file.write_text("drawio-xml")
+
+    success = _publish_to_confluence(
+        confluence_url="https://company.atlassian.net/wiki",
+        confluence_user="dev@company.com",
+        confluence_token="token-xyz",
+        page_id="998877",
+        diagram_path=png_file,
+        drawio_path=drawio_file,
+        replace=True,
+    )
+
+    assert success is True
+    assert mock_get.called
+    assert mock_post.call_count == 2  # 1 for PNG + 1 for Draw.io
+    assert mock_put.called
+
