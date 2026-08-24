@@ -241,33 +241,36 @@ jobs:
       force_full: ${{ github.event.inputs.force_update || false }}  # Force generation if manually triggered
 ```
 
-### Publishing Diagrams to Confluence Pages
+### 🚀 Smart Confluence (AI-Enhanced Architecture Documentation Portal)
 
-You can automatically publish or replace architecture diagrams to a Confluence page using the workflow's Confluence integration feature. This is useful for keeping your documentation up-to-date with the latest infrastructure changes.
+Transform any Confluence page into a rich, living architecture portal updated automatically on every IaC change. **Smart Confluence** generates an executive-ready documentation suite directly from Terraform, CloudFormation, Bicep, or Pulumi using Google Gemini 3.1 Flash Lite or OpenRouter vision models:
 
-**Example Workflow Step:**
+- **Executive Architecture Header & Status Badges**: Environment badges (`PRODUCTION`, `STAGING`), cloud provider tags (`AWS`, `AZURE`, `GCP`), IaC tool, and Git commit metadata.
+- **Embedded Architecture Canvas**: High-res PNG/JPG with centered connectors & type legend.
+- **Multi-Format Attachment Vault**: Automatically uploads `.drawio` (editable via Confluence Draw.io plugin), standalone offline `.html` studio, scalable `.svg`, `.png`, and `.jpg` as direct page attachments.
+- **AI Executive Workload Narrative**: Comprehensive 3-4 paragraph architectural summary explaining ingress, caching, compute, storage, and persistence tiers.
+- **💰 Projected Cost Analysis & FinOps Insights**: Estimated monthly run-rate range, primary cost drivers (GPU compute, Multi-AZ databases, NAT gateways), and actionable savings plan recommendations.
+- **🛡️ Well-Architected Framework Assessment**: Security & governance controls (KMS CMK encryption, IAM least-privilege, subnet segregation) and high-availability / DR failover posture.
+- **🛠️ Prioritized Improvements Backlog**: Actionable P0/P1/P2 recommendations with concrete Terraform code remediation steps.
+- **🔍 Expandable Resource Inventory**: Structured table detailing all detected infrastructure resources, types, categories, and identifiers.
+
+**GitHub Actions Configuration (`.github/workflows/architecture.yml`):**
 
 ```yaml
-with:
-  direction: AUTO
-  image_formats: png,svg
-  publish_enabled: true
-  publish_confluence: true
-  confluence_page_id: '123456789'  # Target Confluence page ID
-  confluence_replace: true         # Replace existing diagram on the page
-secrets:
-  CONFLUENCE_URL: ${{ secrets.CONFLUENCE_URL }}
-  CONFLUENCE_USER: ${{ secrets.CONFLUENCE_USER }}
-  CONFLUENCE_TOKEN: ${{ secrets.CONFLUENCE_TOKEN }}
+- uses: suryakumaran2611/auto-arch-diagram/.github/workflows/reusable-auto-arch-diagram.yml@main
+  with:
+    direction: AUTO
+    image_formats: png,svg,jpg
+    publish_confluence: true
+    confluence_smart: true           # Enable Smart Confluence AI Architecture Portal
+    confluence_page_id: '123456789'  # Target Confluence page ID
+    ai_backend: gemini               # gemini | openrouter | auto
+  secrets:
+    GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+    CONFLUENCE_URL: ${{ secrets.CONFLUENCE_URL }}
+    CONFLUENCE_USER: ${{ secrets.CONFLUENCE_USER }}
+    CONFLUENCE_TOKEN: ${{ secrets.CONFLUENCE_TOKEN }}
 ```
-
-**How it works:**
-- Set `publish_enabled: true` and `publish_confluence: true` to activate Confluence publishing.
-- Provide your Confluence instance URL, user, and API token as secrets.
-- Specify the target page ID with `confluence_page_id`.
-- Set `confluence_replace: true` to overwrite the existing diagram, or omit for append mode.
-
-**Required Secrets:**
 - `CONFLUENCE_URL`: Base URL of your Confluence instance (e.g., `https://your-domain.atlassian.net/wiki`)
 - `CONFLUENCE_USER`: Confluence username or email
 - `CONFLUENCE_TOKEN`: API token generated from Confluence
