@@ -16,10 +16,10 @@ def _python_cmd(repo: Path) -> list[str]:
     venv_py_win = repo / ".venv" / "Scripts" / "python.exe"
     venv_py_unix = repo / ".venv" / "bin" / "python"
     if venv_py_win.exists():
-        return [str(venv_py_win)]
+        return [str(venv_py_win), "-u"]
     elif venv_py_unix.exists():
-        return [str(venv_py_unix)]
-    return [sys.executable]
+        return [str(venv_py_unix), "-u"]
+    return [sys.executable, "-u"]
 
 
 def _generate_for_example(repo: Path, entry_file: Path, *, ai_enhance: bool = False) -> None:
@@ -27,15 +27,25 @@ def _generate_for_example(repo: Path, entry_file: Path, *, ai_enhance: bool = Fa
         return
 
     example_dir = entry_file.parent
-
-    # Always regenerate outputs to keep examples consistent with current renderer.
-    out_md = example_dir / "architecture-diagram.md"
-    out_mmd = example_dir / "architecture-diagram.mmd"
-    out_png = example_dir / "architecture-diagram.png"
-    out_jpg = example_dir / "architecture-diagram.jpg"
-    out_svg = example_dir / "architecture-diagram.svg"
-    out_drawio = example_dir / "architecture-diagram.drawio"
-    out_html = example_dir / "architecture-diagram.html"
+    if example_dir.name == "integration_example":
+        docs_dir = example_dir / "docs"
+        docs_dir.mkdir(parents=True, exist_ok=True)
+        out_md = docs_dir / "architecture.md"
+        out_mmd = docs_dir / "architecture.mmd"
+        out_png = docs_dir / "architecture.png"
+        out_jpg = docs_dir / "architecture.jpg"
+        out_svg = docs_dir / "architecture.svg"
+        out_drawio = docs_dir / "architecture.drawio"
+        out_html = docs_dir / "architecture.html"
+    else:
+        # Always regenerate outputs to keep examples consistent with current renderer.
+        out_md = example_dir / "architecture-diagram.md"
+        out_mmd = example_dir / "architecture-diagram.mmd"
+        out_png = example_dir / "architecture-diagram.png"
+        out_jpg = example_dir / "architecture-diagram.jpg"
+        out_svg = example_dir / "architecture-diagram.svg"
+        out_drawio = example_dir / "architecture-diagram.drawio"
+        out_html = example_dir / "architecture-diagram.html"
 
     env = dict(os.environ)
     # Don't publish into docs/ paths when regenerating examples.
@@ -85,6 +95,10 @@ def main() -> int:
     examples_root = repo / "examples"
 
     entries: list[Path] = []
+    integration_main = repo / "integration_example" / "main.tf"
+    if integration_main.exists():
+        entries.append(integration_main)
+
     entries += sorted(examples_root.rglob("main.tf"))
     entries += sorted(examples_root.rglob("main.bicep"))
     entries += sorted(examples_root.rglob("template.yml"))
@@ -100,10 +114,10 @@ def main() -> int:
         # Skip CDK examples (not statically parsed).
         if entry.suffix.lower() in {".ts", ".py"} and entry.name.endswith(".cdk.ts"):
             continue
-        print(f"Generating: {entry.parent.relative_to(repo)} (from {entry.name})")
+        print(f"Generating: {entry.parent.relative_to(repo)} (from {entry.name})", flush=True)
         _generate_for_example(repo, entry, ai_enhance=args.ai_enhance)
 
-    print("Done.")
+    print("Done.", flush=True)
     return 0
 
 

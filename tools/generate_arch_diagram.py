@@ -3339,7 +3339,7 @@ def _render_icon_diagram_from_terraform(
     node_by_res: dict[str, Any] = {}
 
     layout = (
-        (os.getenv("AUTO_ARCH_RENDER_LAYOUT") or render.layout or "lanes")
+        (os.getenv("AUTO_ARCH_RENDER_LAYOUT") or render.layout or "providers")
         .strip()
         .lower()
     )
@@ -3889,6 +3889,7 @@ def _render_icon_diagram_from_terraform(
                     _align_provider_clusters(diag.dot, provider_anchor_ids, direction=direction, max_per_row=2)
         else:
             # Category lanes (industry-friendly default): Network -> Security -> Compute -> Data...
+            lane_anchor_ids: list[str] = []
             for lane in lanes:
                 providers = grouped_lanes.get(lane) or {}
                 if not providers:
@@ -4018,6 +4019,20 @@ def _render_icon_diagram_from_terraform(
                             for res in sorted(provider_resources):
                                 if res not in compute_children:
                                     render_resource_node(res)
+
+                # Capture an anchor from this lane for horizontal alignment
+                for provider, resources in sorted(providers.items()):
+                    found_anchor = False
+                    for r in sorted(resources):
+                        if r in node_by_res and hasattr(node_by_res[r], "_id"):
+                            lane_anchor_ids.append(node_by_res[r]._id)
+                            found_anchor = True
+                            break
+                    if found_anchor:
+                        break
+
+            if len(lane_anchor_ids) > 1:
+                _align_provider_clusters(diag.dot, lane_anchor_ids, direction=direction, max_per_row=3)
 
         for src_res, dst_res in sorted(edges):
             if src_res in node_by_res and dst_res in node_by_res:

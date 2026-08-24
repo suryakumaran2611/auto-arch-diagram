@@ -7,139 +7,103 @@ Summary: Generated a dependency-oriented Terraform diagram from changed resource
 ```mermaid
 flowchart LR
 subgraph all_AWS[AWS]
-  subgraph vpc_aws_vpc_ml_vpc[VPC
-ml vpc]
-    tf_aws_vpc_ml_vpc["aws_vpc.ml_vpc"]
-    subgraph subnet_aws_subnet_private_a[Subnet
-private a (Private)]
-      tf_aws_subnet_private_a["aws_subnet.private_a"]
-      tf_aws_elasticache_cluster_online["aws_elasticache_cluster.online"]
-      tf_aws_lambda_function_preprocess["aws_lambda_function.preprocess"]
-      tf_aws_rds_cluster_features["aws_rds_cluster.features"]
-      tf_aws_sagemaker_notebook_instance_notebook["aws_sagemaker_notebook_instance.notebook"]
+  subgraph vpc_aws_vpc_dr_vpc[VPC
+dr vpc]
+    tf_aws_vpc_dr_vpc["aws_vpc.dr_vpc"]
+    subgraph subnet_aws_subnet_dr_private_subnet_2a[Subnet
+dr private subnet 2a (Private)]
+      tf_aws_subnet_dr_private_subnet_2a["aws_subnet.dr_private_subnet_2a"]
     end
-    subgraph subnet_aws_subnet_private_b[Subnet
-private b (Private)]
-      tf_aws_subnet_private_b["aws_subnet.private_b"]
+  end
+  subgraph vpc_aws_vpc_primary_vpc[VPC
+primary vpc]
+    tf_aws_vpc_primary_vpc["aws_vpc.primary_vpc"]
+    subgraph subnet_aws_subnet_primary_private_subnet_1a[Subnet
+primary private… (Private)]
+      tf_aws_subnet_primary_private_subnet_1a["aws_subnet.primary_private_subnet_1a"]
+      tf_aws_elasticache_cluster_feature_cache["aws_elasticache_cluster.feature_cache"]
+      tf_aws_lambda_function_data_preprocessor["aws_lambda_function.data_preprocessor"]
+      tf_aws_rds_cluster_feature_store["aws_rds_cluster.feature_store"]
+      tf_aws_sagemaker_notebook_instance_ml_notebook["aws_sagemaker_notebook_instance.ml_notebook"]
     end
-    subgraph subnet_aws_subnet_public_a[Subnet
-public a (Public)]
-      tf_aws_subnet_public_a["aws_subnet.public_a"]
-      tf_aws_nat_gateway_nat["aws_nat_gateway.nat"]
+    subgraph subnet_aws_subnet_primary_private_subnet_1b[Subnet
+primary private… (Private)]
+      tf_aws_subnet_primary_private_subnet_1b["aws_subnet.primary_private_subnet_1b"]
     end
-    subgraph subnet_aws_subnet_public_b[Subnet
-public b (Public)]
-      tf_aws_subnet_public_b["aws_subnet.public_b"]
+    subgraph subnet_aws_subnet_primary_public_subnet_1a[Subnet
+primary public… (Public)]
+      tf_aws_subnet_primary_public_subnet_1a["aws_subnet.primary_public_subnet_1a"]
+      tf_aws_nat_gateway_primary_nat["aws_nat_gateway.primary_nat"]
     end
-    tf_aws_db_subnet_group_aurora["aws_db_subnet_group.aurora"]
-    tf_aws_elasticache_subnet_group_cache["aws_elasticache_subnet_group.cache"]
+    subgraph subnet_aws_subnet_primary_public_subnet_1b[Subnet
+primary public… (Public)]
+      tf_aws_subnet_primary_public_subnet_1b["aws_subnet.primary_public_subnet_1b"]
+    end
+    tf_aws_db_subnet_group_aurora_subnet_group["aws_db_subnet_group.aurora_subnet_group"]
+    tf_aws_elasticache_subnet_group_cache_subnet_group["aws_elasticache_subnet_group.cache_subnet_group"]
+    tf_aws_lb_mlops_alb["aws_lb.mlops_alb"]
     tf_aws_network_acl_private_nacl["aws_network_acl.private_nacl"]
-    tf_aws_sagemaker_domain_ml["aws_sagemaker_domain.ml"]
-    tf_aws_security_group_eks_sg["aws_security_group.eks_sg"]
+    tf_aws_security_group_alb_sg["aws_security_group.alb_sg"]
   end
-  tf_aws_cloudwatch_event_rule_nightly["aws_cloudwatch_event_rule.nightly"]
-  tf_aws_cloudwatch_event_target_nightly["aws_cloudwatch_event_target.nightly"]
-  tf_aws_cloudwatch_log_group_pipeline_logs["aws_cloudwatch_log_group.pipeline_logs"]
-  tf_aws_cloudwatch_log_metric_filter_training_failed["aws_cloudwatch_log_metric_filter.training_failed"]
-  tf_aws_cloudwatch_metric_alarm_error_rate["aws_cloudwatch_metric_alarm.error_rate"]
-  tf_aws_cloudwatch_metric_alarm_latency["aws_cloudwatch_metric_alarm.latency"]
-  tf_aws_dynamodb_table_experiments["aws_dynamodb_table.experiments"]
-  tf_aws_ecr_repository_trainer["aws_ecr_repository.trainer"]
-  tf_aws_eip_nat["aws_eip.nat"]
-  subgraph cluster_aws_eks_cluster_ml[EKS Cluster
-ml]
-    tf_aws_eks_cluster_ml["aws_eks_cluster.ml"]
-    tf_aws_eks_node_group_gpu["aws_eks_node_group.gpu"]
+  tf_aws_cloudwatch_log_group_ml_pipeline_logs["aws_cloudwatch_log_group.ml_pipeline_logs"]
+  tf_aws_dynamodb_table_experiment_tracking["aws_dynamodb_table.experiment_tracking"]
+  tf_aws_eip_nat_eip["aws_eip.nat_eip"]
+  subgraph cluster_aws_eks_cluster_mlops_cluster[EKS Cluster
+mlops cluster]
+    tf_aws_eks_cluster_mlops_cluster["aws_eks_cluster.mlops_cluster"]
+    tf_aws_eks_node_group_mlops_nodes["aws_eks_node_group.mlops_nodes"]
   end
-  tf_aws_glue_catalog_database_lake["aws_glue_catalog_database.lake"]
-  tf_aws_glue_crawler_raw["aws_glue_crawler.raw"]
-  tf_aws_glue_job_feature_job["aws_glue_job.feature_job"]
   tf_aws_iam_role_eks_cluster_role["aws_iam_role.eks_cluster_role"]
   tf_aws_iam_role_eks_node_role["aws_iam_role.eks_node_role"]
-  tf_aws_iam_role_events_role["aws_iam_role.events_role"]
-  tf_aws_iam_role_glue_role["aws_iam_role.glue_role"]
   tf_aws_iam_role_lambda_role["aws_iam_role.lambda_role"]
   tf_aws_iam_role_sagemaker_role["aws_iam_role.sagemaker_role"]
-  tf_aws_iam_role_sfn_role["aws_iam_role.sfn_role"]
-  tf_aws_iam_role_policy_attachment_eks_cluster["aws_iam_role_policy_attachment.eks_cluster"]
-  tf_aws_iam_role_policy_attachment_eks_cni["aws_iam_role_policy_attachment.eks_cni"]
-  tf_aws_iam_role_policy_attachment_eks_registry["aws_iam_role_policy_attachment.eks_registry"]
-  tf_aws_iam_role_policy_attachment_eks_worker["aws_iam_role_policy_attachment.eks_worker"]
-  tf_aws_internet_gateway_igw["aws_internet_gateway.igw"]
-  tf_aws_kinesis_stream_ingest["aws_kinesis_stream.ingest"]
-  tf_aws_kms_key_main["aws_kms_key.main"]
-  tf_aws_lambda_event_source_mapping_kinesis["aws_lambda_event_source_mapping.kinesis"]
-  tf_aws_lambda_function_remediator["aws_lambda_function.remediator"]
-  tf_aws_lambda_permission_sns["aws_lambda_permission.sns"]
-  tf_aws_s3_bucket_curated["aws_s3_bucket.curated"]
-  tf_aws_s3_bucket_models["aws_s3_bucket.models"]
-  tf_aws_s3_bucket_processed["aws_s3_bucket.processed"]
-  tf_aws_s3_bucket_raw["aws_s3_bucket.raw"]
-  tf_aws_s3_bucket_versioning_models["aws_s3_bucket_versioning.models"]
-  tf_aws_sagemaker_endpoint_ep["aws_sagemaker_endpoint.ep"]
-  tf_aws_sagemaker_endpoint_configuration_ep_config["aws_sagemaker_endpoint_configuration.ep_config"]
-  tf_aws_sagemaker_feature_group_store["aws_sagemaker_feature_group.store"]
-  tf_aws_sagemaker_model_model["aws_sagemaker_model.model"]
+  tf_aws_iam_role_step_functions_role["aws_iam_role.step_functions_role"]
+  tf_aws_iam_role_policy_attachment_eks_cluster_policy["aws_iam_role_policy_attachment.eks_cluster_policy"]
+  tf_aws_iam_role_policy_attachment_eks_cni_policy["aws_iam_role_policy_attachment.eks_cni_policy"]
+  tf_aws_iam_role_policy_attachment_eks_node_policy["aws_iam_role_policy_attachment.eks_node_policy"]
+  tf_aws_iam_role_policy_attachment_eks_registry_policy["aws_iam_role_policy_attachment.eks_registry_policy"]
+  tf_aws_iam_role_policy_attachment_eks_service_policy["aws_iam_role_policy_attachment.eks_service_policy"]
+  tf_aws_internet_gateway_primary_igw["aws_internet_gateway.primary_igw"]
+  tf_aws_kms_key_mlops_key["aws_kms_key.mlops_key"]
+  tf_aws_lambda_function_model_evaluator["aws_lambda_function.model_evaluator"]
+  tf_aws_rds_cluster_feature_store_replica["aws_rds_cluster.feature_store_replica"]
+  tf_aws_s3_bucket_data_lake["aws_s3_bucket.data_lake"]
+  tf_aws_s3_bucket_model_artifacts["aws_s3_bucket.model_artifacts"]
+  tf_aws_s3_bucket_training_data["aws_s3_bucket.training_data"]
+  tf_aws_s3_bucket_versioning_model_versioning["aws_s3_bucket_versioning.model_versioning"]
+  tf_aws_security_group_eks_sg["aws_security_group.eks_sg"]
   tf_aws_security_group_rds_sg["aws_security_group.rds_sg"]
-  tf_aws_security_group_sagemaker_sg["aws_security_group.sagemaker_sg"]
-  tf_aws_sfn_state_machine_pipeline["aws_sfn_state_machine.pipeline"]
-  tf_aws_sns_topic_alerts["aws_sns_topic.alerts"]
-  tf_aws_sns_topic_subscription_alerts_email["aws_sns_topic_subscription.alerts_email"]
-  tf_aws_sns_topic_subscription_alerts_lambda["aws_sns_topic_subscription.alerts_lambda"]
-  tf_aws_sqs_queue_dlq["aws_sqs_queue.dlq"]
+  tf_aws_sfn_state_machine_ml_pipeline["aws_sfn_state_machine.ml_pipeline"]
+  tf_aws_sns_topic_ml_alerts["aws_sns_topic.ml_alerts"]
+  tf_aws_vpc_peering_connection_primary_to_dr["aws_vpc_peering_connection.primary_to_dr"]
+  tf_aws_vpc_peering_connection_accepter_dr_accepter["aws_vpc_peering_connection_accepter.dr_accepter"]
 end
-tf_aws_cloudwatch_event_rule_nightly --> tf_aws_cloudwatch_event_target_nightly
-tf_aws_db_subnet_group_aurora --> tf_aws_rds_cluster_features
-tf_aws_eip_nat --> tf_aws_nat_gateway_nat
-tf_aws_eks_cluster_ml --> tf_aws_eks_node_group_gpu
-tf_aws_elasticache_subnet_group_cache --> tf_aws_elasticache_cluster_online
-tf_aws_glue_catalog_database_lake --> tf_aws_glue_crawler_raw
-tf_aws_iam_role_eks_cluster_role --> tf_aws_eks_cluster_ml
-tf_aws_iam_role_eks_cluster_role --> tf_aws_iam_role_policy_attachment_eks_cluster
-tf_aws_iam_role_events_role --> tf_aws_cloudwatch_event_target_nightly
-tf_aws_iam_role_lambda_role --> tf_aws_lambda_function_preprocess
-tf_aws_internet_gateway_igw --> tf_aws_nat_gateway_nat
-tf_aws_kinesis_stream_ingest --> tf_aws_lambda_event_source_mapping_kinesis
-tf_aws_lambda_function_preprocess --> tf_aws_lambda_event_source_mapping_kinesis
-tf_aws_lambda_function_preprocess --> tf_aws_sfn_state_machine_pipeline
-tf_aws_lambda_function_remediator --> tf_aws_lambda_permission_sns
-tf_aws_s3_bucket_models --> tf_aws_s3_bucket_versioning_models
-tf_aws_s3_bucket_processed --> tf_aws_lambda_function_preprocess
-tf_aws_s3_bucket_processed --> tf_aws_sagemaker_feature_group_store
-tf_aws_s3_bucket_raw --> tf_aws_lambda_function_preprocess
-tf_aws_sns_topic_alerts --> tf_aws_lambda_function_remediator
-tf_aws_sns_topic_alerts --> tf_aws_lambda_permission_sns
-tf_aws_subnet_private_a --> tf_aws_db_subnet_group_aurora
-tf_aws_subnet_private_a --> tf_aws_lambda_function_preprocess
-tf_aws_subnet_private_a --> tf_aws_sagemaker_domain_ml
-tf_aws_subnet_private_a --> tf_aws_sagemaker_notebook_instance_notebook
-tf_aws_subnet_private_b --> tf_aws_db_subnet_group_aurora
-tf_aws_vpc_ml_vpc --> tf_aws_security_group_eks_sg
+tf_aws_db_subnet_group_aurora_subnet_group --> tf_aws_rds_cluster_feature_store
+tf_aws_dynamodb_table_experiment_tracking --> tf_aws_lambda_function_model_evaluator
+tf_aws_eip_nat_eip --> tf_aws_nat_gateway_primary_nat
+tf_aws_eks_cluster_mlops_cluster --> tf_aws_eks_node_group_mlops_nodes
+tf_aws_elasticache_cluster_feature_cache --> tf_aws_lambda_function_data_preprocessor
+tf_aws_elasticache_subnet_group_cache_subnet_group --> tf_aws_elasticache_cluster_feature_cache
+tf_aws_iam_role_eks_cluster_role --> tf_aws_eks_cluster_mlops_cluster
+tf_aws_iam_role_eks_cluster_role --> tf_aws_iam_role_policy_attachment_eks_cluster_policy
+tf_aws_iam_role_lambda_role --> tf_aws_lambda_function_data_preprocessor
+tf_aws_iam_role_step_functions_role --> tf_aws_sfn_state_machine_ml_pipeline
+tf_aws_internet_gateway_primary_igw --> tf_aws_nat_gateway_primary_nat
+tf_aws_lambda_function_data_preprocessor --> tf_aws_sfn_state_machine_ml_pipeline
+tf_aws_lambda_function_model_evaluator --> tf_aws_sfn_state_machine_ml_pipeline
+tf_aws_rds_cluster_feature_store --> tf_aws_lambda_function_data_preprocessor
+tf_aws_rds_cluster_feature_store --> tf_aws_rds_cluster_feature_store_replica
+tf_aws_s3_bucket_model_artifacts --> tf_aws_lambda_function_model_evaluator
+tf_aws_s3_bucket_model_artifacts --> tf_aws_s3_bucket_versioning_model_versioning
+tf_aws_s3_bucket_training_data --> tf_aws_lambda_function_data_preprocessor
+tf_aws_security_group_alb_sg --> tf_aws_lb_mlops_alb
+tf_aws_subnet_primary_private_subnet_1a --> tf_aws_db_subnet_group_aurora_subnet_group
+tf_aws_subnet_primary_private_subnet_1a --> tf_aws_lambda_function_data_preprocessor
+tf_aws_subnet_primary_private_subnet_1a --> tf_aws_sagemaker_notebook_instance_ml_notebook
+tf_aws_subnet_primary_private_subnet_1b --> tf_aws_db_subnet_group_aurora_subnet_group
+tf_aws_vpc_primary_vpc --> tf_aws_security_group_alb_sg
 ```
 
 Assumptions: Connections represent inferred references (including depends_on and attribute references).
 
 Rendered diagram: available as workflow artifact
-
-## AI Architecture Insights
-
-*Reviewed by `gemini:gemini-3.1-flash-lite` (quality score: 4/10).*
-
-The architecture implements a robust, event-driven ML pipeline. Data flows from Kinesis through Lambda-based preprocessing into S3, triggering Step Functions for orchestration. The design leverages EKS for scalable training and SageMaker for model lifecycle management. Security is enforced via IAM roles, VPC isolation, and KMS encryption. Scalability is achieved through decoupled storage (S3) and compute (EKS/Lambda). To improve, consider consolidating the 'Other' category into functional domains to reduce visual clutter.
-
-**Context hints**
-- `[KMS]` Centralized encryption via KMS key for all data at rest.
-- `[COMPUTE]` Hybrid compute using EKS for training and Lambda for event-driven orchestration.
-- `[DATA]` Multi-tier S3 storage architecture for raw, processed, and curated datasets.
-- `[NETWORK]` Isolated VPC with private subnets and NAT gateway for secure egress.
-
-**Contextual labels applied:** `eks_cluster` → ML Kubernetes Cluster, `sagemaker_domain` → SageMaker ML Studio, `lambda_function_preprocess` → Data Preprocessing Lambda, `sfn_state_machine` → Pipeline Orchestrator, `rds_cluster` → Feature Store DB, `kinesis_stream` → Ingestion Stream (+4 more)
-
-**Review notes**
-- [layout] Extreme vertical aspect ratio makes the diagram difficult to read on standard displays.
-- [grouping] The 'Other' category contains too many disparate resources, obscuring functional relationships.
-- [edge-routing] High density of crossing lines between the Security column and the rest of the diagram.
-
-Feedback iterations: iter0: 4/10
-
-**AI-refined diagram files** (include legend and review hints): architecture-ai.png, architecture-ai.jpg, architecture-ai.svg, architecture-ai.html, architecture-ai.drawio

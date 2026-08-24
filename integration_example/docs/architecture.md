@@ -120,26 +120,3 @@ tf_aws_vpc_ml_vpc --> tf_aws_security_group_eks_sg
 Assumptions: Connections represent inferred references (including depends_on and attribute references).
 
 Rendered diagram: available as workflow artifact
-
-## AI Architecture Insights
-
-*Reviewed by `gemini:gemini-3.1-flash-lite` (quality score: 4/10).*
-
-The architecture implements a robust, event-driven ML pipeline. Data flows from Kinesis through Lambda-based preprocessing into S3, triggering Step Functions for orchestration. The design leverages EKS for scalable training and SageMaker for model lifecycle management. Security is enforced via IAM roles, VPC isolation, and KMS encryption. Scalability is achieved through decoupled storage (S3) and compute (EKS/Lambda). To improve, consider consolidating the 'Other' category into functional domains to reduce visual clutter.
-
-**Context hints**
-- `[KMS]` Centralized encryption via KMS key for all data at rest.
-- `[COMPUTE]` Hybrid compute using EKS for training and Lambda for event-driven orchestration.
-- `[DATA]` Multi-tier S3 storage architecture for raw, processed, and curated datasets.
-- `[NETWORK]` Isolated VPC with private subnets and NAT gateway for secure egress.
-
-**Contextual labels applied:** `eks_cluster` → ML Kubernetes Cluster, `sagemaker_domain` → SageMaker ML Studio, `lambda_function_preprocess` → Data Preprocessing Lambda, `sfn_state_machine` → Pipeline Orchestrator, `rds_cluster` → Feature Store DB, `kinesis_stream` → Ingestion Stream (+4 more)
-
-**Review notes**
-- [layout] Extreme vertical aspect ratio makes the diagram difficult to read on standard displays.
-- [grouping] The 'Other' category contains too many disparate resources, obscuring functional relationships.
-- [edge-routing] High density of crossing lines between the Security column and the rest of the diagram.
-
-Feedback iterations: iter0: 4/10
-
-**AI-refined diagram files** (include legend and review hints): architecture-ai.png, architecture-ai.jpg, architecture-ai.svg, architecture-ai.html, architecture-ai.drawio
