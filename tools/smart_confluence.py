@@ -487,7 +487,7 @@ def build_smart_confluence_xhtml(
     now_str = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
 
     # Primary Image attachment filename
-    primary_img = artifacts.png or artifacts.jpg or artifacts.svg
+    primary_img = artifacts.ai_png or artifacts.png or artifacts.jpg or artifacts.svg
     primary_filename = primary_img.name if primary_img else "architecture.png"
 
     # Status badge color

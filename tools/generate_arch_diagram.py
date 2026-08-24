@@ -6830,6 +6830,13 @@ def main() -> int:
 
 if __name__ == "__main__":
     # Check for Confluence publishing env/config
+    confluence_publish_requested = os.getenv("CONFLUENCE_PUBLISH_REQUESTED", "").lower() in {
+        "1",
+        "true",
+        "yes",
+        "y",
+        "on",
+    }
     confluence_url = os.getenv("CONFLUENCE_URL")
     confluence_user = os.getenv("CONFLUENCE_USER")
     confluence_token = os.getenv("CONFLUENCE_TOKEN")
@@ -6865,7 +6872,28 @@ if __name__ == "__main__":
     }
     # Run main diagram generation
     exit_code = main()
-    # If Confluence config is set, publish diagram
+    # If Confluence publishing was requested, fail loudly when configuration is incomplete.
+    if confluence_publish_requested and not all(
+        [confluence_url, confluence_user, confluence_token, confluence_page_id]
+    ):
+        missing = [
+            name
+            for name, value in {
+                "CONFLUENCE_URL": confluence_url,
+                "CONFLUENCE_USER": confluence_user,
+                "CONFLUENCE_TOKEN": confluence_token,
+                "CONFLUENCE_PAGE_ID": confluence_page_id,
+            }.items()
+            if not value
+        ]
+        print(
+            "Confluence publish requested but configuration is missing: "
+            + ", ".join(missing),
+            flush=True,
+        )
+        exit_code = exit_code or 1
+
+    published = not confluence_publish_requested
     if confluence_url and confluence_user and confluence_token and confluence_page_id:
         repo_root = Path.cwd()
         
@@ -6912,7 +6940,7 @@ if __name__ == "__main__":
                 )
 
                 # Publish rich Smart Confluence architecture portal
-                publish_smart_confluence_page(
+                published = publish_smart_confluence_page(
                     confluence_url=confluence_url,
                     confluence_user=confluence_user,
                     confluence_token=confluence_token,
@@ -6955,4 +6983,6 @@ if __name__ == "__main__":
                         break
             if not published:
                 print("Confluence publish: no diagram file found to upload.")
+        if not published:
+            exit_code = exit_code or 1
     raise SystemExit(exit_code)
