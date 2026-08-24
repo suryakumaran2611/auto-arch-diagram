@@ -20,6 +20,8 @@ import html
 import json
 import os
 import re
+import shutil
+import tempfile
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Sequence
@@ -643,6 +645,7 @@ def publish_smart_confluence_page(
     branch: str = "main",
     full_page: bool = True,
     debug: bool = False,
+    unique_filename: bool = False,
 ) -> bool:
     """Upload all attachments and update the Confluence page with the Smart Confluence architecture portal."""
     auth = (confluence_user, confluence_token)
@@ -658,6 +661,22 @@ def publish_smart_confluence_page(
     title = page_data.get("title", "Architecture Diagram")
     version = page_data.get("version", {}).get("number", 1)
     current_body = page_data.get("body", {}).get("storage", {}).get("value", "")
+
+    if unique_filename:
+        unique_dir = Path(tempfile.mkdtemp(prefix="auto-arch-confluence-"))
+        unique_artifacts = ConfluenceArtifacts()
+        for field_name in (
+            "png", "jpg", "svg", "drawio", "html", "md", "mmd",
+            "ai_png", "ai_svg", "ai_html", "ai_drawio", "ai_md",
+        ):
+            source = getattr(artifacts, field_name)
+            if source and source.exists():
+                digest = __import__("hashlib").sha256(source.read_bytes()).hexdigest()[:8]
+                target = unique_dir / f"{source.stem}-{digest}{source.suffix}"
+                shutil.copyfile(source, target)
+                setattr(unique_artifacts, field_name, target)
+        artifacts = unique_artifacts
+        print(f"[smart-confluence] Using unique attachment names in {unique_dir.name}", flush=True)
 
     # Upload all available artifacts as attachments
     files_to_upload: list[Path] = []

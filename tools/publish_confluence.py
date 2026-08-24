@@ -112,6 +112,7 @@ def main() -> int:
             resources=resources,
             full_page=as_bool(args.replace),
             debug=True,
+            unique_filename=as_bool(args.unique_filename),
         )
     else:
         from tools.generate_arch_diagram import _publish_to_confluence
