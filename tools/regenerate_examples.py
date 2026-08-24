@@ -55,6 +55,8 @@ def _generate_for_example(repo: Path, entry_file: Path, *, ai_enhance: bool = Fa
         "tools/generate_arch_diagram.py",
         "--changed-files",
         str(entry_file.relative_to(repo)),
+        "--direction",
+        "LR",  # Enterprise standard: horizontal left-to-right flow
         "--out-md",
         str(out_md.relative_to(repo)),
         "--out-mmd",

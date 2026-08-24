@@ -3470,7 +3470,14 @@ def _render_icon_diagram_from_terraform(
 
     # Enhanced graph attributes with intelligent edge routing, adaptive DPI
     # (300 small / 220 medium / 180 large layouts) and centered bottom legend
+    #
+    # CRITICAL: rankdir must be set explicitly here AND in Diagram(direction=…).
+    # newrank=true is intentionally omitted — it re-enables TB rank computation
+    # even when rankdir=LR, causing the tall "tower" layout.
+    # smoothing=spring is intentionally omitted — it triggers neato mode which
+    # ignores rankdir entirely and produces TB output regardless of setting.
     graph_attr = {
+        "rankdir": direction,  # Force horizontal/vertical direction explicitly
         "bgcolor": bgcolor,
         "dpi": _raster_dpi_for_complexity(complexity.node_count),
         "pad": str(final_pad),
@@ -3492,13 +3499,13 @@ def _render_icon_diagram_from_terraform(
         "labelloc": "b",
         "labeljust": "c",
         "label": legend_html,
-        # Professional edge routing from centers
-        "smoothing": "spring" if complexity.edge_count > 10 else "none",
+        # Professional edge routing parameters
         "mclimit": "2.0",
         "nslimit": "2.0",
         "remincross": "true",
         "compound": "true",
-        "newrank": "true",
+        # NOTE: newrank=true is intentionally absent — it overrides rankdir to TB.
+        # NOTE: smoothing=spring is intentionally absent — it triggers neato mode.
     }
 
     # AWS-specific enhancements
@@ -3524,7 +3531,7 @@ def _render_icon_diagram_from_terraform(
         "style": render.edge_style_network,  # Default style
         # Professional edge routing from center of borders
         "constraint": "true",  # Maintain hierarchical structure
-        "minlen": "2.0",
+        "minlen": "1.0",
         "weight": "1",
         "dir": "forward",
         # Center-based edge connections
@@ -3615,6 +3622,7 @@ def _render_icon_diagram_from_terraform(
                 "color": accent,  # Official brand accent border
                 "labelloc": "t",
                 "labeljust": "l",
+                "rankdir": direction,  # Enforce horizontal direction inside provider cluster
             }
             return Cluster(provider_label, graph_attr=provider_cluster_attrs)
 
@@ -3627,6 +3635,7 @@ def _render_icon_diagram_from_terraform(
             "color": "#326CE5",  # Official Kubernetes blue border
             "fontsize": "10",
             "fontname": "Helvetica-Bold",
+            "rankdir": direction,  # Enforce horizontal direction inside compute cluster
         }
 
         def render_resource_node(res: str) -> None:
@@ -3686,6 +3695,7 @@ def _render_icon_diagram_from_terraform(
                         "color": "#5DADE2",  # VPC blue border
                         "fontsize": "11",
                         "fontname": "Helvetica-Bold",
+                        "rankdir": direction,  # Enforce horizontal direction inside VPC
                     }
                     with Cluster(vpc_label, graph_attr=vpc_attrs):
                         r_type, _name = vpc_name.split(".", 1)
@@ -3741,6 +3751,7 @@ def _render_icon_diagram_from_terraform(
                                     "color": "#28A745"
                                     if is_public
                                     else "#FFC107",  # Green for public, amber for private
+                                    "rankdir": direction,  # Enforce horizontal direction inside subnet
                                 }
                                 with Cluster(subnet_label, graph_attr=subnet_attrs):
                                     r_type, _name = subnet_name.split(".", 1)
@@ -3758,6 +3769,27 @@ def _render_icon_diagram_from_terraform(
                                         ):
                                             render_resource_node(res)
 
+                        # In LR mode: force subnets to be placed side-by-side
+                        # by adding invisible rank=same edges between subnet anchors.
+                        if direction == "LR":
+                            subnet_anchors = []
+                            for sn, _ in sorted(subnets_dict.items()):
+                                if sn != "other" and sn in node_by_res and hasattr(node_by_res[sn], "_id"):
+                                    subnet_anchors.append(node_by_res[sn]._id)
+                            if len(subnet_anchors) > 1 and hasattr(diag, "dot"):
+                                try:
+                                    from graphviz import Digraph as _GvDigraph
+                                    _rank_sub = _GvDigraph()
+                                    _rank_sub.attr(rank="same")
+                                    for _anc in subnet_anchors:
+                                        _rank_sub.node(_anc)
+                                    diag.dot.subgraph(_rank_sub)
+                                    # Also add invis edges between anchors to pull them LR
+                                    for _i in range(len(subnet_anchors) - 1):
+                                        diag.dot.edge(subnet_anchors[_i], subnet_anchors[_i + 1], style="invis", weight="8")
+                                except Exception:
+                                    pass
+
                 # Render non-VPC resources into structured category clusters
                 categories_with_res = []
                 for lane in lanes:
@@ -3771,30 +3803,18 @@ def _render_icon_diagram_from_terraform(
                     if res_list:
                         categories_with_res.append((lane, res_list))
 
-                if len(categories_with_res) > 1:
-                    cat_anchors = []
-                    for lane, res_list in categories_with_res:
-                        lane_attrs = {
-                            "bgcolor": "#FFFFFF",
-                            "fillcolor": "#FFFFFF",
-                            "style": "rounded,filled",
-                            "penwidth": "1.0",
-                            "color": "#CBD5E1",
-                            "fontsize": "11",
-                            "fontname": "Helvetica-Bold",
-                        }
-                        with Cluster(lane, graph_attr=lane_attrs):
-                            for res in sorted(res_list):
-                                render_resource_node(res)
-                        for res in sorted(res_list):
-                            if res in node_by_res and hasattr(node_by_res[res], "_id"):
-                                cat_anchors.append(node_by_res[res]._id)
-                                break
-                    if len(cat_anchors) > 1 and hasattr(diag, "dot") and direction == "LR":
-                        for i in range(len(cat_anchors) - 1):
-                            diag.dot.edge(cat_anchors[i], cat_anchors[i + 1], style="invis", weight="5")
-                else:
-                    for lane, res_list in categories_with_res:
+                for lane, res_list in categories_with_res:
+                    lane_attrs = {
+                        "bgcolor": "#FFFFFF",
+                        "fillcolor": "#FFFFFF",
+                        "style": "rounded,filled",
+                        "penwidth": "1.0",
+                        "color": "#CBD5E1",
+                        "fontsize": "11",
+                        "fontname": "Helvetica-Bold",
+                        "rankdir": direction,  # Enforce horizontal direction in category lane
+                    }
+                    with Cluster(lane, graph_attr=lane_attrs):
                         for res in sorted(res_list):
                             render_resource_node(res)
 
@@ -3915,6 +3935,7 @@ def _render_icon_diagram_from_terraform(
                     "fontsize": "14",
                     "fontname": "Helvetica-Bold",
                     "color": lane_accent or "#CCCCCC",  # Brand accent border
+                    "rankdir": direction,  # Enforce horizontal layout inside lane
                 }
                 with Cluster(lane, graph_attr=lane_cluster_attrs):
                     for provider, resources in sorted(providers.items()):
