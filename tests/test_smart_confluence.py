@@ -87,6 +87,7 @@ def test_build_smart_confluence_xhtml(tmp_path: Path):
     assert '<ac:structured-macro ac:name="tip">' in xhtml
     assert '<ac:structured-macro ac:name="expand">' in xhtml
     assert '<ac:image' in xhtml
+    assert 'ac:width="900"' in xhtml
     assert 'ri:filename="architecture.png"' in xhtml
     assert "Enterprise Scalable MLOps Platform" in xhtml
     assert "EKS GPU Nodes" in xhtml

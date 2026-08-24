@@ -30,6 +30,11 @@ jobs:
       render_bg: transparent
       comment_on_pr: true
       publish_enabled: true
+      publish_confluence: ${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main' }}
+      confluence_smart: true
+      confluence_page_id: ${{ vars.CONFLUENCE_PAGE_ID }}
+      confluence_replace: true
+      confluence_unique_filename: true
       # AI vision refinement — set ai_enhance: true + add GEMINI_API_KEY or OPENROUTER_API_KEY secret
       ai_enhance: true
       ai_backend: gemini
@@ -42,27 +47,4 @@ jobs:
       CONFLUENCE_USER: ${{ secrets.CONFLUENCE_USER }}
       CONFLUENCE_TOKEN: ${{ secrets.CONFLUENCE_TOKEN }}
 
-  publish-confluence:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    needs: diagram
-    uses: suryakumaran2611/auto-arch-diagram/.github/workflows/reusable-auto-arch-diagram.yml@main
-    with:
-      iac_root: integration_example
-      out_dir: integration_example/docs
-      image_formats: png,jpg,svg
-      publish_enabled: true
-      publish_confluence: true
-      confluence_smart: true             # 🚀 Enable Smart Confluence AI Architecture Portal
-      ai_enhance: true
-      confluence_page_id: ${{ vars.CONFLUENCE_PAGE_ID }}
-      ai_backend: gemini
-      gemini_model: gemini-3.1-flash-lite
-      confluence_replace: true
-      confluence_unique_filename: true
-    secrets:
-      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-      OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
-      CONFLUENCE_URL: ${{ secrets.CONFLUENCE_URL }}
-      CONFLUENCE_USER: ${{ secrets.CONFLUENCE_USER }}
-      CONFLUENCE_TOKEN: ${{ secrets.CONFLUENCE_TOKEN }}
 

@@ -252,6 +252,7 @@ DEFAULT_MODE = "static"  # static | ai
 # --- Confluence Publishing ---
 
 _CONFLUENCE_TIMEOUT_SECONDS = 30
+_CONFLUENCE_IMAGE_WIDTH = "900"
 
 
 def _publish_to_confluence(
@@ -322,7 +323,7 @@ def _publish_to_confluence(
         else image_marker
     )
     _log(f"Confluence publish: marker={marker_comment!r}")
-    img_tag = f'{marker_comment}<ac:image><ri:attachment ri:filename="{filename}" /></ac:image>'
+    img_tag = f'{marker_comment}<ac:image ac:align="center" ac:layout="center" ac:width="{_CONFLUENCE_IMAGE_WIDTH}"><ri:attachment ri:filename="{filename}" /></ac:image>'
 
     def _upload_attachment(path_to_upload: Path, target_name: str, target_mime: str) -> bool:
         upload_url = f"{confluence_url}/rest/api/content/{page_id}/child/attachment"
