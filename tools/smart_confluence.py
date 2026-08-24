@@ -40,6 +40,7 @@ from tools.openrouter_client import (
 )
 
 _CONFLUENCE_TIMEOUT_SECONDS = 45
+_CONFLUENCE_IMAGE_WIDTH = "900"
 
 
 @dataclass
@@ -518,7 +519,7 @@ def build_smart_confluence_xhtml(
 
     # Main Architecture Diagram Canvas
     out.append("<h2>📐 System Architecture Map</h2>")
-    out.append(f'<p><ac:image ac:align="center" ac:layout="center" ac:thumbnail="true"><ri:attachment ri:filename="{html.escape(primary_filename)}" /></ac:image></p>')
+    out.append(f'<p><ac:image ac:align="center" ac:layout="center" ac:thumbnail="true" ac:width="{_CONFLUENCE_IMAGE_WIDTH}"><ri:attachment ri:filename="{html.escape(primary_filename)}" /></ac:image></p>')
 
     # Multi-Format Artifacts Vault / Download Bar
     out.append("<h3>📂 Architecture Artifacts & Interactive Studios</h3>")
