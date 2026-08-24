@@ -574,6 +574,7 @@ def _load_config(
         jpg=publish_paths_cfg.get("jpg"),
         svg=publish_paths_cfg.get("svg"),
         drawio=publish_paths_cfg.get("drawio"),
+        html=publish_paths_cfg.get("html"),
     )
 
     # Optional render overrides (used for PNG/SVG/JPEG icon rendering).
@@ -1416,6 +1417,7 @@ def _maybe_publish_outputs(
     out_jpg: Path | None,
     out_svg: Path | None,
     out_drawio: Path | None = None,
+    out_html: Path | None = None,
 ) -> list[str]:
     """Copy generated outputs into user-configured repo paths (for committing in a follow-up PR)."""
 
@@ -1448,6 +1450,7 @@ def _maybe_publish_outputs(
     publish_file(out_jpg, publish.jpg, binary=True)
     publish_file(out_svg, publish.svg, binary=False)
     publish_file(out_drawio, publish.drawio, binary=False)
+    publish_file(out_html, publish.html, binary=False)
 
     return changed
 
@@ -5973,22 +5976,6 @@ def _static_markdown(
             # Keep Mermaid output even if Graphviz/diagrams fails.
             pass
 
-    # Interactive HTML Export
-    if (out_html is not None or (out_svg is not None and out_svg.exists())) and tf_resources is not None:
-        try:
-            target_html = out_html if out_html is not None else (out_svg.with_suffix(".html") if out_svg else None)
-            if target_html is not None and out_svg is not None and out_svg.exists():
-                svg_data = out_svg.read_text(encoding="utf-8")
-                export_interactive_html(
-                    svg_data,
-                    tf_resources,
-                    title=f"Architecture ({diag_kind.capitalize() if diag_kind else 'IaC'})",
-                    out_path=target_html,
-                )
-                rendered_any = True
-        except Exception as exc:
-            _debug(f"[DEBUG] Interactive HTML export failed: {exc}")
-
     # Vision-assisted feedback loop (OpenRouter, free models only): critique
     # the rendered diagram and refine render settings when it improves.
     # AI-refined renders go to unique *-ai.* files (with legend + hints) so
@@ -6064,6 +6051,7 @@ def _static_markdown(
                                 tf_resources,
                                 title=ai_title,
                                 out_path=ai_html,
+                                edges=tf_edges,
                             )
                             ai_refined_files.append(ai_html.name)
                         except Exception:
@@ -6241,6 +6229,35 @@ def _static_markdown(
                 rendered_any = True
             except Exception as exc:  # nosec B110
                 _debug(f"[DEBUG] draw.io export failed: {exc}")
+
+    # Interactive HTML export works for every supported IaC kind if SVG was generated.
+    if out_html is not None or (out_svg is not None and out_svg.exists()):
+        html_graphs = {
+            "terraform": (tf_resources, tf_edges),
+            "cloudformation": (cfn_resources, cfn_edges),
+            "bicep": (bicep_resources, bicep_edges),
+            "pulumi": (pulumi_resources, pulumi_edges),
+        }
+        html_resources, html_edges = html_graphs.get(diag_kind, (None, None))
+        if html_resources is not None:
+            try:
+                target_html = (
+                    out_html
+                    if out_html is not None
+                    else (out_svg.with_suffix(".html") if out_svg else None)
+                )
+                if target_html is not None and out_svg is not None and out_svg.exists():
+                    svg_data = out_svg.read_text(encoding="utf-8")
+                    export_interactive_html(
+                        svg_data,
+                        html_resources,
+                        title=f"Architecture ({diag_kind.capitalize() if diag_kind else 'IaC'})",
+                        out_path=target_html,
+                        edges=html_edges,
+                    )
+                    rendered_any = True
+            except Exception as exc:  # nosec B110
+                _debug(f"[DEBUG] Interactive HTML export failed: {exc}")
 
     md = (
         f"{COMMENT_MARKER}\n\n"
@@ -6648,6 +6665,8 @@ def main() -> int:
         out_svg.parent.mkdir(parents=True, exist_ok=True)
     if out_drawio is not None:
         out_drawio.parent.mkdir(parents=True, exist_ok=True)
+    if out_html is not None:
+        out_html.parent.mkdir(parents=True, exist_ok=True)
 
     if not changed_files:
         out_md.write_text(
@@ -6662,6 +6681,8 @@ def main() -> int:
             out_svg.write_text("", encoding="utf-8")
         if out_drawio is not None:
             out_drawio.write_text("", encoding="utf-8")
+        if out_html is not None:
+            out_html.write_text("", encoding="utf-8")
         return 0
 
     selected = changed_files[: limits.max_files]
@@ -6687,6 +6708,10 @@ def main() -> int:
             out_jpg.write_bytes(b"")
         if out_svg is not None:
             out_svg.write_text("", encoding="utf-8")
+        if out_drawio is not None:
+            out_drawio.write_text("", encoding="utf-8")
+        if out_html is not None:
+            out_html.write_text("", encoding="utf-8")
         return 0
 
     mermaid_direction = _normalize_mermaid_direction(direction)
@@ -6723,6 +6748,7 @@ def main() -> int:
             out_jpg=out_jpg,
             out_svg=out_svg,
             out_drawio=out_drawio,
+            out_html=out_html,
         )
         return 0
 
@@ -6785,6 +6811,8 @@ def main() -> int:
         out_png=out_png,
         out_jpg=out_jpg,
         out_svg=out_svg,
+        out_drawio=out_drawio,
+        out_html=out_html,
     )
     return 0
 

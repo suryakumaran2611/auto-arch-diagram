@@ -145,6 +145,44 @@ python tools/generate_arch_diagram.py --changed-files path/to/main.tf \
 - **OpenRouter Free Tier**: $0 budget model ranking filter (`OPENROUTER_API_KEY`).
 - **Outputs**: Generates dedicated `*-ai.png`, `*-ai.svg`, `*-ai.html`, `*-ai.drawio`, `*-ai.md` with operational step annotations and review insights.
 
+### 🔑 Local API Key Management & Configuration
+
+You can configure and change your API keys locally using **either** environment variables or secure persistent key files outside the repository.
+
+#### Option A: Persistent Key Files (Recommended for Local Dev)
+
+Key files keep secrets securely outside git repositories and persist across shell restarts:
+
+```bash
+# 1. Create the config directory (restrict permissions)
+mkdir -p ~/.config/auto-arch-diagram && chmod 700 ~/.config/auto-arch-diagram
+
+# 2. Store or change your Gemini API key:
+echo "YOUR_GEMINI_API_KEY" > ~/.config/auto-arch-diagram/gemini_key
+chmod 600 ~/.config/auto-arch-diagram/gemini_key
+
+# 3. Store or change your OpenRouter API key:
+echo "YOUR_OPENROUTER_API_KEY" > ~/.config/auto-arch-diagram/openrouter_key
+chmod 600 ~/.config/auto-arch-diagram/openrouter_key
+```
+
+> **To update/rotate keys later:** Simply rewrite the key file with your new token (e.g. `echo "NEW_KEY" > ~/.config/auto-arch-diagram/gemini_key`) or edit with `nano ~/.config/auto-arch-diagram/gemini_key`.
+
+#### Option B: Environment Variables
+
+```bash
+# Set for current shell session:
+export GEMINI_API_KEY="your-gemini-key"
+export OPENROUTER_API_KEY="your-openrouter-key"
+
+# Or persist in your ~/.bashrc / ~/.zshrc:
+echo 'export GEMINI_API_KEY="your-gemini-key"' >> ~/.bashrc
+source ~/.bashrc
+```
+
+**Key Resolution Order:** Environment Variables (`GEMINI_API_KEY` / `OPENROUTER_API_KEY`) > Config Files (`~/.config/auto-arch-diagram/*_key`).
+
+
 ## 🎯 Quick Start
 
 ### Using Reusable Workflow (Recommended)

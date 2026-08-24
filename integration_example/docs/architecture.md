@@ -120,33 +120,3 @@ tf_aws_vpc_ml_vpc --> tf_aws_security_group_eks_sg
 Assumptions: Connections represent inferred references (including depends_on and attribute references).
 
 Rendered diagram: available as workflow artifact
-
-## AI Architecture Insights
-
-*Reviewed by OpenRouter free vision model `stealth/ox-alpha` (quality score: 4/10).*
-
-**Architecture.** Medallion-lake MLOps platform on AWS: an EventBridge nightly schedule drives a Step Functions pipeline coordinating Glue ETL, SageMaker training, and endpoint deployment; Kinesis->Lambda streaming preprocessing feeds the same orchestrator.
-**Dataflow.** 1) Scheduled trigger; 2) Kinesis events preprocessed; 3) raw S3 -> Glue feature job; 4) processed S3 -> Feature Store; 5) ECR image -> model -> endpoint config -> live endpoint.
-**Security.** One KMS CMK across buckets, RDS, and SageMaker; per-service IAM roles; private subnets with NAT egress, NACL, and chained SGs (eks->rds); versioned model bucket; SQS DLQ.
-**Scaling.** GPU EKS nodes for training, shard-scalable Kinesis, serverless Lambda/Glue, Aurora multi-AZ; CloudWatch error-rate and latency alarms drive SNS alerts and Lambda auto-remediation.
-
-**Context hints**
-- `[KMS]` Single KMS key encrypts S3, RDS, and SageMaker artifacts centrally
-- `[S3]` Medallion layout: raw, processed, curated buckets; models bucket versioned for rollback
-- `[IAM]` Dedicated IAM role per service enforces least-privilege pipeline execution
-- `[NETWORK]` Workloads in private subnets; NAT egress; NACL plus layered security groups
-- `[DATA]` Kinesis ingest, Glue ETL, and Step Functions orchestrate nightly retraining
-- `[COMPUTE]` GPU EKS nodes handle training; SageMaker serves real-time inference
-
-**Contextual labels applied:** `kinesis_stream.ingest` → Streaming Ingestion Entry, `lambda_function.preprocess` → Preprocess Lambda, `sfn_state_machine.pipeline` → Pipeline Orchestrator, `glue_job.feature_job` → Feature Engineering Job, `sagemaker_endpoint.ep` → Model Inference Endpoint, `sagemaker_feature_group.store` → Online Feature Store (+6 more)
-
-**Review notes**
-- [layout] Extreme vertical aspect ratio with vast empty canvas; content compressed into left and right columns
-- [grouping] 'Other' group is a catch-all mixing monitoring, ML, messaging, and orchestration resources
-- [edge-routing] Red dashed security edges traverse the full canvas height, crossing groups and data-flow edges
-- [labeling] Multiple node labels truncated (Cloudwatch Log..., Sagemaker Notebook..., Elasticache Subnet...)
-- [edge-routing] Blue data-flow edges overlap near Lambda preprocess and Step Functions, obscuring direction
-
-Feedback iterations: iter0: 4/10, iter1: 3/10, iter2: 4/10
-
-**AI-refined diagram files** (include legend and review hints): architecture-ai.png, architecture-ai.jpg, architecture-ai.svg, architecture-ai.html, architecture-ai.drawio
