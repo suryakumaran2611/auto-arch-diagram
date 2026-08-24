@@ -26,12 +26,17 @@ GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/models"
 KEY_FILE_PATH = Path.home() / ".config" / "auto-arch-diagram" / "gemini_key"
 ALT_KEY_FILE_PATH = Path.home() / ".config" / "auto-arch-diagram" / "google_key"
 
-DEFAULT_GEMINI_MODEL = "gemini-1.5-flash"
+DEFAULT_GEMINI_MODEL = "gemini-3.1-flash-lite"
 FALLBACK_GEMINI_MODELS = [
-    "gemini-1.5-flash",
-    "gemini-1.5-flash-8b",
-    "gemini-2.0-flash",
-    "gemini-1.5-pro",
+    "gemini-3.1-flash-lite",
+    "gemini-3.1-flash-lite-preview",
+    "gemini-3.5-flash",
+    "gemini-3.5-flash-lite",
+    "gemini-2.5-flash",
+    "gemini-2.5-flash-lite",
+    "gemini-flash-latest",
+    "gemini-flash-lite-latest",
+    "gemini-pro-latest",
 ]
 
 _TIMEOUT_SECONDS = 45
@@ -181,7 +186,17 @@ def critique_diagram_gemini(
         m for m in FALLBACK_GEMINI_MODELS if m != preferred_model
     ]
 
-    png_bytes = png_path.read_bytes()
+    try:
+        import io
+        from PIL import Image
+        with Image.open(png_path) as im:
+            im.thumbnail((1024, 1024), Image.Resampling.LANCZOS)
+            buf = io.BytesIO()
+            im.save(buf, format="PNG", optimize=True)
+            png_bytes = buf.getvalue()
+    except Exception:
+        png_bytes = png_path.read_bytes()
+
     b64_image = base64.b64encode(png_bytes).decode("ascii")
 
     prompt_text = (
@@ -215,17 +230,17 @@ def critique_diagram_gemini(
         }
 
         try:
-            resp = requests.post(url, json=payload, timeout=(10, timeout))
+            resp = requests.post(url, json=payload, headers={"Content-Type": "application/json"}, timeout=(10, timeout))
         except Exception as err:
             last_error = err
-            print(f"[ai-enhance:gemini] Request failed for {target_model}: {err}")
+            print(f"[ai-enhance:gemini] Request failed for {target_model}: {err}", flush=True)
             continue
 
         if resp.status_code != 200:
             last_error = GeminiError(
                 f"HTTP {resp.status_code} from Gemini ({target_model}): {resp.text[:300]}"
             )
-            print(f"[ai-enhance:gemini] Model {target_model} returned HTTP {resp.status_code}; trying fallback...")
+            print(f"[ai-enhance:gemini] Model {target_model} returned HTTP {resp.status_code}; trying fallback...", flush=True)
             continue
 
         resp_json = resp.json()

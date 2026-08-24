@@ -58,6 +58,26 @@
 
 </td>
 </tr>
+<tr>
+<td width="50%">
+
+**Enterprise MLOps/AIOps (Standard Baseline)**
+[![Integration Example Standard](docs/images/integration-example.png)](https://suryakumaran2611.github.io/auto-arch-diagram/demos/integration-example.html)
+*VPC topology, SageMaker, EKS GPU nodes, Aurora, S3 lake, Glue ETL, and CloudWatch AIOps.*
+
+[🌐 Live HTML Studio ↗](https://suryakumaran2611.github.io/auto-arch-diagram/demos/integration-example.html) • [📊 Open in draw.io ↗](https://viewer.diagrams.net/?highlight=0000ff&edit=_blank&layers=1&nav=1#Uhttps%3A%2F%2Fraw.githubusercontent.com%2Fsuryakumaran2611%2Fauto-arch-diagram%2Fmain%2Fdocs%2Fdemos%2Fintegration-example.drawio) • [💾 .drawio](docs/demos/integration-example.drawio) • [📐 .svg](docs/demos/integration-example.svg)
+
+</td>
+<td width="50%">
+
+**Enterprise Scalable MLOps (Gemini AI-Enhanced)**
+[![Integration Example AI-Enhanced](docs/images/integration-example-ai.png)](https://suryakumaran2611.github.io/auto-arch-diagram/demos/integration-example-ai.html)
+*✨ Vision-refined via Gemini 3.1 Flash Lite with executive titles, operational subtitles, tooltips & flow paths.*
+
+[🌐 Live AI HTML Studio ↗](https://suryakumaran2611.github.io/auto-arch-diagram/demos/integration-example-ai.html) • [📊 Open in draw.io ↗](https://viewer.diagrams.net/?highlight=0000ff&edit=_blank&layers=1&nav=1#Uhttps%3A%2F%2Fraw.githubusercontent.com%2Fsuryakumaran2611%2Fauto-arch-diagram%2Fmain%2Fdocs%2Fdemos%2Fintegration-example-ai.drawio) • [💾 .drawio](docs/demos/integration-example-ai.drawio) • [📐 .svg](docs/demos/integration-example-ai.svg)
+
+</td>
+</tr>
 </table>
 
 <div align="center">
@@ -128,7 +148,7 @@ Now you can ask your AI assistant:
 Run locally with your preferred vision provider:
 
 ```bash
-# With Google Gemini (Default: gemini-1.5-flash):
+# With Google Gemini (Default: gemini-3.1-flash-lite):
 export GEMINI_API_KEY="your-gemini-key"
 python tools/generate_arch_diagram.py --changed-files path/to/main.tf \
   --out-png out/architecture.png --out-html out/architecture.html --out-drawio out/architecture.drawio \
@@ -141,7 +161,7 @@ python tools/generate_arch_diagram.py --changed-files path/to/main.tf \
   --ai-enhance --ai-backend openrouter
 ```
 
-- **Google Gemini**: Get free keys from [Google AI Studio](https://aistudio.google.com). Fast, high-throughput multimodal analysis defaulting to `gemini-1.5-flash` with fallback to `gemini-2.0-flash` and `gemini-1.5-flash-8b`.
+- **Google Gemini**: Get free keys from [Google AI Studio](https://aistudio.google.com). Fast, high-throughput multimodal analysis defaulting to `gemini-3.1-flash-lite` with fallback to `gemini-3.5-flash`, `gemini-2.5-flash`, and `gemini-flash-latest`.
 - **OpenRouter Free Tier**: $0 budget model ranking filter (`OPENROUTER_API_KEY`).
 - **Outputs**: Generates dedicated `*-ai.png`, `*-ai.svg`, `*-ai.html`, `*-ai.drawio`, `*-ai.md` with operational step annotations and review insights.
 

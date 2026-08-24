@@ -6522,8 +6522,8 @@ def main() -> int:
     )
     parser.add_argument(
         "--gemini-model",
-        default="gemini-1.5-flash",
-        help="Google Gemini vision model name (default: gemini-1.5-flash)",
+        default="gemini-3.1-flash-lite",
+        help="Google Gemini vision model name (default: gemini-3.1-flash-lite)",
     )
     parser.add_argument(
         "--openrouter-model",

@@ -2,9 +2,144 @@
 
 ## Architecture Diagram (Auto)
 
-Summary: Unable to generate diagram automatically.
+Summary: Generated a dependency-oriented Terraform diagram from changed resources.
 
-Reason: No CloudFormation templates parsed from the changed files.
+```mermaid
+flowchart LR
+subgraph all_AWS[AWS]
+  subgraph vpc_aws_vpc_ml_vpc[VPC
+ml vpc]
+    tf_aws_vpc_ml_vpc["aws_vpc.ml_vpc"]
+    subgraph subnet_aws_subnet_private_a[Subnet
+private a (Private)]
+      tf_aws_subnet_private_a["aws_subnet.private_a"]
+      tf_aws_elasticache_cluster_online["aws_elasticache_cluster.online"]
+      tf_aws_lambda_function_preprocess["aws_lambda_function.preprocess"]
+      tf_aws_rds_cluster_features["aws_rds_cluster.features"]
+      tf_aws_sagemaker_notebook_instance_notebook["aws_sagemaker_notebook_instance.notebook"]
+    end
+    subgraph subnet_aws_subnet_private_b[Subnet
+private b (Private)]
+      tf_aws_subnet_private_b["aws_subnet.private_b"]
+    end
+    subgraph subnet_aws_subnet_public_a[Subnet
+public a (Public)]
+      tf_aws_subnet_public_a["aws_subnet.public_a"]
+      tf_aws_nat_gateway_nat["aws_nat_gateway.nat"]
+    end
+    subgraph subnet_aws_subnet_public_b[Subnet
+public b (Public)]
+      tf_aws_subnet_public_b["aws_subnet.public_b"]
+    end
+    tf_aws_db_subnet_group_aurora["aws_db_subnet_group.aurora"]
+    tf_aws_elasticache_subnet_group_cache["aws_elasticache_subnet_group.cache"]
+    tf_aws_network_acl_private_nacl["aws_network_acl.private_nacl"]
+    tf_aws_sagemaker_domain_ml["aws_sagemaker_domain.ml"]
+    tf_aws_security_group_eks_sg["aws_security_group.eks_sg"]
+  end
+  tf_aws_cloudwatch_event_rule_nightly["aws_cloudwatch_event_rule.nightly"]
+  tf_aws_cloudwatch_event_target_nightly["aws_cloudwatch_event_target.nightly"]
+  tf_aws_cloudwatch_log_group_pipeline_logs["aws_cloudwatch_log_group.pipeline_logs"]
+  tf_aws_cloudwatch_log_metric_filter_training_failed["aws_cloudwatch_log_metric_filter.training_failed"]
+  tf_aws_cloudwatch_metric_alarm_error_rate["aws_cloudwatch_metric_alarm.error_rate"]
+  tf_aws_cloudwatch_metric_alarm_latency["aws_cloudwatch_metric_alarm.latency"]
+  tf_aws_dynamodb_table_experiments["aws_dynamodb_table.experiments"]
+  tf_aws_ecr_repository_trainer["aws_ecr_repository.trainer"]
+  tf_aws_eip_nat["aws_eip.nat"]
+  subgraph cluster_aws_eks_cluster_ml[EKS Cluster
+ml]
+    tf_aws_eks_cluster_ml["aws_eks_cluster.ml"]
+    tf_aws_eks_node_group_gpu["aws_eks_node_group.gpu"]
+  end
+  tf_aws_glue_catalog_database_lake["aws_glue_catalog_database.lake"]
+  tf_aws_glue_crawler_raw["aws_glue_crawler.raw"]
+  tf_aws_glue_job_feature_job["aws_glue_job.feature_job"]
+  tf_aws_iam_role_eks_cluster_role["aws_iam_role.eks_cluster_role"]
+  tf_aws_iam_role_eks_node_role["aws_iam_role.eks_node_role"]
+  tf_aws_iam_role_events_role["aws_iam_role.events_role"]
+  tf_aws_iam_role_glue_role["aws_iam_role.glue_role"]
+  tf_aws_iam_role_lambda_role["aws_iam_role.lambda_role"]
+  tf_aws_iam_role_sagemaker_role["aws_iam_role.sagemaker_role"]
+  tf_aws_iam_role_sfn_role["aws_iam_role.sfn_role"]
+  tf_aws_iam_role_policy_attachment_eks_cluster["aws_iam_role_policy_attachment.eks_cluster"]
+  tf_aws_iam_role_policy_attachment_eks_cni["aws_iam_role_policy_attachment.eks_cni"]
+  tf_aws_iam_role_policy_attachment_eks_registry["aws_iam_role_policy_attachment.eks_registry"]
+  tf_aws_iam_role_policy_attachment_eks_worker["aws_iam_role_policy_attachment.eks_worker"]
+  tf_aws_internet_gateway_igw["aws_internet_gateway.igw"]
+  tf_aws_kinesis_stream_ingest["aws_kinesis_stream.ingest"]
+  tf_aws_kms_key_main["aws_kms_key.main"]
+  tf_aws_lambda_event_source_mapping_kinesis["aws_lambda_event_source_mapping.kinesis"]
+  tf_aws_lambda_function_remediator["aws_lambda_function.remediator"]
+  tf_aws_lambda_permission_sns["aws_lambda_permission.sns"]
+  tf_aws_s3_bucket_curated["aws_s3_bucket.curated"]
+  tf_aws_s3_bucket_models["aws_s3_bucket.models"]
+  tf_aws_s3_bucket_processed["aws_s3_bucket.processed"]
+  tf_aws_s3_bucket_raw["aws_s3_bucket.raw"]
+  tf_aws_s3_bucket_versioning_models["aws_s3_bucket_versioning.models"]
+  tf_aws_sagemaker_endpoint_ep["aws_sagemaker_endpoint.ep"]
+  tf_aws_sagemaker_endpoint_configuration_ep_config["aws_sagemaker_endpoint_configuration.ep_config"]
+  tf_aws_sagemaker_feature_group_store["aws_sagemaker_feature_group.store"]
+  tf_aws_sagemaker_model_model["aws_sagemaker_model.model"]
+  tf_aws_security_group_rds_sg["aws_security_group.rds_sg"]
+  tf_aws_security_group_sagemaker_sg["aws_security_group.sagemaker_sg"]
+  tf_aws_sfn_state_machine_pipeline["aws_sfn_state_machine.pipeline"]
+  tf_aws_sns_topic_alerts["aws_sns_topic.alerts"]
+  tf_aws_sns_topic_subscription_alerts_email["aws_sns_topic_subscription.alerts_email"]
+  tf_aws_sns_topic_subscription_alerts_lambda["aws_sns_topic_subscription.alerts_lambda"]
+  tf_aws_sqs_queue_dlq["aws_sqs_queue.dlq"]
+end
+tf_aws_cloudwatch_event_rule_nightly --> tf_aws_cloudwatch_event_target_nightly
+tf_aws_db_subnet_group_aurora --> tf_aws_rds_cluster_features
+tf_aws_eip_nat --> tf_aws_nat_gateway_nat
+tf_aws_eks_cluster_ml --> tf_aws_eks_node_group_gpu
+tf_aws_elasticache_subnet_group_cache --> tf_aws_elasticache_cluster_online
+tf_aws_glue_catalog_database_lake --> tf_aws_glue_crawler_raw
+tf_aws_iam_role_eks_cluster_role --> tf_aws_eks_cluster_ml
+tf_aws_iam_role_eks_cluster_role --> tf_aws_iam_role_policy_attachment_eks_cluster
+tf_aws_iam_role_events_role --> tf_aws_cloudwatch_event_target_nightly
+tf_aws_iam_role_lambda_role --> tf_aws_lambda_function_preprocess
+tf_aws_internet_gateway_igw --> tf_aws_nat_gateway_nat
+tf_aws_kinesis_stream_ingest --> tf_aws_lambda_event_source_mapping_kinesis
+tf_aws_lambda_function_preprocess --> tf_aws_lambda_event_source_mapping_kinesis
+tf_aws_lambda_function_preprocess --> tf_aws_sfn_state_machine_pipeline
+tf_aws_lambda_function_remediator --> tf_aws_lambda_permission_sns
+tf_aws_s3_bucket_models --> tf_aws_s3_bucket_versioning_models
+tf_aws_s3_bucket_processed --> tf_aws_lambda_function_preprocess
+tf_aws_s3_bucket_processed --> tf_aws_sagemaker_feature_group_store
+tf_aws_s3_bucket_raw --> tf_aws_lambda_function_preprocess
+tf_aws_sns_topic_alerts --> tf_aws_lambda_function_remediator
+tf_aws_sns_topic_alerts --> tf_aws_lambda_permission_sns
+tf_aws_subnet_private_a --> tf_aws_db_subnet_group_aurora
+tf_aws_subnet_private_a --> tf_aws_lambda_function_preprocess
+tf_aws_subnet_private_a --> tf_aws_sagemaker_domain_ml
+tf_aws_subnet_private_a --> tf_aws_sagemaker_notebook_instance_notebook
+tf_aws_subnet_private_b --> tf_aws_db_subnet_group_aurora
+tf_aws_vpc_ml_vpc --> tf_aws_security_group_eks_sg
+```
 
-Changed IaC files:
-- /home/suryakumaran/GitHub/auto-arch-diagram/docs/architecture/template.yaml
+Assumptions: Connections represent inferred references (including depends_on and attribute references).
+
+Rendered diagram: available as workflow artifact
+
+## AI Architecture Insights
+
+*Reviewed by `gemini:gemini-3.1-flash-lite` (quality score: 4/10).*
+
+The architecture implements a robust, event-driven ML pipeline. Data flows from Kinesis through Lambda-based preprocessing into S3, triggering Step Functions for orchestration. The design leverages EKS for scalable training and SageMaker for model lifecycle management. Security is enforced via IAM roles, VPC isolation, and KMS encryption. Scalability is achieved through decoupled storage (S3) and compute (EKS/Lambda). To improve, consider consolidating the 'Other' category into functional domains to reduce visual clutter.
+
+**Context hints**
+- `[KMS]` Centralized encryption via KMS key for all data at rest.
+- `[COMPUTE]` Hybrid compute using EKS for training and Lambda for event-driven orchestration.
+- `[DATA]` Multi-tier S3 storage architecture for raw, processed, and curated datasets.
+- `[NETWORK]` Isolated VPC with private subnets and NAT gateway for secure egress.
+
+**Contextual labels applied:** `eks_cluster` → ML Kubernetes Cluster, `sagemaker_domain` → SageMaker ML Studio, `lambda_function_preprocess` → Data Preprocessing Lambda, `sfn_state_machine` → Pipeline Orchestrator, `rds_cluster` → Feature Store DB, `kinesis_stream` → Ingestion Stream (+4 more)
+
+**Review notes**
+- [layout] Extreme vertical aspect ratio makes the diagram difficult to read on standard displays.
+- [grouping] The 'Other' category contains too many disparate resources, obscuring functional relationships.
+- [edge-routing] High density of crossing lines between the Security column and the rest of the diagram.
+
+Feedback iterations: iter0: 4/10
+
+**AI-refined diagram files** (include legend and review hints): architecture-ai.png, architecture-ai.jpg, architecture-ai.svg, architecture-ai.html, architecture-ai.drawio
