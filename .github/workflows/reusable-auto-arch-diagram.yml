@@ -432,9 +432,10 @@ jobs:
           open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8").write("all_changed_files=" + " ".join(matched) + "\n")
           PY
 
-      - name: Generate diagrams
+      - name: Generate diagrams and AI enhancement iterations
         id: gen
         env:
+          PYTHONPATH: .auto-arch-diagram-tool
           CHANGED_IAC_FILES: ${{ inputs.changed_files != '' && steps.changed_direct.outputs.all_changed_files || (inputs.force_full && steps.all_iac.outputs.all_changed_files || steps.changed.outputs.all_changed_files) }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           GEMINI_MODEL: ${{ inputs.gemini_model }}
@@ -450,16 +451,6 @@ jobs:
           AUTO_ARCH_EDGE_PENWIDTH: ${{ inputs.edge_penwidth }}
           AUTO_ARCH_EDGE_ARROWSIZE: ${{ inputs.edge_arrowsize }}
           AUTO_ARCH_PUBLISH_ENABLED: ${{ inputs.publish_enabled && 'true' || 'false' }}
-          AUTO_ARCH_DEBUG: ${{ inputs.publish_confluence && '1' || '' }}
-          CONFLUENCE_URL: ${{ inputs.publish_confluence && secrets.CONFLUENCE_URL || '' }}
-          CONFLUENCE_USER: ${{ inputs.publish_confluence && secrets.CONFLUENCE_USER || '' }}
-          CONFLUENCE_TOKEN: ${{ inputs.publish_confluence && secrets.CONFLUENCE_TOKEN || '' }}
-          CONFLUENCE_PAGE_ID: ${{ inputs.publish_confluence && inputs.confluence_page_id || '' }}
-          CONFLUENCE_SMART_PAGE: ${{ inputs.publish_confluence && (inputs.confluence_smart && 'true' || 'false') || '' }}
-          CONFLUENCE_REPLACE: ${{ inputs.publish_confluence && (inputs.confluence_replace && 'true' || 'false') || '' }}
-          CONFLUENCE_IMAGE_MARKER: ${{ inputs.publish_confluence && inputs.confluence_image_marker || '' }}
-          CONFLUENCE_UNIQUE_FILENAME: ${{ inputs.publish_confluence && (inputs.confluence_unique_filename && 'true' || 'false') || '' }}
-          CONFLUENCE_PUBLISH_REQUESTED: ${{ inputs.publish_confluence && 'true' || 'false' }}
         shell: bash
         run: |
           set -e
@@ -593,6 +584,31 @@ jobs:
             if [ -f "$p" ]; then echo "✓ $(basename "$p"): $p ($(stat -c%s "$p") bytes)"; else echo "○ Not requested: $p"; fi
           done
           echo "=== Validation OK — outputs: md, mmd, png, jpg, svg, drawio, html (+ *-ai.* if ai_enhance) ==="
+
+      - name: Publish Confluence page and replace image
+        if: ${{ inputs.publish_confluence }}
+        env:
+          PYTHONPATH: .auto-arch-diagram-tool
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_MODEL: ${{ inputs.gemini_model }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          OPENROUTER_MODEL: ${{ inputs.openrouter_model }}
+          CONFLUENCE_URL: ${{ secrets.CONFLUENCE_URL }}
+          CONFLUENCE_USER: ${{ secrets.CONFLUENCE_USER }}
+          CONFLUENCE_TOKEN: ${{ secrets.CONFLUENCE_TOKEN }}
+        shell: bash
+        run: |
+          set -e
+          echo "=== Smart Confluence publishing ==="
+          python .auto-arch-diagram-tool/tools/publish_confluence.py \
+            --iac-root '${{ inputs.iac_root }}' \
+            --out-dir '${{ inputs.out_dir }}' \
+            --page-id '${{ inputs.confluence_page_id }}' \
+            --smart '${{ inputs.confluence_smart }}' \
+            --replace '${{ inputs.confluence_replace }}' \
+            --marker '${{ inputs.confluence_image_marker }}' \
+            --unique-filename '${{ inputs.confluence_unique_filename }}' \
+            --backend '${{ inputs.ai_backend }}'
 
       - name: Compute artifact name
         id: artifact
@@ -802,16 +818,6 @@ jobs:
           AUTO_ARCH_EDGE_PENWIDTH: ${{ inputs.edge_penwidth }}
           AUTO_ARCH_EDGE_ARROWSIZE: ${{ inputs.edge_arrowsize }}
           AUTO_ARCH_PUBLISH_ENABLED: 'true'
-          AUTO_ARCH_DEBUG: ${{ inputs.publish_confluence && '1' || '' }}
-          CONFLUENCE_URL: ${{ inputs.publish_confluence && secrets.CONFLUENCE_URL || '' }}
-          CONFLUENCE_USER: ${{ inputs.publish_confluence && secrets.CONFLUENCE_USER || '' }}
-          CONFLUENCE_TOKEN: ${{ inputs.publish_confluence && secrets.CONFLUENCE_TOKEN || '' }}
-          CONFLUENCE_PAGE_ID: ${{ inputs.publish_confluence && inputs.confluence_page_id || '' }}
-          CONFLUENCE_SMART_PAGE: ${{ inputs.publish_confluence && (inputs.confluence_smart && 'true' || 'false') || '' }}
-          CONFLUENCE_REPLACE: ${{ inputs.publish_confluence && (inputs.confluence_replace && 'true' || 'false') || '' }}
-          CONFLUENCE_IMAGE_MARKER: ${{ inputs.publish_confluence && inputs.confluence_image_marker || '' }}
-          CONFLUENCE_UNIQUE_FILENAME: ${{ inputs.publish_confluence && (inputs.confluence_unique_filename && 'true' || 'false') || '' }}
-          CONFLUENCE_PUBLISH_REQUESTED: ${{ inputs.publish_confluence && 'true' || 'false' }}
         shell: bash
         run: |
           set -e
