@@ -323,45 +323,49 @@ To regenerate diagrams even when no IaC files have changed:
 
 ---
 
-## 📑 Confluence Publishing & Image Replacement
+## 📑 Smart Confluence (AI-Enhanced Architecture Documentation Portal)
 
-Automatically upload or replace architecture diagrams in Atlassian Confluence documentation pages.
+Transform any Confluence documentation page into a living, executive-ready architecture portal automatically updated on every Infrastructure-as-Code change.
 
-### Confluence Workflow Setup
+### Key Capabilities of Smart Confluence
+
+1. **Executive Header & Status Badges**: Environment badges (`PRODUCTION`, `STAGING`), cloud provider tags (`AWS`, `AZURE`, `GCP`, `MULTI-CLOUD`), IaC engine (`Terraform`), and Git commit SHA.
+2. **Embedded Visual Diagram**: High-definition raster diagram (`.png` / `.jpg`) with centered connectors and classification legend.
+3. **Multi-Format Attachment Vault**: Uploads native editable `.drawio` (compatible with the Confluence Draw.io plugin), standalone offline `.html` studio, scalable `.svg`, and `.png` as direct page attachments.
+4. **AI-Synthesized Workload Narrative**: Comprehensive 3-4 paragraph architectural summary generated via Google Gemini 3.1 Flash Lite or OpenRouter.
+5. **💰 Projected Cost Analysis & FinOps Insights**: Estimated monthly run-rate range, primary cost drivers (GPU compute, Multi-AZ databases, NAT gateways), and actionable savings plan recommendations.
+6. **🛡️ Well-Architected Framework Assessment**: Security & governance controls (KMS CMK envelope encryption, IAM least-privilege, private subnet isolation) and reliability (Multi-AZ failover, DLQ retry streams).
+7. **🛠️ Prioritized Improvements Backlog**: Actionable P0/P1/P2 recommendations with concrete Terraform code remediation steps.
+8. **🔍 Detailed Resource Inventory Table**: Expandable table of all detected infrastructure components, types, categories, and identifiers.
+
+### GitHub Actions Setup for Smart Confluence
 
 ```yaml
 jobs:
-  publish_docs:
+  publish_architecture_docs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: suryakumaran2611/auto-arch-diagram@v1
+      - uses: suryakumaran2611/auto-arch-diagram/.github/workflows/reusable-auto-arch-diagram.yml@main
         with:
-          iac_globs: 'terraform/**/*.tf'
-          publish_enabled: true
+          iac_root: 'terraform/'
+          direction: AUTO
+          image_formats: png,svg,jpg
           publish_confluence: true
-          confluence_url: ${{ secrets.CONFLUENCE_URL }}
-          confluence_user: ${{ secrets.CONFLUENCE_USER }}
-          confluence_token: ${{ secrets.CONFLUENCE_TOKEN }}
-          confluence_page_id: '123456789'
-          confluence_replace: true
-          confluence_image_marker: '<!-- auto-arch-diagram:prod-architecture.png -->'
+          confluence_smart: true           # Enable Smart Confluence Portal
+          confluence_page_id: '123456789'  # Target Confluence page ID
+          ai_backend: gemini               # gemini | openrouter | auto
+        secrets:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          CONFLUENCE_URL: ${{ secrets.CONFLUENCE_URL }}
+          CONFLUENCE_USER: ${{ secrets.CONFLUENCE_USER }}
+          CONFLUENCE_TOKEN: ${{ secrets.CONFLUENCE_TOKEN }}
 ```
 
-### Marker-Based Image Replacement
-Place an HTML comment marker in your Confluence page source where the diagram should live:
-```html
-<!-- auto-arch-diagram:prod-architecture.png -->
-<p><img src="architecture-diagram.png" /></p>
-<!-- auto-arch-diagram:prod-architecture.png -->
-```
-The action will replace only the content between the matching markers, preserving all surrounding text, headers, and tables.
+### Modes of Operation
 
-### Multi-Environment Publishing
-Use distinct markers for multiple environments on a single Confluence wiki page:
-- Staging: `<!-- auto-arch-diagram:staging-architecture.png -->`
-- Production: `<!-- auto-arch-diagram:prod-architecture.png -->`
-- DR / Disaster Recovery: `<!-- auto-arch-diagram:dr-architecture.png -->`
+- **Full Page Mode (`confluence_smart: true`, Default)**: Overwrites the entire page body to maintain a structured, unified architecture hub.
+- **Section Replace Mode (`confluence_replace: false` or marker-based)**: Updates only between `<!-- smart-confluence:start -->` and `<!-- smart-confluence:end -->` markers, preserving existing meeting notes or project background.
 
 ---
 

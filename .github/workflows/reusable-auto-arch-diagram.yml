@@ -171,6 +171,11 @@ on:
         required: false
         type: boolean
         default: false
+      confluence_smart:
+        description: "Enable Smart Confluence AI-enhanced architecture portal (workload narrative, FinOps cost analysis, Well-Architected review, draw.io + HTML studio attachments)."
+        required: false
+        type: boolean
+        default: true
       confluence_page_id:
         description: "Confluence page ID to update."
         required: false
@@ -450,6 +455,7 @@ jobs:
           CONFLUENCE_USER: ${{ inputs.publish_confluence && secrets.CONFLUENCE_USER || '' }}
           CONFLUENCE_TOKEN: ${{ inputs.publish_confluence && secrets.CONFLUENCE_TOKEN || '' }}
           CONFLUENCE_PAGE_ID: ${{ inputs.publish_confluence && inputs.confluence_page_id || '' }}
+          CONFLUENCE_SMART_PAGE: ${{ inputs.publish_confluence && (inputs.confluence_smart && 'true' || 'false') || '' }}
           CONFLUENCE_REPLACE: ${{ inputs.publish_confluence && (inputs.confluence_replace && 'true' || 'false') || '' }}
           CONFLUENCE_IMAGE_MARKER: ${{ inputs.publish_confluence && inputs.confluence_image_marker || '' }}
           CONFLUENCE_UNIQUE_FILENAME: ${{ inputs.publish_confluence && (inputs.confluence_unique_filename && 'true' || 'false') || '' }}
@@ -800,6 +806,7 @@ jobs:
           CONFLUENCE_USER: ${{ inputs.publish_confluence && secrets.CONFLUENCE_USER || '' }}
           CONFLUENCE_TOKEN: ${{ inputs.publish_confluence && secrets.CONFLUENCE_TOKEN || '' }}
           CONFLUENCE_PAGE_ID: ${{ inputs.publish_confluence && inputs.confluence_page_id || '' }}
+          CONFLUENCE_SMART_PAGE: ${{ inputs.publish_confluence && (inputs.confluence_smart && 'true' || 'false') || '' }}
           CONFLUENCE_REPLACE: ${{ inputs.publish_confluence && (inputs.confluence_replace && 'true' || 'false') || '' }}
           CONFLUENCE_IMAGE_MARKER: ${{ inputs.publish_confluence && inputs.confluence_image_marker || '' }}
           CONFLUENCE_UNIQUE_FILENAME: ${{ inputs.publish_confluence && (inputs.confluence_unique_filename && 'true' || 'false') || '' }}

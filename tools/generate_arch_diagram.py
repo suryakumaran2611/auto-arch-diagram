@@ -260,12 +260,13 @@ def _publish_to_confluence(
     confluence_token: str,
     page_id: str,
     diagram_path: Path,
+    drawio_path: Path | None = None,
     replace: bool = True,
     image_marker: str | None = None,
     debug: bool = False,
     unique_filename: bool = False,
 ) -> bool:
-    """Publish or robustly replace a specific image in a Confluence page via REST API."""
+    """Publish or robustly replace a specific image in a Confluence page via REST API with optional draw.io attachment."""
     def _log(msg: str) -> None:
         if debug:
             print(msg, flush=True)
@@ -323,13 +324,13 @@ def _publish_to_confluence(
     _log(f"Confluence publish: marker={marker_comment!r}")
     img_tag = f'{marker_comment}<ac:image><ri:attachment ri:filename="{filename}" /></ac:image>'
 
-    def _upload_attachment() -> bool:
+    def _upload_attachment(path_to_upload: Path, target_name: str, target_mime: str) -> bool:
         upload_url = f"{confluence_url}/rest/api/content/{page_id}/child/attachment"
         headers = {"X-Atlassian-Token": "no-check"}
         params = {"minorEdit": "true"}
-        _info("Confluence publish: uploading attachment")
-        with diagram_path.open("rb") as f:
-            files = {"file": (filename, f, mime)}
+        _info(f"Confluence publish: uploading attachment {target_name}")
+        with path_to_upload.open("rb") as f:
+            files = {"file": (target_name, f, target_mime)}
             resp = requests.post(
                 upload_url,
                 auth=auth,
@@ -339,13 +340,18 @@ def _publish_to_confluence(
                 timeout=_CONFLUENCE_TIMEOUT_SECONDS,
             )
         if resp.status_code not in (200, 201):
-            print(f"Confluence publish: failed to upload attachment: {resp.text}")
+            print(f"Confluence publish: failed to upload attachment {target_name}: {resp.text}")
             return False
-        _info("Confluence publish: attachment uploaded")
+        _info(f"Confluence publish: attachment {target_name} uploaded successfully")
         return True
 
-    if not _upload_attachment():
+    if not _upload_attachment(diagram_path, filename, mime):
         return False
+
+    # Also upload draw.io vector diagram if present
+    if drawio_path and drawio_path.exists():
+        drawio_name = drawio_path.name
+        _upload_attachment(drawio_path, drawio_name, "application/xml")
 
     new_body = body
     replaced = False
@@ -6540,6 +6546,11 @@ def main() -> int:
         action="store_true",
         help="Enable vision-assisted refinement (Gemini or OpenRouter free models)",
     )
+    parser.add_argument(
+        "--confluence-smart",
+        action="store_true",
+        help="Enable Smart Confluence AI-enhanced architecture portal (workload narrative, FinOps cost analysis, Well-Architected review, draw.io + HTML studio attachments)",
+    )
     args = parser.parse_args()
 
     repo_root = Path.cwd()
@@ -6838,6 +6849,13 @@ if __name__ == "__main__":
         "y",
         "on",
     }
+    confluence_smart = os.getenv("CONFLUENCE_SMART_PAGE", "true").lower() in {
+        "1",
+        "true",
+        "yes",
+        "y",
+        "on",
+    }
     confluence_debug = os.getenv("AUTO_ARCH_DEBUG", "").lower() in {
         "1",
         "true",
@@ -6849,26 +6867,92 @@ if __name__ == "__main__":
     exit_code = main()
     # If Confluence config is set, publish diagram
     if confluence_url and confluence_user and confluence_token and confluence_page_id:
-        # Try to publish PNG or SVG only (prefer PNG)
         repo_root = Path.cwd()
-        png_path = repo_root / "artifacts/architecture-diagram.png"
-        svg_path = repo_root / "artifacts/architecture-diagram.svg"
-        published = False
-        for path in [png_path, svg_path]:
-            if path.exists():
-                published = _publish_to_confluence(
-                    confluence_url,
-                    confluence_user,
-                    confluence_token,
-                    confluence_page_id,
-                    path,
-                    replace=confluence_replace,
-                    image_marker=confluence_image_marker,
-                    debug=confluence_debug,
-                    unique_filename=confluence_unique_filename,
+        
+        # Check if Smart Confluence is requested
+        if confluence_smart:
+            try:
+                from tools.smart_confluence import (
+                    ConfluenceArtifacts,
+                    analyze_architecture_for_confluence,
+                    publish_smart_confluence_page,
                 )
-                if published:
-                    break
-        if not published:
-            print("Confluence publish: no diagram file found to upload.")
+
+                # Collect all available artifacts
+                def _find_file(pattern: str) -> Path | None:
+                    matches = list(repo_root.glob(pattern))
+                    return matches[0] if matches else None
+
+                artifacts = ConfluenceArtifacts(
+                    png=_find_file("artifacts/*.png") or _find_file("docs/*.png"),
+                    jpg=_find_file("artifacts/*.jpg") or _find_file("docs/*.jpg"),
+                    svg=_find_file("artifacts/*.svg") or _find_file("docs/*.svg"),
+                    drawio=_find_file("artifacts/*.drawio") or _find_file("docs/*.drawio"),
+                    html=_find_file("artifacts/*.html") or _find_file("docs/*.html"),
+                    md=_find_file("artifacts/*.md") or _find_file("docs/*.md"),
+                    mmd=_find_file("artifacts/*.mmd") or _find_file("docs/*.mmd"),
+                    ai_png=_find_file("artifacts/*-ai.png") or _find_file("docs/*-ai.png"),
+                    ai_svg=_find_file("artifacts/*-ai.svg") or _find_file("docs/*-ai.svg"),
+                    ai_html=_find_file("artifacts/*-ai.html") or _find_file("docs/*-ai.html"),
+                    ai_drawio=_find_file("artifacts/*-ai.drawio") or _find_file("docs/*-ai.drawio"),
+                    ai_md=_find_file("artifacts/*-ai.md") or _find_file("docs/*-ai.md"),
+                )
+
+                # Scan IaC files to build resource inventory
+                iac_files = _find_iac_files(repo_root)
+                resources, edges = _parse_iac_to_graph(iac_files)
+
+                # Perform deep architectural & FinOps analysis
+                ai_backend = os.getenv("AUTO_ARCH_AI_BACKEND", "auto")
+                report = analyze_architecture_for_confluence(
+                    resources=resources,
+                    edges=edges,
+                    png_path=artifacts.ai_png or artifacts.png,
+                    backend=ai_backend,
+                )
+
+                # Publish rich Smart Confluence architecture portal
+                publish_smart_confluence_page(
+                    confluence_url=confluence_url,
+                    confluence_user=confluence_user,
+                    confluence_token=confluence_token,
+                    page_id=confluence_page_id,
+                    report=report,
+                    artifacts=artifacts,
+                    resources=resources,
+                    full_page=confluence_replace,
+                    debug=confluence_debug,
+                )
+            except Exception as smart_exc:
+                print(f"[smart-confluence] Error executing Smart Confluence: {smart_exc}; falling back to standard publish...", flush=True)
+                confluence_smart = False
+
+        if not confluence_smart:
+            # Fallback to standard single-image replacement + optional draw.io upload
+            png_path = repo_root / "artifacts/architecture-diagram.png"
+            svg_path = repo_root / "artifacts/architecture-diagram.svg"
+            drawio_path = repo_root / "artifacts/architecture-diagram.drawio"
+            if not drawio_path.exists():
+                drawio_matches = list(repo_root.glob("docs/*.drawio")) or list(repo_root.glob("artifacts/*.drawio"))
+                drawio_path = drawio_matches[0] if drawio_matches else None
+
+            published = False
+            for path in [png_path, svg_path]:
+                if path.exists():
+                    published = _publish_to_confluence(
+                        confluence_url,
+                        confluence_user,
+                        confluence_token,
+                        confluence_page_id,
+                        path,
+                        drawio_path=drawio_path,
+                        replace=confluence_replace,
+                        image_marker=confluence_image_marker,
+                        debug=confluence_debug,
+                        unique_filename=confluence_unique_filename,
+                    )
+                    if published:
+                        break
+            if not published:
+                print("Confluence publish: no diagram file found to upload.")
     raise SystemExit(exit_code)
