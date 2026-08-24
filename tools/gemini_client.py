@@ -86,11 +86,11 @@ Respond with STRICT JSON only matching this schema:
   "tooltips": {"<resource-name-part>": "<purpose, scaling, security details, max 20 words>"},
   "flow_labels": {"<source_resource -> target_resource>": "<numbered action, e.g. '1. Ingest Events'>"},
   "insights_md": "<markdown summary (<=150 words): architecture summary, dataflow stages, security & scaling>",
-  "issues": [{"type": "layout|labeling|grouping|edge-routing|completeness", "detail": "..."}],
-  "suggestions": [{"action": "increase_spacing|flip_direction|change_splines|enlarge_fonts|reduce_edge_noise",
+  "suggestions": [{"action": "increase_spacing|change_splines|enlarge_fonts|reduce_edge_noise",
                    "params": {"multiplier": 1.25}}]
 }
-Label & Tooltip rules (strict):
+Label, Tooltip & Layout rules (strict):
+- Architecture Flow: Professional cloud architectures follow Left-to-Right (LR) horizontal progression (Ingress -> Compute -> Storage). Preserve LR direction for optimal widescreen reading.
 - Ground every label and tooltip in concrete evidence from the inventory.
 - Max 5 words for labels, Title Case, no raw terraform prefixes (aws_, azurerm_, etc.).
 - Flow labels should be numbered sequentially ('1. Ingress Request', '2. Transform Payload', etc.).

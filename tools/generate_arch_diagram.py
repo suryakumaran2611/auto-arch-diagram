@@ -1307,56 +1307,49 @@ def _determine_optimal_direction(
     grouped_data: dict[str, dict[str, list[str]]],
     layout: str,
 ) -> str:
-    """Intelligently determine the best diagram direction based on architecture characteristics.
+    """Intelligently determine the best diagram direction following enterprise cloud architecture standards.
 
-    Returns 'LR' (horizontal) or 'TB' (vertical) based on:
-    - Number of lanes/clusters (wide architectures → LR)
-    - Node distribution (many providers → LR, deep nesting → TB)
-    - Overall complexity (large diagrams often better horizontal)
-    - Edge patterns (highly connected → TB for clarity)
+    Professional Cloud Architecture Standards (AWS, Azure, GCP Well-Architected):
+    - Horizontal (LR: Left-to-Right) is the universal industry standard for cloud architectures:
+      User / Ingress (Left) -> Application / Compute (Center) -> Data / Storage / Persistence (Right).
+    - Horizontal layouts optimally utilize widescreen displays (16:9, 16:10), Markdown READMEs,
+      and Confluence pages, avoiding tall 'vertical tower' scrolling.
+    - Vertical (TB: Top-to-Bottom) is reserved strictly for 1-dimensional single-column DAGs.
     """
 
     # Count lanes and providers
     lane_count = len(grouped_data)
     provider_count = complexity.provider_count
 
-    # Calculate cluster width (avg resources per cluster)
-    total_resources = complexity.node_count
-    avg_resources_per_cluster = total_resources / max(complexity.cluster_count, 1)
-
-    # Decision factors (scoring system)
-    lr_score = 0
+    # Baseline: Strong preference for horizontal (LR) in modern cloud architecture
+    lr_score = 10
     tb_score = 0
 
-    # Factor 1: Multi-cloud / multi-provider architectures work best horizontally (LR)
+    # Factor 1: Multi-cloud / multi-provider architectures require horizontal lane isolation
     if provider_count >= 2:
+        lr_score += 6
+    elif lane_count >= 2:
+        lr_score += 4
+
+    # Factor 2: Multi-tier infrastructure (Ingress -> Compute -> Persistence)
+    if complexity.node_count >= 4:
         lr_score += 5
-    elif lane_count >= 3:
-        lr_score += 3
 
-    # Factor 2: Deep nesting without peer services
-    if complexity.max_cluster_depth >= 4:
-        tb_score += 2
-    else:
-        lr_score += 2
+    # Factor 3: Connected service graphs benefit from horizontal dataflow progression
+    if complexity.avg_edges_per_node > 0.3:
+        lr_score += 4
 
-    # Factor 3: Cloud architectures with dataflow / pipelines prefer horizontal
-    if complexity.node_count >= 10:
-        lr_score += 3
-    else:
-        lr_score += 1
+    # Factor 4: Only penalize LR if it is a strictly linear, single-lane 1D hierarchy
+    if lane_count <= 1 and provider_count <= 1 and complexity.node_count <= 3 and complexity.max_cluster_depth >= 4:
+        tb_score += 12
 
-    # Factor 4: High edge density benefits from horizontal flow to align ingress -> compute -> storage
-    if complexity.avg_edges_per_node > 0.5:
-        lr_score += 2
-
-    # Make decision based on scores
+    # Decision based on scores (strongly defaults to LR)
     if lr_score >= tb_score:
         direction = "LR"
-        reason = "horizontal (standard professional cloud flow)"
+        reason = "horizontal (industry standard cloud architecture: Ingress -> Compute -> Storage)"
     else:
         direction = "TB"
-        reason = "vertical (deep hierarchical nesting)"
+        reason = "vertical (strictly linear 1D hierarchy)"
 
     # Debug output
     if os.getenv("AUTO_ARCH_DEBUG"):
