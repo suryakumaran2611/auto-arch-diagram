@@ -51,10 +51,10 @@ cd /path/to/your-new-repo
 mkdir -p .github/workflows
 cp integration_example/.github/workflows/architecture.yml .github/workflows/architecture.yml
 
-# 3. (Optional) Confluence — set these repo secrets + variable:
-#   Secrets:  CONFLUENCE_URL, CONFLUENCE_USER, CONFLUENCE_TOKEN, OPENROUTER_API_KEY (for AI)
-#   Variable: CONFLUENCE_PAGE_ID  (page to publish the PNG to)
-#   Then set publish_confluence: true in the workflow or via vars.
+# 3. (Optional) Smart Confluence Architecture Portal:
+#   Secrets:  CONFLUENCE_URL, CONFLUENCE_USER, CONFLUENCE_TOKEN, GEMINI_API_KEY (or OPENROUTER_API_KEY)
+#   Variable: CONFLUENCE_PAGE_ID  (target Confluence page ID)
+#   Then set publish_confluence: true and confluence_smart: true in the workflow.
 
 # 4. Push — the workflow runs on push/PR and on manual dispatch:
 git add .
@@ -65,8 +65,8 @@ git push
 After the first push, check:
 
 - **PR comment:** the workflow posts a sticky comment with the Mermaid + PNG preview on every PR that touches `integration_example/**/*.tf`.
-- **Artifacts:** `integration_example/docs/architecture.{png,svg,drawio,html,md,mmd,jpg}` are updated. The `drawio` is fully editable with native AWS shapes; `html` is the interactive studio (pan/zoom, path tracing, inspect drawer).
-- **Confluence:** if `CONFLUENCE_PAGE_ID` is set and `publish_confluence: true`, the PNG is uploaded/replaced on that page (unique filename avoids cache).
+- **Artifacts:** `integration_example/docs/architecture.{png,svg,drawio,html,md,mmd,jpg}` and `architecture-ai.{png,svg,drawio,html,md}` are updated. The `drawio` is fully editable with native AWS shapes; `html` is the interactive studio (pan/zoom, path tracing, inspect drawer).
+- **Smart Confluence:** if `CONFLUENCE_PAGE_ID` is set and `publish_confluence: true`, the entire page is transformed into an executive **Architecture Documentation Portal** featuring an AI workload narrative, FinOps cost analysis, Well-Architected assessment, and multi-format attachments (`.drawio`, `.html`, `.svg`, `.png`).
 
 ## Workflow — what it does
 
@@ -81,22 +81,31 @@ After the first push, check:
     direction: AUTO
     comment_on_pr: true              # sticky PR comment
     publish_enabled: true            # writes to publish.paths in .auto-arch-diagram.yml
+    publish_confluence: true         # publish to Confluence
+    confluence_smart: true           # 🚀 Enable Smart Confluence AI Portal
+    confluence_page_id: ${{ vars.CONFLUENCE_PAGE_ID }}
+    ai_enhance: true                 # AI Vision Refinement
+    ai_backend: gemini               # gemini | openrouter
+    gemini_model: gemini-3.1-flash-lite
 ```
 
 Key inputs (all crystal-clear in the reusable):
 
 - **Outputs:** `out_dir`, `out_*`, `image_formats` — seven core formats plus `*-ai.*` when `ai_enhance: true`.
-- **AI:** `ai_enhance`, `ai_backend` (`openrouter`/`ollama`/`bedrock`/`restapi`), `ollama_model`, `ai_iterations` — free OpenRouter vision models, graceful fallback if `OPENROUTER_API_KEY` is unset.
+- **AI Vision Refinement:** `ai_enhance`, `ai_backend` (`gemini`/`openrouter`/`ollama`/`bedrock`/`restapi`), `gemini_model` (`gemini-3.1-flash-lite`), `ai_iterations` — automated visual ergonomics & flow annotations.
+- **Smart Confluence:** `publish_confluence`, `confluence_smart`, `confluence_page_id`, `confluence_replace` — publishes living architecture wiki portal with FinOps and Well-Architected reviews.
 - **Rendering:** `direction`, `render_layout` (`lanes`/`providers`), `render_bg`, `edge_color`/`edge_penwidth`/`edge_arrowsize`, `fontsize`/`iconsize`.
-- **Publishing:** `publish_confluence`, `confluence_page_id`, `auto_commit_artifacts` / `create_diagram_pr`.
 
 See `../.github/workflows/reusable-auto-arch-diagram.yml` for the full input catalogue.
 
-## Local preview
+## Local preview & AI generation
 
 ```bash
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
+
+# Standard + Gemini AI-Enhanced Generation:
+export GEMINI_API_KEY="your-gemini-key"
 python tools/generate_arch_diagram.py \
   --changed-files integration_example/main.tf \
   --out-md integration_example/docs/architecture.md \
@@ -104,7 +113,10 @@ python tools/generate_arch_diagram.py \
   --out-png integration_example/docs/architecture.png \
   --out-svg integration_example/docs/architecture.svg \
   --out-drawio integration_example/docs/architecture.drawio \
-  --out-html integration_example/docs/architecture.html
+  --out-html integration_example/docs/architecture.html \
+  --ai-enhance \
+  --ai-backend gemini \
+  --gemini-model gemini-3.1-flash-lite
 ```
 
 ## Customising
@@ -112,4 +124,4 @@ python tools/generate_arch_diagram.py \
 - Change `var.project` / `var.environment` / `var.region` in `variables.tf`.
 - Add/remove resources in `main.tf` — the diagram updates automatically.
 - Tweak `.auto-arch-diagram.yml` `publish.paths` if you prefer different output locations.
-- Set `ai_enhance: true` + `OPENROUTER_API_KEY` secret for the AI-refined `*-ai.*` suite.
+- Set `confluence_smart: true` to auto-publish living architecture portals to Confluence on main branch pushes.
