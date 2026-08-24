@@ -670,9 +670,14 @@ def publish_smart_confluence_page(
             files_to_upload.append(art)
 
     print(f"[smart-confluence] Uploading {len(files_to_upload)} architecture artifact attachments...", flush=True)
+    if not files_to_upload:
+        print("[smart-confluence] Error: no generated artifacts were found to upload.", flush=True)
+        return False
     upload_url = f"{confluence_url}/rest/api/content/{page_id}/child/attachment"
     headers = {"X-Atlassian-Token": "no-check"}
-    params = {"minorEdit": "true"}
+    # Confluence rejects a repeated filename unless duplicate uploads are allowed.
+    params = {"minorEdit": "true", "allowDuplicated": "true"}
+    upload_failed = False
 
     for file_path in files_to_upload:
         ext = file_path.suffix.lower()
@@ -698,9 +703,20 @@ def publish_smart_confluence_page(
             if upload_resp.status_code in (200, 201):
                 print(f"[smart-confluence]   ✓ Uploaded attachment: {file_path.name}", flush=True)
             else:
-                print(f"[smart-confluence]   ⚠ Upload note ({file_path.name}): {upload_resp.status_code}", flush=True)
+                upload_failed = True
+                detail = (upload_resp.text or "").replace("\n", " ")[:500]
+                print(
+                    f"[smart-confluence]   ✗ Upload failed ({file_path.name}): "
+                    f"HTTP {upload_resp.status_code}: {detail}",
+                    flush=True,
+                )
         except Exception as upload_err:
+            upload_failed = True
             print(f"[smart-confluence]   ⚠ Attachment error ({file_path.name}): {upload_err}", flush=True)
+
+    if upload_failed:
+        print("[smart-confluence] Error: one or more attachments failed; page was not updated.", flush=True)
+        return False
 
     # Construct the Smart Confluence XHTML body
     smart_xhtml = build_smart_confluence_xhtml(
