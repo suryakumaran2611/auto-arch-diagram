@@ -1,25 +1,20 @@
 flowchart LR
-subgraph all_AWS[AWS]
-  subgraph vpc_aws_vpc_main[VPC
-main]
+subgraph all_AWS["AWS"]
+  subgraph vpc_aws_vpc_main["VPC main"]
     tf_aws_vpc_main["aws_vpc.main"]
-    subgraph subnet_aws_subnet_private_1[Subnet
-private 1 (Private)]
+    subgraph subnet_aws_subnet_private_1["Subnet private 1 (Private)"]
       tf_aws_subnet_private_1["aws_subnet.private_1"]
       tf_aws_db_instance_main["aws_db_instance.main"]
       tf_aws_elasticache_cluster_main["aws_elasticache_cluster.main"]
     end
-    subgraph subnet_aws_subnet_private_2[Subnet
-private 2 (Private)]
+    subgraph subnet_aws_subnet_private_2["Subnet private 2 (Private)"]
       tf_aws_subnet_private_2["aws_subnet.private_2"]
     end
-    subgraph subnet_aws_subnet_public_1[Subnet
-public 1 (Public)]
+    subgraph subnet_aws_subnet_public_1["Subnet public 1 (Public)"]
       tf_aws_subnet_public_1["aws_subnet.public_1"]
       tf_aws_route_table_association_public_1["aws_route_table_association.public_1"]
     end
-    subgraph subnet_aws_subnet_public_2[Subnet
-public 2 (Public)]
+    subgraph subnet_aws_subnet_public_2["Subnet public 2 (Public)"]
       tf_aws_subnet_public_2["aws_subnet.public_2"]
       tf_aws_route_table_association_public_2["aws_route_table_association.public_2"]
     end

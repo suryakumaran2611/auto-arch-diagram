@@ -6,7 +6,7 @@ Summary: Generated a best-effort Bicep dependency diagram (dependsOn/parent).
 
 ```mermaid
 flowchart LR
-subgraph Azure[Azure]
+subgraph Azure["Azure"]
   bicep_cdnEndpoint["cdnEndpoint\nMicrosoft.Cdn/profiles/endpoints"]
   bicep_cdnProfile["cdnProfile\nMicrosoft.Cdn/profiles"]
   bicep_rg["rg\nMicrosoft.Resources/resourceGroups"]

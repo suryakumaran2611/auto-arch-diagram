@@ -6,7 +6,7 @@ Summary: Generated a dependency-oriented Terraform diagram from changed resource
 
 ```mermaid
 flowchart LR
-subgraph all_AWS[AWS]
+subgraph all_AWS["AWS"]
   tf_aws_cloudfront_distribution_cdn["aws_cloudfront_distribution.cdn"]
   tf_aws_cloudfront_function_rewrite_uri["aws_cloudfront_function.rewrite_uri"]
   tf_aws_cloudfront_origin_access_control_oac["aws_cloudfront_origin_access_control.oac"]

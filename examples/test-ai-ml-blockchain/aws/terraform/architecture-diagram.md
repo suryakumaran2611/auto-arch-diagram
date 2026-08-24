@@ -6,7 +6,7 @@ Summary: Generated a dependency-oriented Terraform diagram from changed resource
 
 ```mermaid
 flowchart LR
-subgraph all_AWS[AWS]
+subgraph all_AWS["AWS"]
   tf_aws_amplify_app_web_app["aws_amplify_app.web_app"]
   tf_aws_appsync_graphql_api_graphql_api["aws_appsync_graphql_api.graphql_api"]
   tf_aws_bedrock_agent_agent["aws_bedrock_agent.agent"]
@@ -24,25 +24,25 @@ subgraph all_AWS[AWS]
   tf_aws_textract_document_text_extraction["aws_textract_document.text_extraction"]
   tf_aws_transcribe_job_speech_to_text["aws_transcribe_job.speech_to_text"]
 end
-subgraph all_Azure[Azure]
+subgraph all_Azure["Azure"]
   tf_azurerm_blockchain_member_blockchain_member["azurerm_blockchain_member.blockchain_member"]
   tf_azurerm_cognitive_account_cognitive_services["azurerm_cognitive_account.cognitive_services"]
   tf_azurerm_machine_learning_workspace_azure_ml["azurerm_machine_learning_workspace.azure_ml"]
   tf_azurerm_openai_account_openai_service["azurerm_openai_account.openai_service"]
 end
-subgraph all_GCP[GCP]
+subgraph all_GCP["GCP"]
   tf_google_ai_platform_notebook_vertex_notebook["google_ai_platform_notebook.vertex_notebook"]
   tf_google_automl_model_auto_ml["google_automl_model.auto_ml"]
   tf_google_vertex_ai_endpoint_ai_endpoint["google_vertex_ai_endpoint.ai_endpoint"]
   tf_google_video_intelligence_annotation_video_ai["google_video_intelligence_annotation.video_ai"]
   tf_google_vision_product_set_vision_ai["google_vision_product_set.vision_ai"]
 end
-subgraph all_IBM[IBM]
+subgraph all_IBM["IBM"]
   tf_ibm_blockchain_platform_blockchain["ibm_blockchain_platform.blockchain"]
   tf_ibm_cloud_pak_for_data_analytics["ibm_cloud_pak_for_data.analytics"]
   tf_ibm_watson_studio_watson_ml["ibm_watson_studio.watson_ml"]
 end
-subgraph all_OCI[OCI]
+subgraph all_OCI["OCI"]
   tf_oci_ai_service_language_ai_language["oci_ai_service_language.ai_language"]
   tf_oci_ai_service_vision_ai_vision["oci_ai_service_vision.ai_vision"]
   tf_oci_blockchain_platform_blockchain["oci_blockchain_platform.blockchain"]

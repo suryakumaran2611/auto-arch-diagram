@@ -6,7 +6,7 @@ Summary: Generated a dependency-oriented Terraform diagram from changed resource
 
 ```mermaid
 flowchart LR
-subgraph all_IBM[IBM]
+subgraph all_IBM["IBM"]
   tf_ibm_cos_bucket_site["ibm_cos_bucket.site"]
   tf_ibm_resource_instance_cos["ibm_resource_instance.cos"]
 end

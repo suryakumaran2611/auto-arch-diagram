@@ -6,18 +6,18 @@ Summary: Generated a dependency-oriented CloudFormation diagram from changed res
 
 ```mermaid
 flowchart LR
-subgraph Management[Management]
+subgraph Management["Management"]
   cfn_CloudFrontLogGroup["CloudFrontLogGroup\nLogGroup"]
   cfn_WafLogGroup["WafLogGroup\nLogGroup"]
 end
-subgraph Network[Network]
+subgraph Network["Network"]
   cfn_CloudFrontOAC["CloudFrontOAC\nOriginAccessControl"]
   cfn_Distribution["Distribution\nDistribution"]
 end
-subgraph Security[Security]
+subgraph Security["Security"]
   cfn_WafAcl["WafAcl\nWebACL"]
 end
-subgraph Storage[Storage]
+subgraph Storage["Storage"]
   cfn_LogsBucket["LogsBucket\nBucket"]
   cfn_SiteBucket["SiteBucket\nBucket"]
   cfn_SiteBucketPublicAccessBlock["SiteBucketPublicAccessBlock\nBucketPublicAccessBlock"]

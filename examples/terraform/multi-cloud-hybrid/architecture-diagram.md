@@ -6,17 +6,14 @@ Summary: Generated a dependency-oriented Terraform diagram from changed resource
 
 ```mermaid
 flowchart LR
-subgraph all_AWS[AWS]
-  subgraph vpc_aws_vpc_main[VPC
-main]
+subgraph all_AWS["AWS"]
+  subgraph vpc_aws_vpc_main["VPC main"]
     tf_aws_vpc_main["aws_vpc.main"]
-    subgraph subnet_aws_subnet_private_1[Subnet
-private 1 (Private)]
+    subgraph subnet_aws_subnet_private_1["Subnet private 1 (Private)"]
       tf_aws_subnet_private_1["aws_subnet.private_1"]
       tf_aws_db_instance_postgres["aws_db_instance.postgres"]
     end
-    subgraph subnet_aws_subnet_private_2[Subnet
-private 2 (Private)]
+    subgraph subnet_aws_subnet_private_2["Subnet private 2 (Private)"]
       tf_aws_subnet_private_2["aws_subnet.private_2"]
     end
     tf_aws_db_subnet_group_main["aws_db_subnet_group.main"]
@@ -30,7 +27,7 @@ private 2 (Private)]
   tf_aws_s3_bucket_versioning_data_lake["aws_s3_bucket_versioning.data_lake"]
   tf_aws_sns_topic_data_events["aws_sns_topic.data_events"]
 end
-subgraph all_Azure[Azure]
+subgraph all_Azure["Azure"]
   tf_azurerm_cosmosdb_account_main["azurerm_cosmosdb_account.main"]
   tf_azurerm_cosmosdb_sql_database_app_db["azurerm_cosmosdb_sql_database.app_db"]
   tf_azurerm_eventgrid_event_subscription_data_processor["azurerm_eventgrid_event_subscription.data_processor"]
@@ -43,7 +40,7 @@ subgraph all_Azure[Azure]
   tf_azurerm_storage_account_datalake["azurerm_storage_account.datalake"]
   tf_azurerm_storage_container_processed["azurerm_storage_container.processed"]
 end
-subgraph all_GCP[GCP]
+subgraph all_GCP["GCP"]
   tf_google_bigquery_dataset_analytics["google_bigquery_dataset.analytics"]
   tf_google_cloudfunctions_function_analytics_processor["google_cloudfunctions_function.analytics_processor"]
   tf_google_pubsub_subscription_events_sub["google_pubsub_subscription.events_sub"]

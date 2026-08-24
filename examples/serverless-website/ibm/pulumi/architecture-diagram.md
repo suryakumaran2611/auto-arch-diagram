@@ -6,7 +6,7 @@ Summary: Generated a Pulumi YAML diagram from resources and dependsOn/reference 
 
 ```mermaid
 flowchart LR
-subgraph IBM[IBM]
+subgraph IBM["IBM"]
   pulumi_cos["cos\nibm:resource/instance:Instance"]
   pulumi_siteBucket["siteBucket\nibm:cos/bucket:Bucket"]
 end

@@ -6,7 +6,7 @@ Summary: Generated a Pulumi YAML diagram from resources and dependsOn/reference 
 
 ```mermaid
 flowchart LR
-subgraph GCP[GCP]
+subgraph GCP["GCP"]
   pulumi_cdn["cdn\ngcp:compute/backendBucket:BackendBucket"]
   pulumi_siteBucket["siteBucket\ngcp:storage/bucket:Bucket"]
 end

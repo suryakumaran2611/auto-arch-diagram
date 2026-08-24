@@ -6,7 +6,7 @@ Summary: Generated a Pulumi YAML diagram from resources and dependsOn/reference 
 
 ```mermaid
 flowchart LR
-subgraph OCI[OCI]
+subgraph OCI["OCI"]
   pulumi_siteBucket["siteBucket\noci:objectstorage/bucket:Bucket"]
 end
 ```

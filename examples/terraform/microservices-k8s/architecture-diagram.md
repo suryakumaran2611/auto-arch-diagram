@@ -6,12 +6,10 @@ Summary: Generated a dependency-oriented Terraform diagram from changed resource
 
 ```mermaid
 flowchart LR
-subgraph all_AWS[AWS]
-  subgraph vpc_aws_vpc_main[VPC
-main]
+subgraph all_AWS["AWS"]
+  subgraph vpc_aws_vpc_main["VPC main"]
     tf_aws_vpc_main["aws_vpc.main"]
-    subgraph subnet_aws_subnet_private[Subnet
-private (Private)]
+    subgraph subnet_aws_subnet_private["Subnet private (Private)"]
       tf_aws_subnet_private["aws_subnet.private"]
       tf_aws_db_instance_microservices["aws_db_instance.microservices"]
       tf_aws_db_subnet_group_microservices["aws_db_subnet_group.microservices"]
@@ -19,8 +17,7 @@ private (Private)]
       tf_aws_elasticache_subnet_group_microservices["aws_elasticache_subnet_group.microservices"]
       tf_aws_route_table_association_private["aws_route_table_association.private"]
     end
-    subgraph subnet_aws_subnet_public[Subnet
-public (Public)]
+    subgraph subnet_aws_subnet_public["Subnet public (Public)"]
       tf_aws_subnet_public["aws_subnet.public"]
       tf_aws_nat_gateway_main["aws_nat_gateway.main"]
       tf_aws_route_table_association_public["aws_route_table_association.public"]
@@ -30,8 +27,7 @@ public (Public)]
   tf_aws_cloudwatch_log_group_eks["aws_cloudwatch_log_group.eks"]
   tf_aws_ecr_repository_microservices["aws_ecr_repository.microservices"]
   tf_aws_eip_nat["aws_eip.nat"]
-  subgraph cluster_aws_eks_cluster_main[EKS Cluster
-main]
+  subgraph cluster_aws_eks_cluster_main["EKS Cluster main"]
     tf_aws_eks_cluster_main["aws_eks_cluster.main"]
     tf_aws_eks_node_group_main["aws_eks_node_group.main"]
   end
