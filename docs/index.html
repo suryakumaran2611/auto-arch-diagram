@@ -816,6 +816,89 @@
         .code-box pre .hl-str { color: #34d399; }
         .code-box pre .hl-cmd { color: #f472b6; }
 
+        /* AI Comparison Showcase */
+        .comparison-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 32px;
+            margin-bottom: 40px;
+        }
+
+        .comparison-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .comparison-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 20px 45px rgba(0, 0, 0, 0.5);
+        }
+
+        .comparison-card.ai-highlight {
+            border: 2px solid #a855f7;
+            box-shadow: 0 0 35px rgba(168, 85, 247, 0.25);
+        }
+
+        .comparison-preview-wrap {
+            position: relative;
+            background: #ffffff;
+            padding: 24px;
+            height: 520px;
+            max-height: 520px;
+            border-bottom: 1px solid var(--border);
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .comparison-preview-wrap img {
+            max-width: 100%;
+            max-height: 100%;
+            width: auto;
+            height: auto;
+            object-fit: contain;
+            transition: transform 0.4s ease;
+            filter: drop-shadow(0 4px 12px rgba(0,0,0,0.08));
+        }
+
+        .comparison-card:hover .comparison-preview-wrap img {
+            transform: scale(1.02);
+        }
+
+        .comparison-overlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.82);
+            backdrop-filter: blur(5px);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            opacity: 0;
+            transition: opacity 0.25s ease;
+            padding: 24px;
+            z-index: 10;
+        }
+
+        .comparison-preview-wrap:hover .comparison-overlay {
+            opacity: 1;
+        }
+
+        .comparison-body {
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            flex-grow: 1;
+        }
+
         /* Footer */
         footer {
             padding: 60px 0;
@@ -843,6 +926,8 @@
             .hero h1 { font-size: 2.8rem; }
             .features-grid, .formats-grid, .code-showcase-grid { grid-template-columns: 1fr; }
             .gallery-grid { grid-template-columns: 1fr; }
+            .comparison-grid { grid-template-columns: 1fr; }
+            .comparison-preview-wrap { height: 380px; max-height: 380px; }
             .tab-panel .feature-overlay-grid { grid-template-columns: 1fr; }
             .nav-links { display: none; }
         }
@@ -1046,50 +1131,52 @@
                 <p>Compare the baseline Infrastructure-as-Code export against the Gemini 3.1 Flash Lite vision-refined architecture for the enterprise MLOps & AIOps integration stack.</p>
             </div>
 
-            <div class="gallery-grid" style="grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); margin-bottom: 40px;">
+            <div class="comparison-grid">
                 <!-- Standard Architecture Card -->
-                <div class="gallery-card">
-                    <div class="gallery-card-preview">
+                <div class="comparison-card">
+                    <a href="demos/integration-example.html" target="_blank" class="comparison-preview-wrap" title="Click to launch full interactive HTML studio">
                         <img src="images/integration-example.png" alt="Standard Architecture Diagram">
-                        <div class="gallery-card-overlay">
-                            <a href="demos/integration-example.html" target="_blank" class="btn btn-secondary btn-sm">🌐 Live Studio ↗</a>
-                            <a href="demos/integration-example.drawio" download class="btn btn-secondary btn-sm">💾 .drawio</a>
+                        <div class="comparison-overlay">
+                            <span class="btn btn-secondary btn-sm">🌐 Open Standard Interactive Studio ↗</span>
+                            <span style="font-size: 0.8rem; color: #94a3b8;">Click to pan, zoom, trace flows & inspect nodes</span>
                         </div>
-                    </div>
-                    <div class="gallery-card-body">
-                        <div class="card-tags">
-                            <span class="tag tag-provider" style="background: rgba(148, 163, 184, 0.15); color: #cbd5e1; border-color: rgba(148, 163, 184, 0.3);">Standard IaC Baseline</span>
-                            <span class="tag">Raw Topology</span>
+                    </a>
+                    <div class="comparison-body">
+                        <div class="card-tags" style="display: flex; gap: 8px; margin-bottom: 12px;">
+                            <span class="tag tag-provider" style="background: rgba(148, 163, 184, 0.15); color: #cbd5e1; border: 1px solid rgba(148, 163, 184, 0.3); padding: 4px 10px; border-radius: 999px; font-size: 0.75rem; font-weight: 600;">Standard IaC Baseline</span>
+                            <span class="tag" style="background: rgba(15, 23, 42, 0.6); color: #94a3b8; border: 1px solid var(--border); padding: 4px 10px; border-radius: 999px; font-size: 0.75rem;">Raw Topology</span>
                         </div>
-                        <h3>MLOps / AIOps Platform (Standard)</h3>
-                        <p>Direct 1:1 structural graph of all VPCs, SageMaker, EKS, RDS Aurora, S3 buckets, and Step Functions synthesized directly from Terraform declarations.</p>
-                        <div class="card-links" style="margin-top: 14px; display: flex; gap: 10px; flex-wrap: wrap;">
+                        <h3 style="font-size: 1.25rem; margin-bottom: 8px; color: #fff;">MLOps / AIOps Platform (Standard)</h3>
+                        <p style="color: var(--text-muted); font-size: 0.9rem; line-height: 1.6; margin-bottom: 16px;">Direct 1:1 structural graph of all VPCs, SageMaker, EKS, RDS Aurora, S3 buckets, and Step Functions synthesized directly from Terraform declarations.</p>
+                        <div style="margin-top: auto; display: flex; gap: 10px; flex-wrap: wrap;">
                             <a href="demos/integration-example.html" target="_blank" class="btn btn-secondary btn-sm" style="flex: 1; text-align: center;">🌐 Standard HTML Studio ↗</a>
-                            <a href="demos/integration-example.svg" target="_blank" class="btn btn-secondary btn-sm">📐 Scalable SVG ↗</a>
+                            <a href="demos/integration-example.drawio" download class="btn btn-secondary btn-sm">💾 .drawio</a>
+                            <a href="demos/integration-example.svg" target="_blank" class="btn btn-secondary btn-sm">📐 SVG</a>
                         </div>
                     </div>
                 </div>
 
                 <!-- Gemini AI-Enhanced Architecture Card -->
-                <div class="gallery-card" style="border: 2px solid #a855f7; box-shadow: 0 0 25px rgba(168, 85, 247, 0.2);">
-                    <div class="gallery-card-preview">
+                <div class="comparison-card ai-highlight">
+                    <a href="demos/integration-example-ai.html" target="_blank" class="comparison-preview-wrap" title="Click to launch AI-Enhanced interactive HTML studio">
                         <img src="images/integration-example-ai.png" alt="Gemini AI-Enhanced Architecture Diagram">
-                        <div class="gallery-card-overlay">
-                            <a href="demos/integration-example-ai.html" target="_blank" class="btn btn-primary btn-sm">🌐 AI Live Studio ↗</a>
-                            <a href="demos/integration-example-ai.drawio" download class="btn btn-primary btn-sm">💾 .drawio (AI)</a>
+                        <div class="comparison-overlay">
+                            <span class="btn btn-primary btn-sm">🌐 Launch AI-Enhanced Interactive Studio ↗</span>
+                            <span style="font-size: 0.8rem; color: #d8b4fe;">✨ Vision-refined with Gemini 3.1 Flash Lite</span>
                         </div>
-                    </div>
-                    <div class="gallery-card-body">
-                        <div class="card-tags">
-                            <span class="tag tag-provider" style="background: rgba(168, 85, 247, 0.2); color: #d8b4fe; border-color: rgba(168, 85, 247, 0.4);">✨ Gemini 3.1 Flash Lite</span>
-                            <span class="tag">Executive Framing</span>
-                            <span class="tag">Operational Flow</span>
+                    </a>
+                    <div class="comparison-body">
+                        <div class="card-tags" style="display: flex; gap: 8px; margin-bottom: 12px;">
+                            <span class="tag tag-provider" style="background: rgba(168, 85, 247, 0.2); color: #d8b4fe; border: 1px solid rgba(168, 85, 247, 0.4); padding: 4px 10px; border-radius: 999px; font-size: 0.75rem; font-weight: 600;">✨ Gemini 3.1 Flash Lite</span>
+                            <span class="tag" style="background: rgba(15, 23, 42, 0.6); color: #c084fc; border: 1px solid rgba(168, 85, 247, 0.3); padding: 4px 10px; border-radius: 999px; font-size: 0.75rem;">Executive Framing</span>
+                            <span class="tag" style="background: rgba(15, 23, 42, 0.6); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.3); padding: 4px 10px; border-radius: 999px; font-size: 0.75rem;">Operational Flow</span>
                         </div>
-                        <h3>Enterprise Scalable MLOps Data Platform (AI-Enhanced)</h3>
-                        <p>Vision-refined with executive platform framing, automated pipeline context, operational tooltips on storage/compute tiers, and sequenced dataflow badges.</p>
-                        <div class="card-links" style="margin-top: 14px; display: flex; gap: 10px; flex-wrap: wrap;">
+                        <h3 style="font-size: 1.25rem; margin-bottom: 8px; color: #fff;">Enterprise Scalable MLOps Platform (AI-Enhanced)</h3>
+                        <p style="color: var(--text-muted); font-size: 0.9rem; line-height: 1.6; margin-bottom: 16px;">Vision-refined with executive platform framing, automated pipeline context, operational tooltips on storage/compute tiers, and sequenced dataflow badges.</p>
+                        <div style="margin-top: auto; display: flex; gap: 10px; flex-wrap: wrap;">
                             <a href="demos/integration-example-ai.html" target="_blank" class="btn btn-primary btn-sm" style="flex: 1; text-align: center;">🌐 Launch AI-Enhanced Studio ↗</a>
-                            <a href="demos/integration-example-ai.svg" target="_blank" class="btn btn-secondary btn-sm">📐 AI Scalable SVG ↗</a>
+                            <a href="demos/integration-example-ai.drawio" download class="btn btn-primary btn-sm">💾 .drawio</a>
+                            <a href="demos/integration-example-ai.svg" target="_blank" class="btn btn-secondary btn-sm">📐 SVG</a>
                         </div>
                     </div>
                 </div>
