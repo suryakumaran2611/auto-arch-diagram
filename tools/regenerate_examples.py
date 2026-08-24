@@ -85,12 +85,13 @@ def main() -> int:
     examples_root = repo / "examples"
 
     entries: list[Path] = []
-    entries += sorted(examples_root.rglob("main.tf"))
-    entries += sorted(examples_root.rglob("main.bicep"))
-    entries += sorted(examples_root.rglob("template.yml"))
-    entries += sorted(examples_root.rglob("template.yaml"))
-    entries += sorted(examples_root.rglob("Pulumi.yaml"))
-    entries += sorted(examples_root.rglob("Pulumi.yml"))
+    entries += list(examples_root.rglob("main.tf"))
+    entries += list(examples_root.rglob("main.bicep"))
+    entries += list(examples_root.rglob("template.yml"))
+    entries += list(examples_root.rglob("template.yaml"))
+    entries += list(examples_root.rglob("Pulumi.yaml"))
+    entries += list(examples_root.rglob("Pulumi.yml"))
+    entries = sorted(set(entries))
 
     if not entries:
         print("No examples found.")

@@ -6,16 +6,13 @@ Summary: Generated a dependency-oriented Terraform diagram from changed resource
 
 ```mermaid
 flowchart LR
-subgraph all_AWS[AWS]
-  subgraph vpc_aws_vpc_app_vpc[VPC
-app vpc]
+subgraph all_AWS["AWS"]
+  subgraph vpc_aws_vpc_app_vpc["VPC app vpc"]
     tf_aws_vpc_app_vpc["aws_vpc.app_vpc"]
-    subgraph subnet_aws_subnet_private_1[Subnet
-private 1 (Private)]
+    subgraph subnet_aws_subnet_private_1["Subnet private 1 (Private)"]
       tf_aws_subnet_private_1["aws_subnet.private_1"]
     end
-    subgraph subnet_aws_subnet_public_1[Subnet
-public 1 (Public)]
+    subgraph subnet_aws_subnet_public_1["Subnet public 1 (Public)"]
       tf_aws_subnet_public_1["aws_subnet.public_1"]
     end
   end

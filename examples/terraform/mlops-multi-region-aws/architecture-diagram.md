@@ -6,37 +6,30 @@ Summary: Generated a dependency-oriented Terraform diagram from changed resource
 
 ```mermaid
 flowchart LR
-subgraph all_AWS[AWS]
-  subgraph vpc_aws_vpc_dr_vpc[VPC
-dr vpc]
+subgraph all_AWS["AWS"]
+  subgraph vpc_aws_vpc_dr_vpc["VPC dr vpc"]
     tf_aws_vpc_dr_vpc["aws_vpc.dr_vpc"]
-    subgraph subnet_aws_subnet_dr_private_subnet_2a[Subnet
-dr private subnet 2a (Private)]
+    subgraph subnet_aws_subnet_dr_private_subnet_2a["Subnet dr private subnet 2a (Private)"]
       tf_aws_subnet_dr_private_subnet_2a["aws_subnet.dr_private_subnet_2a"]
     end
   end
-  subgraph vpc_aws_vpc_primary_vpc[VPC
-primary vpc]
+  subgraph vpc_aws_vpc_primary_vpc["VPC primary vpc"]
     tf_aws_vpc_primary_vpc["aws_vpc.primary_vpc"]
-    subgraph subnet_aws_subnet_primary_private_subnet_1a[Subnet
-primary private… (Private)]
+    subgraph subnet_aws_subnet_primary_private_subnet_1a["Subnet primary private… (Private)"]
       tf_aws_subnet_primary_private_subnet_1a["aws_subnet.primary_private_subnet_1a"]
       tf_aws_elasticache_cluster_feature_cache["aws_elasticache_cluster.feature_cache"]
       tf_aws_lambda_function_data_preprocessor["aws_lambda_function.data_preprocessor"]
       tf_aws_rds_cluster_feature_store["aws_rds_cluster.feature_store"]
       tf_aws_sagemaker_notebook_instance_ml_notebook["aws_sagemaker_notebook_instance.ml_notebook"]
     end
-    subgraph subnet_aws_subnet_primary_private_subnet_1b[Subnet
-primary private… (Private)]
+    subgraph subnet_aws_subnet_primary_private_subnet_1b["Subnet primary private… (Private)"]
       tf_aws_subnet_primary_private_subnet_1b["aws_subnet.primary_private_subnet_1b"]
     end
-    subgraph subnet_aws_subnet_primary_public_subnet_1a[Subnet
-primary public… (Public)]
+    subgraph subnet_aws_subnet_primary_public_subnet_1a["Subnet primary public… (Public)"]
       tf_aws_subnet_primary_public_subnet_1a["aws_subnet.primary_public_subnet_1a"]
       tf_aws_nat_gateway_primary_nat["aws_nat_gateway.primary_nat"]
     end
-    subgraph subnet_aws_subnet_primary_public_subnet_1b[Subnet
-primary public… (Public)]
+    subgraph subnet_aws_subnet_primary_public_subnet_1b["Subnet primary public… (Public)"]
       tf_aws_subnet_primary_public_subnet_1b["aws_subnet.primary_public_subnet_1b"]
     end
     tf_aws_db_subnet_group_aurora_subnet_group["aws_db_subnet_group.aurora_subnet_group"]
@@ -48,8 +41,7 @@ primary public… (Public)]
   tf_aws_cloudwatch_log_group_ml_pipeline_logs["aws_cloudwatch_log_group.ml_pipeline_logs"]
   tf_aws_dynamodb_table_experiment_tracking["aws_dynamodb_table.experiment_tracking"]
   tf_aws_eip_nat_eip["aws_eip.nat_eip"]
-  subgraph cluster_aws_eks_cluster_mlops_cluster[EKS Cluster
-mlops cluster]
+  subgraph cluster_aws_eks_cluster_mlops_cluster["EKS Cluster mlops cluster"]
     tf_aws_eks_cluster_mlops_cluster["aws_eks_cluster.mlops_cluster"]
     tf_aws_eks_node_group_mlops_nodes["aws_eks_node_group.mlops_nodes"]
   end

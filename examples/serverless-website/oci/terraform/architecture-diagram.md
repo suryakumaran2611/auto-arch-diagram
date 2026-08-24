@@ -6,7 +6,7 @@ Summary: Generated a dependency-oriented Terraform diagram from changed resource
 
 ```mermaid
 flowchart LR
-subgraph all_OCI[OCI]
+subgraph all_OCI["OCI"]
   tf_oci_objectstorage_bucket_site["oci_objectstorage_bucket.site"]
 end
 ```

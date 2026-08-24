@@ -6,7 +6,7 @@ Summary: Generated a Pulumi YAML diagram from resources and dependsOn/reference 
 
 ```mermaid
 flowchart LR
-subgraph AZURE-NATIVE[AZURE-NATIVE]
+subgraph AZURE-NATIVE["AZURE-NATIVE"]
   pulumi_cdnProfile["cdnProfile\nazure-native:cdn:Profile"]
   pulumi_rg["rg\nazure-native:resources:ResourceGroup"]
   pulumi_stg["stg\nazure-native:storage:StorageAccount"]
