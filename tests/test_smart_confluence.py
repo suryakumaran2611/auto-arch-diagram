@@ -170,6 +170,7 @@ def test_publish_smart_confluence_page(mock_put, mock_post, mock_get, tmp_path: 
     assert mock_get.called
     assert mock_post.called  # Attachments uploaded
     assert mock_put.called   # Page updated
+    assert mock_post.call_args.kwargs["params"]["allowDuplicated"] == "true"
 
     # Inspect page update payload
     put_args, put_kwargs = mock_put.call_args
