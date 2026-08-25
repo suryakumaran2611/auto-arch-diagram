@@ -340,11 +340,40 @@ def _publish_to_confluence(
                 files=files,
                 timeout=_CONFLUENCE_TIMEOUT_SECONDS,
             )
-        if resp.status_code not in (200, 201):
-            print(f"Confluence publish: failed to upload attachment {target_name}: {resp.text}")
-            return False
-        _info(f"Confluence publish: attachment {target_name} uploaded successfully")
-        return True
+        if resp.status_code in (200, 201):
+            _info(f"Confluence publish: attachment {target_name} uploaded successfully")
+            return True
+        if resp.status_code == 400 and "same file name as an existing attachment" in resp.text:
+            # Attachment already exists; update via /{attachment_id}/data
+            lookup_url = f"{confluence_url}/rest/api/content/{page_id}/child/attachment"
+            lookup_resp = requests.get(
+                lookup_url,
+                auth=auth,
+                headers=headers,
+                params={"filename": target_name},
+                timeout=_CONFLUENCE_TIMEOUT_SECONDS,
+            )
+            att_id = None
+            if lookup_resp.status_code == 200:
+                results = lookup_resp.json().get("results", [])
+                if results:
+                    att_id = results[0].get("id")
+            if att_id:
+                with path_to_upload.open("rb") as f2:
+                    update_url = f"{confluence_url}/rest/api/content/{page_id}/child/attachment/{att_id}/data"
+                    update_resp = requests.post(
+                        update_url,
+                        auth=auth,
+                        headers=headers,
+                        params={"minorEdit": "true"},
+                        files={"file": (target_name, f2, target_mime)},
+                        timeout=_CONFLUENCE_TIMEOUT_SECONDS,
+                    )
+                if update_resp.status_code in (200, 201):
+                    _info(f"Confluence publish: attachment {target_name} updated successfully")
+                    return True
+        print(f"Confluence publish: failed to upload attachment {target_name}: {resp.text}")
+        return False
 
     if not _upload_attachment(diagram_path, filename, mime):
         return False

@@ -215,3 +215,58 @@ def test_publish_standard_confluence_with_drawio(mock_put, mock_post, mock_get, 
     assert mock_post.call_count == 2  # 1 for PNG + 1 for Draw.io
     assert mock_put.called
 
+
+@patch("tools.smart_confluence.requests.get")
+@patch("tools.smart_confluence.requests.post")
+@patch("tools.smart_confluence.requests.put")
+def test_smart_confluence_existing_attachment_data_update(mock_put, mock_post, mock_get, tmp_path: Path):
+    """Verify that when an attachment already exists (HTTP 400), it updates via /{att_id}/data."""
+    # First GET for page metadata, second GET for attachment lookup by filename
+    mock_get.side_effect = [
+        MagicMock(status_code=200, json=lambda: {
+            "title": "Existing Architecture",
+            "version": {"number": 5},
+            "body": {"storage": {"value": "<p>Existing content</p>"}},
+        }),
+        MagicMock(status_code=200, json=lambda: {
+            "results": [{"id": "att-existing-999", "title": "architecture.png"}]
+        }),
+    ]
+
+    # First POST returns 400 (duplicate filename), second POST updates /{att_id}/data (200 OK)
+    mock_post.side_effect = [
+        MagicMock(
+            status_code=400,
+            text='{"message": "Cannot add a new attachment with same file name as an existing attachment: architecture.png"}',
+        ),
+        MagicMock(status_code=200, json=lambda: {"id": "att-existing-999"}),
+    ]
+    mock_put.return_value = MagicMock(status_code=200, json=lambda: {"version": {"number": 6}})
+
+    png_file = tmp_path / "architecture.png"
+    png_file.write_text("png-data-update")
+
+    artifacts = ConfluenceArtifacts(png=png_file)
+    report = SmartConfluenceReport(
+        title="Updated Platform",
+        subtitle="Testing attachment deduplication",
+        workload_overview="Web to DB",
+    )
+
+    success = publish_smart_confluence_page(
+        confluence_url="https://company.atlassian.net/wiki",
+        confluence_user="architect@company.com",
+        confluence_token="secret-token-123",
+        page_id="589825",
+        report=report,
+        artifacts=artifacts,
+        resources=[],
+        full_page=True,
+    )
+
+    assert success is True
+    # Verify second POST was to the /{attachmentId}/data endpoint
+    second_post_url = mock_post.call_args_list[1][0][0]
+    assert second_post_url.endswith("/child/attachment/att-existing-999/data")
+
+

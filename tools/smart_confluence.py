@@ -721,6 +721,40 @@ def publish_smart_confluence_page(
                 )
             if upload_resp.status_code in (200, 201):
                 print(f"[smart-confluence]   ✓ Uploaded attachment: {file_path.name}", flush=True)
+            elif upload_resp.status_code == 400 and "same file name as an existing attachment" in upload_resp.text:
+                # Attachment already exists in Confluence; update via /{attachmentId}/data endpoint
+                lookup_url = f"{confluence_url}/rest/api/content/{page_id}/child/attachment"
+                lookup_resp = requests.get(
+                    lookup_url,
+                    auth=auth,
+                    headers=headers,
+                    params={"filename": file_path.name},
+                    timeout=_CONFLUENCE_TIMEOUT_SECONDS,
+                )
+                att_id = None
+                if lookup_resp.status_code == 200:
+                    results = lookup_resp.json().get("results", [])
+                    if results:
+                        att_id = results[0].get("id")
+                if att_id:
+                    with file_path.open("rb") as f2:
+                        update_att_url = f"{confluence_url}/rest/api/content/{page_id}/child/attachment/{att_id}/data"
+                        update_att_resp = requests.post(
+                            update_att_url,
+                            auth=auth,
+                            headers=headers,
+                            params={"minorEdit": "true"},
+                            files={"file": (file_path.name, f2, mime)},
+                            timeout=_CONFLUENCE_TIMEOUT_SECONDS,
+                        )
+                    if update_att_resp.status_code in (200, 201):
+                        print(f"[smart-confluence]   ✓ Updated existing attachment: {file_path.name}", flush=True)
+                    else:
+                        upload_failed = True
+                        print(f"[smart-confluence]   ✗ Update attachment data failed ({file_path.name}): HTTP {update_att_resp.status_code}: {update_att_resp.text[:300]}", flush=True)
+                else:
+                    upload_failed = True
+                    print(f"[smart-confluence]   ✗ Attachment lookup failed ({file_path.name}): could not find attachment ID", flush=True)
             else:
                 upload_failed = True
                 detail = (upload_resp.text or "").replace("\n", " ")[:500]
