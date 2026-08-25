@@ -6,7 +6,7 @@ Summary: Generated a Pulumi YAML diagram from resources and dependsOn/reference 
 
 ```mermaid
 flowchart LR
-subgraph AWS[AWS]
+subgraph AWS["AWS"]
   pulumi_cdn["cdn\naws:cloudfront/distribution:Distribution"]
   pulumi_siteBucket["siteBucket\naws:s3/bucket:Bucket"]
   pulumi_waf["waf\naws:wafv2/webAcl:WebAcl"]

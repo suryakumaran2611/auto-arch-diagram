@@ -6,40 +6,33 @@ Summary: Generated a dependency-oriented Terraform diagram from changed resource
 
 ```mermaid
 flowchart LR
-subgraph all_AWS[AWS]
-  subgraph vpc_aws_vpc_app_vpc[VPC
-app vpc]
+subgraph all_AWS["AWS"]
+  subgraph vpc_aws_vpc_app_vpc["VPC app vpc"]
     tf_aws_vpc_app_vpc["aws_vpc.app_vpc"]
-    subgraph subnet_aws_subnet_private_app_subnet_az1[Subnet
-private app subnet… (Private)]
+    subgraph subnet_aws_subnet_private_app_subnet_az1["Subnet private app subnet… (Private)"]
       tf_aws_subnet_private_app_subnet_az1["aws_subnet.private_app_subnet_az1"]
       tf_aws_efs_mount_target_mount_az1["aws_efs_mount_target.mount_az1"]
       tf_aws_route_table_association_private_rt_assoc_az1["aws_route_table_association.private_rt_assoc_az1"]
     end
-    subgraph subnet_aws_subnet_private_app_subnet_az2[Subnet
-private app subnet… (Private)]
+    subgraph subnet_aws_subnet_private_app_subnet_az2["Subnet private app subnet… (Private)"]
       tf_aws_subnet_private_app_subnet_az2["aws_subnet.private_app_subnet_az2"]
       tf_aws_efs_mount_target_mount_az2["aws_efs_mount_target.mount_az2"]
       tf_aws_route_table_association_private_rt_assoc_az2["aws_route_table_association.private_rt_assoc_az2"]
     end
-    subgraph subnet_aws_subnet_private_data_subnet_az1[Subnet
-private data subnet… (Private)]
+    subgraph subnet_aws_subnet_private_data_subnet_az1["Subnet private data subnet… (Private)"]
       tf_aws_subnet_private_data_subnet_az1["aws_subnet.private_data_subnet_az1"]
       tf_aws_db_instance_postgres_db["aws_db_instance.postgres_db"]
       tf_aws_elasticache_replication_group_redis_replication_group["aws_elasticache_replication_group.redis_replication_group"]
     end
-    subgraph subnet_aws_subnet_private_data_subnet_az2[Subnet
-private data subnet… (Private)]
+    subgraph subnet_aws_subnet_private_data_subnet_az2["Subnet private data subnet… (Private)"]
       tf_aws_subnet_private_data_subnet_az2["aws_subnet.private_data_subnet_az2"]
     end
-    subgraph subnet_aws_subnet_public_subnet_az1[Subnet
-public subnet az1 (Public)]
+    subgraph subnet_aws_subnet_public_subnet_az1["Subnet public subnet az1 (Public)"]
       tf_aws_subnet_public_subnet_az1["aws_subnet.public_subnet_az1"]
       tf_aws_nat_gateway_app_nat_gw_az1["aws_nat_gateway.app_nat_gw_az1"]
       tf_aws_route_table_association_public_rt_assoc_az1["aws_route_table_association.public_rt_assoc_az1"]
     end
-    subgraph subnet_aws_subnet_public_subnet_az2[Subnet
-public subnet az2 (Public)]
+    subgraph subnet_aws_subnet_public_subnet_az2["Subnet public subnet az2 (Public)"]
       tf_aws_subnet_public_subnet_az2["aws_subnet.public_subnet_az2"]
       tf_aws_route_table_association_public_rt_assoc_az2["aws_route_table_association.public_rt_assoc_az2"]
     end
@@ -53,8 +46,7 @@ public subnet az2 (Public)]
   tf_aws_cloudwatch_metric_alarm_alb_5xx_alarm["aws_cloudwatch_metric_alarm.alb_5xx_alarm"]
   tf_aws_cloudwatch_metric_alarm_rds_cpu_alarm["aws_cloudwatch_metric_alarm.rds_cpu_alarm"]
   tf_aws_ecr_repository_app_repository["aws_ecr_repository.app_repository"]
-  subgraph cluster_aws_ecs_cluster_app_cluster[Ecs Cluster
-app cluster]
+  subgraph cluster_aws_ecs_cluster_app_cluster["Ecs Cluster app cluster"]
     tf_aws_ecs_cluster_app_cluster["aws_ecs_cluster.app_cluster"]
     tf_aws_ecs_service_app_service["aws_ecs_service.app_service"]
   end
@@ -90,7 +82,7 @@ app cluster]
   tf_aws_wafv2_web_acl_alb_web_acl["aws_wafv2_web_acl.alb_web_acl"]
   tf_aws_wafv2_web_acl_association_alb_waf_assoc["aws_wafv2_web_acl_association.alb_waf_assoc"]
 end
-subgraph all_RANDOM[RANDOM]
+subgraph all_RANDOM["RANDOM"]
   tf_random_password_db_master_password["random_password.db_master_password"]
 end
 tf_aws_cloudwatch_log_group_app_log_group --> tf_aws_ecs_task_definition_app_task_definition

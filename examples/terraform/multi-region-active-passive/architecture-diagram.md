@@ -6,23 +6,19 @@ Summary: Generated a dependency-oriented Terraform diagram from changed resource
 
 ```mermaid
 flowchart LR
-subgraph all_AWS[AWS]
-  subgraph vpc_aws_vpc_dr[VPC
-dr]
+subgraph all_AWS["AWS"]
+  subgraph vpc_aws_vpc_dr["VPC dr"]
     tf_aws_vpc_dr["aws_vpc.dr"]
-    subgraph subnet_aws_subnet_dr_private_a[Subnet
-dr private a (Private)]
+    subgraph subnet_aws_subnet_dr_private_a["Subnet dr private a (Private)"]
       tf_aws_subnet_dr_private_a["aws_subnet.dr_private_a"]
       tf_aws_db_subnet_group_dr_db["aws_db_subnet_group.dr_db"]
       tf_aws_instance_app_dr["aws_instance.app_dr"]
       tf_aws_rds_cluster_app_db_dr["aws_rds_cluster.app_db_dr"]
     end
   end
-  subgraph vpc_aws_vpc_primary[VPC
-primary]
+  subgraph vpc_aws_vpc_primary["VPC primary"]
     tf_aws_vpc_primary["aws_vpc.primary"]
-    subgraph subnet_aws_subnet_primary_private_a[Subnet
-primary private a (Private)]
+    subgraph subnet_aws_subnet_primary_private_a["Subnet primary private a (Private)"]
       tf_aws_subnet_primary_private_a["aws_subnet.primary_private_a"]
       tf_aws_db_subnet_group_primary_db["aws_db_subnet_group.primary_db"]
       tf_aws_instance_app_primary["aws_instance.app_primary"]

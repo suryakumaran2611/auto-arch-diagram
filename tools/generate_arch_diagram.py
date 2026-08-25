@@ -1457,6 +1457,15 @@ def _safe_node_id(raw: str) -> str:
     return cleaned
 
 
+def _mermaid_safe_label(raw: str) -> str:
+    if not raw:
+        return ""
+    # Normalize internal newlines/whitespace to spaces to keep single-line labels
+    cleaned = re.sub(r"\s+", " ", str(raw)).strip()
+    # Escape quotes
+    return cleaned.replace('"', "'")
+
+
 def _walk(obj: Any) -> Iterable[Any]:
     if isinstance(obj, dict):
         yield obj
@@ -4264,7 +4273,8 @@ def _static_terraform_mermaid(
 
     def _append_node(lines_out: list[str], res: str, indent: str) -> None:
         label = all_resources.get(res, {}).get("_auto_arch_logical_id") or res
-        lines_out.append(f'{indent}{node_id_by_res[res]}["{label}"]')
+        clean_label = _mermaid_safe_label(str(label))
+        lines_out.append(f'{indent}{node_id_by_res[res]}["{clean_label}"]')
 
     def _append_resource(lines_out: list[str], res: str, indent: str) -> None:
         if res in compute_children:
@@ -4272,7 +4282,8 @@ def _static_terraform_mermaid(
         children = sorted(compute_subclusters.get(res, []))
         if children:
             cluster_id = _safe_node_id(f"cluster_{res}")
-            lines_out.append(f"{indent}subgraph {cluster_id}[{_tf_node_label(res)}]")
+            cluster_label = _mermaid_safe_label(_tf_node_label(res))
+            lines_out.append(f'{indent}subgraph {cluster_id}["{cluster_label}"]')
             _append_node(lines_out, res, indent + "  ")
             for child in children:
                 _append_node(lines_out, child, indent + "  ")
@@ -4282,13 +4293,14 @@ def _static_terraform_mermaid(
 
     for env_key, providers in sorted(groups.items()):
         if use_env_grouping:
-            env_label = _format_env_label(env_key)
+            env_label = _mermaid_safe_label(_format_env_label(env_key))
             env_id = _safe_node_id(f"env_{env_key}")
-            lines.append(f"subgraph {env_id}[{env_label}]")
+            lines.append(f'subgraph {env_id}["{env_label}"]')
         for provider, resources in sorted(providers.items()):
             provider_id = _safe_node_id(f"{env_key}_{provider}")
             provider_indent = "  " if use_env_grouping else ""
-            lines.append(f"{provider_indent}subgraph {provider_id}[{provider}]")
+            prov_label = _mermaid_safe_label(provider)
+            lines.append(f'{provider_indent}subgraph {provider_id}["{prov_label}"]')
 
             provider_vpcs = {
                 vpc: data
@@ -4299,7 +4311,8 @@ def _static_terraform_mermaid(
             for vpc_name, subnets_dict in sorted(provider_vpcs.items()):
                 vpc_indent = provider_indent + "  "
                 vpc_id = _safe_node_id(f"vpc_{vpc_name}")
-                lines.append(f"{vpc_indent}subgraph {vpc_id}[{_tf_node_label(vpc_name)}]")
+                vpc_label = _mermaid_safe_label(_tf_node_label(vpc_name))
+                lines.append(f'{vpc_indent}subgraph {vpc_id}["{vpc_label}"]')
                 _append_node(lines, vpc_name, vpc_indent + "  ")
 
                 for subnet_name, subnet_resources in sorted(subnets_dict.items()):
@@ -4311,12 +4324,15 @@ def _static_terraform_mermaid(
                     subnet_indent = vpc_indent + "  "
                     subnet_attrs = all_resources.get(subnet_name, {})
                     subnet_id = _safe_node_id(f"subnet_{subnet_name}")
-                    subnet_label = _tf_node_label(subnet_name) + (
-                        " (Public)"
-                        if _is_public_subnet(subnet_name, subnet_attrs)
-                        else " (Private)"
+                    subnet_label = _mermaid_safe_label(
+                        _tf_node_label(subnet_name)
+                        + (
+                            " (Public)"
+                            if _is_public_subnet(subnet_name, subnet_attrs)
+                            else " (Private)"
+                        )
                     )
-                    lines.append(f"{subnet_indent}subgraph {subnet_id}[{subnet_label}]")
+                    lines.append(f'{subnet_indent}subgraph {subnet_id}["{subnet_label}"]')
                     _append_node(lines, subnet_name, subnet_indent + "  ")
                     for res in sorted(subnet_resources):
                         _append_resource(lines, res, subnet_indent + "  ")
@@ -4655,7 +4671,8 @@ def _static_cloudformation_mermaid(
     for category, rids in sorted(groups.items()):
         if not rids:  # Skip empty categories
             continue
-        lines.append(f"subgraph {category.replace(' ', '')}[{category}]")
+        category_label = _mermaid_safe_label(category)
+        lines.append(f'subgraph {category.replace(" ", "")}["{category_label}"]')
         for rid in sorted(rids):
             rtype = resources[rid].get("Type")
             # Show service name instead of full type for cleaner display
@@ -4895,7 +4912,7 @@ def _static_bicep_mermaid(
     }
 
     mermaid_dir = _normalize_direction(direction)
-    lines: list[str] = [f"flowchart {mermaid_dir}", "subgraph Azure[Azure]"]
+    lines: list[str] = [f"flowchart {mermaid_dir}", 'subgraph Azure["Azure"]']
     for rid in sorted(resources.keys()):
         rtype = resources[rid].get("Type")
         label = f"{rid}\\n{rtype}" if isinstance(rtype, str) else rid
@@ -4927,7 +4944,8 @@ def _static_pulumi_yaml_mermaid(
     lines: list[str] = [f"flowchart {mermaid_dir}"]
     for g, rids in sorted(groups.items()):
         title = g.upper() if g.islower() else g
-        lines.append(f"subgraph {title}[{title}]")
+        title_label = _mermaid_safe_label(title)
+        lines.append(f'subgraph {title}["{title_label}"]')
         for rid in sorted(rids):
             rtype = resources[rid].get("Type")
             label = f"{rid}\\n{rtype}" if isinstance(rtype, str) else rid

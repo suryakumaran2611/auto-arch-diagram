@@ -6,19 +6,16 @@ Summary: Generated a dependency-oriented Terraform diagram from changed resource
 
 ```mermaid
 flowchart LR
-subgraph all_AWS[AWS]
-  subgraph vpc_aws_vpc_serverless_vpc[VPC
-serverless vpc]
+subgraph all_AWS["AWS"]
+  subgraph vpc_aws_vpc_serverless_vpc["VPC serverless vpc"]
     tf_aws_vpc_serverless_vpc["aws_vpc.serverless_vpc"]
-    subgraph subnet_aws_subnet_private_subnet[Subnet
-private subnet (Private)]
+    subgraph subnet_aws_subnet_private_subnet["Subnet private subnet (Private)"]
       tf_aws_subnet_private_subnet["aws_subnet.private_subnet"]
       tf_aws_elasticsearch_domain_search_cluster["aws_elasticsearch_domain.search_cluster"]
       tf_aws_lambda_function_data_ingestion["aws_lambda_function.data_ingestion"]
       tf_aws_lambda_function_stream_processor["aws_lambda_function.stream_processor"]
     end
-    subgraph subnet_aws_subnet_public_subnet[Subnet
-public subnet (Public)]
+    subgraph subnet_aws_subnet_public_subnet["Subnet public subnet (Public)"]
       tf_aws_subnet_public_subnet["aws_subnet.public_subnet"]
     end
     tf_aws_security_group_lambda_sg["aws_security_group.lambda_sg"]
