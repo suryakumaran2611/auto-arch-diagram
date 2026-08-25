@@ -57,6 +57,10 @@ resource "aws_subnet" "public" {
     assert summary
     assert assumptions
 
+    # AUTO direction should normalize to LR
+    mermaid_auto, _, _ = _static_terraform_mermaid([tf], "AUTO", Limits())
+    assert mermaid_auto.startswith("flowchart LR")
+
 
 @pytest.mark.skipif(Diagram is None, reason="diagrams library not installed")
 def test_icon_rendering_produces_png(tmp_path: Path) -> None:

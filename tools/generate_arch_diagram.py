@@ -560,7 +560,7 @@ def _load_config(
         )
 
     config = yaml.safe_load(config_path.read_text(encoding="utf-8")) or {}
-    direction = (((config.get("diagram") or {}).get("direction")) or "LR").strip()
+    direction = _normalize_direction(((config.get("diagram") or {}).get("direction")) or "LR")
     mode = (
         (((config.get("generator") or {}).get("mode")) or DEFAULT_MODE).strip().lower()
     )
@@ -1303,6 +1303,19 @@ def _analyze_diagram_complexity(
     )
 
 
+def _normalize_direction(direction: str | None) -> str:
+    """Normalize and validate diagram flow direction according to cloud architecture standards.
+
+    Cloud architecture diagrams (AWS Architecture Center, Azure Architecture Center,
+    GCP Architecture Framework) officially follow a Left-to-Right (LR) flow from
+    ingress/clients to application compute and data storage tiers.
+    """
+    d = (direction or "").strip().upper()
+    if d in {"LR", "RL", "TB", "BT"}:
+        return d
+    return "LR"
+
+
 def _determine_optimal_direction(
     complexity: DiagramComplexity,
     grouped_data: dict[str, dict[str, list[str]]],
@@ -1310,58 +1323,19 @@ def _determine_optimal_direction(
 ) -> str:
     """Intelligently determine the best diagram direction based on architecture characteristics.
 
-    Returns 'LR' (horizontal) or 'TB' (vertical) based on:
-    - Number of lanes/clusters (wide architectures → LR)
-    - Node distribution (many providers → LR, deep nesting → TB)
-    - Overall complexity (large diagrams often better horizontal)
-    - Edge patterns (highly connected → TB for clarity)
+    Following official cloud architecture guidelines (AWS Architecture Center,
+    Azure Architecture Center, Google Cloud Architecture Framework), professional
+    cloud architecture diagrams standardly flow Left to Right (LR):
+    Ingress / Users / Gateways on the left -> Compute / Processing in the middle -> Storage / DBs on the right.
     """
-
-    # Count lanes and providers
-    lane_count = len(grouped_data)
-    provider_count = complexity.provider_count
-
-    # Calculate cluster width (avg resources per cluster)
-    total_resources = complexity.node_count
-    avg_resources_per_cluster = total_resources / max(complexity.cluster_count, 1)
-
-    # Decision factors (scoring system)
-    lr_score = 0
-    tb_score = 0
-
-    # Factor 1: Multi-cloud / multi-provider architectures work best horizontally (LR)
-    if provider_count >= 2:
-        lr_score += 5
-    elif lane_count >= 3:
-        lr_score += 3
-
-    # Factor 2: Deep nesting without peer services
-    if complexity.max_cluster_depth >= 4:
-        tb_score += 2
-    else:
-        lr_score += 2
-
-    # Factor 3: Cloud architectures with dataflow / pipelines prefer horizontal
-    if complexity.node_count >= 10:
-        lr_score += 3
-    else:
-        lr_score += 1
-
-    # Factor 4: High edge density benefits from horizontal flow to align ingress -> compute -> storage
-    if complexity.avg_edges_per_node > 0.5:
-        lr_score += 2
-
-    # Make decision based on scores
-    if lr_score >= tb_score:
-        direction = "LR"
-        reason = "horizontal (standard professional cloud flow)"
-    else:
-        direction = "TB"
-        reason = "vertical (deep hierarchical nesting)"
+    # Cloud provider guidelines universally mandate Left-to-Right flow for clarity and landscape presentation.
+    direction = "LR"
+    reason = "horizontal (official cloud provider standard flow: Ingress -> App -> Storage)"
 
     # Debug output
     if os.getenv("AUTO_ARCH_DEBUG"):
-        print(f"[Auto Direction] Scores: LR={lr_score}, TB={tb_score}")
+        lane_count = len(grouped_data)
+        provider_count = complexity.provider_count
         print(f"[Auto Direction] Selected: {direction} ({reason})")
         print(
             f"[Auto Direction] Factors: lanes={lane_count}, providers={provider_count}, "
@@ -2177,6 +2151,23 @@ def _is_public_subnet(resource_name: str, resource_attrs: dict[str, Any]) -> boo
     return False
 
 
+def _subnet_tier_sort_key(
+    subnet_item: tuple[str, list[str]], all_resources: dict[str, dict[str, Any]]
+) -> tuple[int, str]:
+    """Sort subnets according to official cloud architecture tiers: Public (left) -> Private/App (middle) -> Data/Isolated (right)."""
+    subnet_name, _ = subnet_item
+    if subnet_name == "other":
+        return (3, subnet_name)
+    attrs = all_resources.get(subnet_name, {})
+    is_pub = _is_public_subnet(subnet_name, attrs)
+    lower = subnet_name.lower()
+    if is_pub or any(k in lower for k in ("public", "dmz", "web", "ingress", "frontend", "alb")):
+        return (0, subnet_name)
+    if any(k in lower for k in ("db", "data", "database", "rds", "storage", "isolated")):
+        return (2, subnet_name)
+    return (1, subnet_name)
+
+
 def _infer_subnet_to_vpc(
     all_resources: dict[str, dict[str, Any]],
     edges: set[tuple[str, str]],
@@ -2778,9 +2769,9 @@ def _infer_resource_regions(
             for key in (
                 "region",
                 "location",
-                "peer_region",
-                "secondary_region",
-                "destination_region",
+                "availability_zone",
+                "zone",
+                "primary_region",
             ):
                 if key in res_attrs:
                     region = _extract_region_from_value(res_attrs[key])
@@ -2803,6 +2794,8 @@ def _infer_resource_regions(
     while changed:
         changed = False
         for src, dst in sorted(edges):
+            if any(skip in src.lower() or skip in dst.lower() for skip in ("peering", "route53", "cloudfront", "waf", "global")):
+                continue
             src_region = resource_regions.get(src)
             dst_region = resource_regions.get(dst)
             if src_region and not dst_region:
@@ -3347,7 +3340,7 @@ def _render_icon_diagram_from_terraform(
     node_by_res: dict[str, Any] = {}
 
     layout = (
-        (os.getenv("AUTO_ARCH_RENDER_LAYOUT") or render.layout or "lanes")
+        (os.getenv("AUTO_ARCH_RENDER_LAYOUT") or render.layout or "providers")
         .strip()
         .lower()
     )
@@ -3624,7 +3617,7 @@ def _render_icon_diagram_from_terraform(
                 "labelloc": "t",
                 "labeljust": "l",
             }
-            return Cluster(provider_label, graph_attr=provider_cluster_attrs)
+            return Cluster(provider_label, direction=direction, graph_attr=provider_cluster_attrs)
 
         # Kubernetes/compute cluster visual styling (official Kubernetes blue)
         _k8s_cluster_attrs = {
@@ -3649,7 +3642,7 @@ def _render_icon_diagram_from_terraform(
             children = compute_subclusters.get(res, [])
             if children:
                 # Render this compute cluster head + its children in a nested box
-                with Cluster(_tf_node_label(res), graph_attr=_k8s_cluster_attrs):
+                with Cluster(_tf_node_label(res), direction=direction, graph_attr=_k8s_cluster_attrs):
                     node_by_res[res] = _create_node_with_xlabel(Icon, _tf_node_label(res))
                     for child_res in sorted(children):
                         child_type = child_res.split(".", 1)[0]
@@ -3684,6 +3677,56 @@ def _render_icon_diagram_from_terraform(
                     )
                 }
 
+                # Split non-VPC resources into Ingress/Edge (Left) vs Backend/Storage/Security (Right)
+                ingress_lanes = ["Network", "Edge", "DNS", "CDN"]
+                egress_lanes = ["Containers", "Compute", "Data", "Storage", "Security", "Management", "Other"]
+
+                ingress_categories = []
+                for lane in ingress_lanes:
+                    res_list = [
+                        r
+                        for r in (categories.get(lane) or [])
+                        if r not in resources_in_vpcs
+                        and r not in compute_children
+                        and (allowed_resources is None or r in allowed_resources)
+                    ]
+                    if res_list:
+                        ingress_categories.append((lane, res_list))
+
+                ingress_anchors = []
+                if ingress_categories:
+                    for lane, res_list in ingress_categories:
+                        lane_attrs = {
+                            "bgcolor": "#FFFFFF",
+                            "fillcolor": "#FFFFFF",
+                            "style": "rounded,filled",
+                            "penwidth": "1.0",
+                            "color": "#CBD5E1",
+                            "fontsize": "11",
+                            "fontname": "Helvetica-Bold",
+                        }
+                        with Cluster(lane, direction=direction, graph_attr=lane_attrs):
+                            for res in sorted(res_list):
+                                render_resource_node(res)
+                            lane_nids = [
+                                node_by_res[r]._id
+                                for r in sorted(res_list)
+                                if r in node_by_res and hasattr(node_by_res[r], "_id")
+                            ]
+                            if len(lane_nids) > 1 and hasattr(diag, "dot") and direction == "LR":
+                                for i in range(len(lane_nids) - 1):
+                                    if (i + 1) % 3 != 0:
+                                        diag.dot.edge(lane_nids[i], lane_nids[i + 1], style="invis", weight="2")
+                        for res in sorted(res_list):
+                            if res in node_by_res and hasattr(node_by_res[res], "_id"):
+                                ingress_anchors.append(node_by_res[res]._id)
+                                break
+                    if len(ingress_anchors) > 1 and hasattr(diag, "dot") and direction == "LR":
+                        for i in range(len(ingress_anchors) - 1):
+                            diag.dot.edge(ingress_anchors[i], ingress_anchors[i + 1], style="invis", weight="5")
+
+                # VPC Container & Multi-Tier Subnets (Center)
+                vpc_anchor_ids = []
                 for vpc_name, subnets_dict in sorted(provider_vpcs.items()):
                     vpc_label = _tf_node_label(vpc_name)
                     vpc_attrs = {
@@ -3695,7 +3738,7 @@ def _render_icon_diagram_from_terraform(
                         "fontsize": "11",
                         "fontname": "Helvetica-Bold",
                     }
-                    with Cluster(vpc_label, graph_attr=vpc_attrs):
+                    with Cluster(vpc_label, direction=direction, graph_attr=vpc_attrs):
                         r_type, _name = vpc_name.split(".", 1)
                         vpc_resource_attrs = all_resources.get(vpc_name, {})
                         Icon = _icon_class_for(
@@ -3704,71 +3747,102 @@ def _render_icon_diagram_from_terraform(
                         node_by_res[vpc_name] = _create_node_with_xlabel(
                             Icon, _tf_node_label(vpc_name)
                         )
+                        if vpc_name in node_by_res and hasattr(node_by_res[vpc_name], "_id"):
+                            vpc_anchor_ids.append(node_by_res[vpc_name]._id)
 
-                        for subnet_name, subnet_resources in sorted(
-                            subnets_dict.items()
-                        ):
-                            if subnet_name == "other":
-                                for res in sorted(subnet_resources):
-                                    if (
-                                        allowed_resources is None
-                                        or res in allowed_resources
-                                    ):
-                                        render_resource_node(res)
-                            else:
-                                if (
-                                    allowed_resources is not None
-                                    and subnet_name not in allowed_resources
-                                    and not any(
-                                        res in allowed_resources
-                                        for res in subnet_resources
-                                    )
-                                ):
-                                    continue
-                                subnet_attrs_dict = all_resources.get(
-                                    subnet_name, {}
-                                )
-                                is_public = _is_public_subnet(
-                                    subnet_name, subnet_attrs_dict
-                                )
-                                subnet_color = (
-                                    render.color_public_subnet
-                                    if is_public
-                                    else render.color_private_subnet
-                                )
-                                subnet_label = _tf_node_label(subnet_name) + (
-                                    " (Public)" if is_public else " (Private)"
-                                )
-                                subnet_attrs = {
-                                    "bgcolor": subnet_color,
-                                    "fillcolor": subnet_color,  # Ultra-light tint
-                                    "style": "rounded,filled,dashed"
-                                    if is_public
-                                    else "rounded,filled",
-                                    "penwidth": "1.5",
-                                    "color": "#28A745"
-                                    if is_public
-                                    else "#FFC107",  # Green for public, amber for private
-                                }
-                                with Cluster(subnet_label, graph_attr=subnet_attrs):
-                                    r_type, _name = subnet_name.split(".", 1)
-                                    subnet_attrs_dict = all_resources.get(subnet_name, {})
-                                    Icon = _icon_class_for(r_type, subnet_attrs_dict) or \
-                                        _generic_icon_for_kind("network")
-                                    node_by_res[subnet_name] = _create_node_with_xlabel(
-                                        Icon, _tf_node_label(subnet_name)
-                                    )
+                        sorted_subnets = sorted(
+                            subnets_dict.items(),
+                            key=lambda item: _subnet_tier_sort_key(item, all_resources),
+                        )
+                        tier_subnets: dict[int, list[tuple[str, list[str]]]] = {}
+                        for item in sorted_subnets:
+                            tier = _subnet_tier_sort_key(item, all_resources)[0]
+                            tier_subnets.setdefault(tier, []).append(item)
 
+                        tier_anchors: dict[int, list[str]] = {}
+                        for tier in sorted(tier_subnets.keys()):
+                            for subnet_name, subnet_resources in tier_subnets[tier]:
+                                if subnet_name == "other":
                                     for res in sorted(subnet_resources):
                                         if (
                                             allowed_resources is None
                                             or res in allowed_resources
                                         ):
                                             render_resource_node(res)
+                                else:
+                                    if (
+                                        allowed_resources is not None
+                                        and subnet_name not in allowed_resources
+                                        and not any(
+                                            res in allowed_resources
+                                            for res in subnet_resources
+                                        )
+                                    ):
+                                        continue
+                                    subnet_attrs_dict = all_resources.get(
+                                        subnet_name, {}
+                                    )
+                                    is_public = _is_public_subnet(
+                                        subnet_name, subnet_attrs_dict
+                                    )
+                                    subnet_color = (
+                                        render.color_public_subnet
+                                        if is_public
+                                        else render.color_private_subnet
+                                    )
+                                    subnet_label = _tf_node_label(subnet_name) + (
+                                        " (Public)" if is_public else " (Private)"
+                                    )
+                                    subnet_attrs = {
+                                        "bgcolor": subnet_color,
+                                        "fillcolor": subnet_color,  # Ultra-light tint
+                                        "style": "rounded,filled,dashed"
+                                        if is_public
+                                        else "rounded,filled",
+                                        "penwidth": "1.5",
+                                        "color": "#28A745"
+                                        if is_public
+                                        else "#FFC107",  # Green for public, amber for private
+                                    }
+                                    with Cluster(subnet_label, direction=direction, graph_attr=subnet_attrs):
+                                        r_type, _name = subnet_name.split(".", 1)
+                                        subnet_attrs_dict = all_resources.get(subnet_name, {})
+                                        Icon = _icon_class_for(r_type, subnet_attrs_dict) or \
+                                            _generic_icon_for_kind("network")
+                                        node_by_res[subnet_name] = _create_node_with_xlabel(
+                                            Icon, _tf_node_label(subnet_name)
+                                        )
 
-                # Render non-VPC resources into structured category clusters
-                categories_with_res = []
-                for lane in lanes:
+                                        for res in sorted(subnet_resources):
+                                            if (
+                                                allowed_resources is None
+                                                or res in allowed_resources
+                                            ):
+                                                render_resource_node(res)
+                                    for res in sorted(subnet_resources):
+                                        if res in node_by_res and hasattr(node_by_res[res], "_id"):
+                                            tier_anchors.setdefault(tier, []).append(node_by_res[res]._id)
+                                            break
+
+                        # Chain tiers horizontally (Public Tier 0 -> App Tier 1 -> Data Tier 2)
+                        sorted_tier_keys = sorted(tier_anchors.keys())
+                        if len(sorted_tier_keys) > 1 and hasattr(diag, "dot") and direction == "LR":
+                            for k in range(len(sorted_tier_keys) - 1):
+                                t1, t2 = sorted_tier_keys[k], sorted_tier_keys[k + 1]
+                                if tier_anchors[t1] and tier_anchors[t2]:
+                                    diag.dot.edge(tier_anchors[t1][-1], tier_anchors[t2][0], style="invis", weight="5")
+
+                if len(vpc_anchor_ids) > 1 and hasattr(diag, "dot") and direction == "LR":
+                    for i in range(len(vpc_anchor_ids) - 1):
+                        diag.dot.edge(vpc_anchor_ids[i], vpc_anchor_ids[i + 1], style="invis", weight="5")
+
+                # Connect Ingress chain to VPC chain horizontally
+                if ingress_anchors and vpc_anchor_ids and hasattr(diag, "dot") and direction == "LR":
+                    diag.dot.edge(ingress_anchors[-1], vpc_anchor_ids[0], style="invis", weight="5")
+
+                # Render backend / data / storage / security categories (Right)
+                egress_categories = []
+                for lane in egress_lanes:
                     res_list = [
                         r
                         for r in (categories.get(lane) or [])
@@ -3777,11 +3851,11 @@ def _render_icon_diagram_from_terraform(
                         and (allowed_resources is None or r in allowed_resources)
                     ]
                     if res_list:
-                        categories_with_res.append((lane, res_list))
+                        egress_categories.append((lane, res_list))
 
-                if len(categories_with_res) > 1:
-                    cat_anchors = []
-                    for lane, res_list in categories_with_res:
+                egress_anchors = []
+                if egress_categories:
+                    for lane, res_list in egress_categories:
                         lane_attrs = {
                             "bgcolor": "#FFFFFF",
                             "fillcolor": "#FFFFFF",
@@ -3791,20 +3865,31 @@ def _render_icon_diagram_from_terraform(
                             "fontsize": "11",
                             "fontname": "Helvetica-Bold",
                         }
-                        with Cluster(lane, graph_attr=lane_attrs):
+                        with Cluster(lane, direction=direction, graph_attr=lane_attrs):
                             for res in sorted(res_list):
                                 render_resource_node(res)
+                            lane_nids = [
+                                node_by_res[r]._id
+                                for r in sorted(res_list)
+                                if r in node_by_res and hasattr(node_by_res[r], "_id")
+                            ]
+                            if len(lane_nids) > 1 and hasattr(diag, "dot") and direction == "LR":
+                                for i in range(len(lane_nids) - 1):
+                                    if (i + 1) % 3 != 0:
+                                        diag.dot.edge(lane_nids[i], lane_nids[i + 1], style="invis", weight="2")
                         for res in sorted(res_list):
                             if res in node_by_res and hasattr(node_by_res[res], "_id"):
-                                cat_anchors.append(node_by_res[res]._id)
+                                egress_anchors.append(node_by_res[res]._id)
                                 break
-                    if len(cat_anchors) > 1 and hasattr(diag, "dot") and direction == "LR":
-                        for i in range(len(cat_anchors) - 1):
-                            diag.dot.edge(cat_anchors[i], cat_anchors[i + 1], style="invis", weight="5")
-                else:
-                    for lane, res_list in categories_with_res:
-                        for res in sorted(res_list):
-                            render_resource_node(res)
+                    if len(egress_anchors) > 1 and hasattr(diag, "dot") and direction == "LR":
+                        for i in range(len(egress_anchors) - 1):
+                            diag.dot.edge(egress_anchors[i], egress_anchors[i + 1], style="invis", weight="5")
+
+                # Connect VPC chain to Egress / Storage / Security chain horizontally in LR mode
+                if vpc_anchor_ids and egress_anchors and hasattr(diag, "dot") and direction == "LR":
+                    diag.dot.edge(vpc_anchor_ids[-1], egress_anchors[0], style="invis", weight="3")
+                elif ingress_anchors and egress_anchors and not vpc_anchor_ids and hasattr(diag, "dot") and direction == "LR":
+                    diag.dot.edge(ingress_anchors[-1], egress_anchors[0], style="invis", weight="3")
 
             def _render_provider_scope(
                 provider: str,
@@ -3845,7 +3930,7 @@ def _render_icon_diagram_from_terraform(
                                 "fontname": "Helvetica-Bold",
                             }
                             with Cluster(
-                                f"Region: {region_name}", graph_attr=region_attrs
+                                f"Region: {region_name}", direction=direction, graph_attr=region_attrs
                             ) as reg_clust:
                                 _render_provider_contents(
                                     provider,
@@ -3859,8 +3944,9 @@ def _render_icon_diagram_from_terraform(
                                     break
                             rendered_resources.update(scoped_resources)
 
-                        if len(region_anchor_ids) > 1:
-                            _align_provider_clusters(diag.dot, region_anchor_ids, direction=direction, max_per_row=2)
+                        if len(region_anchor_ids) > 1 and hasattr(diag, "dot") and direction == "LR":
+                            for i in range(len(region_anchor_ids) - 1):
+                                diag.dot.edge(region_anchor_ids[i], region_anchor_ids[i + 1], style="invis", weight="10")
                         # If a provider has resources without region hints, wrap into a clean Global / Shared Services cluster
                         unscoped_resources = provider_resources - rendered_resources
                         if unscoped_resources:
@@ -3873,7 +3959,7 @@ def _render_icon_diagram_from_terraform(
                                 "fontsize": "12",
                                 "fontname": "Helvetica-Bold",
                             }
-                            with Cluster("Global / Shared Services", graph_attr=shared_attrs) as shared_clust:
+                            with Cluster("Global / Shared Services", direction=direction, graph_attr=shared_attrs) as shared_clust:
                                 _render_provider_contents(
                                     provider,
                                     categories,
@@ -3923,7 +4009,7 @@ def _render_icon_diagram_from_terraform(
                     "fontname": "Helvetica-Bold",
                     "color": lane_accent or "#CCCCCC",  # Brand accent border
                 }
-                with Cluster(lane, graph_attr=lane_cluster_attrs):
+                with Cluster(lane, direction=direction, graph_attr=lane_cluster_attrs):
                     for provider, resources in sorted(providers.items()):
                         # Filter out resources already in VPCs
                         provider_resources = [
@@ -3954,7 +4040,7 @@ def _render_icon_diagram_from_terraform(
                                     "fontsize": "11",
                                     "fontname": "Helvetica-Bold",
                                 }
-                                with Cluster(vpc_label, graph_attr=vpc_attrs):
+                                with Cluster(vpc_label, direction=direction, graph_attr=vpc_attrs):
                                     r_type, _name = vpc_name.split(".", 1)
                                     vpc_attrs_dict = all_resources.get(vpc_name, {})
                                     Icon = _icon_class_for(r_type, vpc_attrs_dict) or \
@@ -3963,10 +4049,12 @@ def _render_icon_diagram_from_terraform(
                                         Icon, _tf_node_label(vpc_name)
                                     )
 
-                                    # Render subnets within VPC
-                                    for subnet_name, subnet_resources in sorted(
-                                        subnets_dict.items()
-                                    ):
+                                    sorted_subnets = sorted(
+                                        subnets_dict.items(),
+                                        key=lambda item: _subnet_tier_sort_key(item, all_resources),
+                                    )
+                                    subnet_anchor_ids = []
+                                    for subnet_name, subnet_resources in sorted_subnets:
                                         if subnet_name == "other":
                                             # VPC-level resources
                                             for res in sorted(subnet_resources):
@@ -4003,7 +4091,7 @@ def _render_icon_diagram_from_terraform(
                                                 else "#FFC107",  # Green for public, amber for private
                                             }
                                             with Cluster(
-                                                subnet_label, graph_attr=subnet_attrs
+                                                subnet_label, direction=direction, graph_attr=subnet_attrs
                                             ):
                                                 r_type, _name = subnet_name.split(
                                                     ".", 1
@@ -4021,6 +4109,14 @@ def _render_icon_diagram_from_terraform(
                                                 # Resources in subnet
                                                 for res in sorted(subnet_resources):
                                                     render_resource_node(res)
+                                            for res in sorted(subnet_resources):
+                                                if res in node_by_res and hasattr(node_by_res[res], "_id"):
+                                                    subnet_anchor_ids.append(node_by_res[res]._id)
+                                                    break
+
+                                    if len(subnet_anchor_ids) > 1 and hasattr(diag, "dot") and direction == "LR":
+                                        for i in range(len(subnet_anchor_ids) - 1):
+                                            diag.dot.edge(subnet_anchor_ids[i], subnet_anchor_ids[i + 1], style="invis", weight="3")
 
                             # Then render remaining resources not in VPCs
                             for res in sorted(provider_resources):
@@ -4163,7 +4259,8 @@ def _static_terraform_mermaid(
         _build_subgraph_render_map(all_resources, raw_edges)
     )
 
-    lines: list[str] = [f"flowchart {direction}"]
+    mermaid_dir = _normalize_direction(direction)
+    lines: list[str] = [f"flowchart {mermaid_dir}"]
 
     def _append_node(lines_out: list[str], res: str, indent: str) -> None:
         label = all_resources.get(res, {}).get("_auto_arch_logical_id") or res
@@ -4551,7 +4648,8 @@ def _static_cloudformation_mermaid(
             if ref in resources and ref != rid:
                 edges.add((node_id_by_res[ref], node_id_by_res[rid]))
 
-    lines: list[str] = [f"flowchart {direction}"]
+    mermaid_dir = _normalize_direction(direction)
+    lines: list[str] = [f"flowchart {mermaid_dir}"]
 
     # Create subgraphs by category for better alignment
     for category, rids in sorted(groups.items()):
@@ -4796,7 +4894,8 @@ def _static_bicep_mermaid(
         rid: _safe_node_id(f"bicep_{rid}") for rid in resources.keys()
     }
 
-    lines: list[str] = [f"flowchart {direction}", "subgraph Azure[Azure]"]
+    mermaid_dir = _normalize_direction(direction)
+    lines: list[str] = [f"flowchart {mermaid_dir}", "subgraph Azure[Azure]"]
     for rid in sorted(resources.keys()):
         rtype = resources[rid].get("Type")
         label = f"{rid}\\n{rtype}" if isinstance(rtype, str) else rid
@@ -4824,7 +4923,8 @@ def _static_pulumi_yaml_mermaid(
         provider = body.get("Provider")
         g = provider if isinstance(provider, str) else "pulumi"
         groups.setdefault(g, []).append(rid)
-    lines: list[str] = [f"flowchart {direction}"]
+    mermaid_dir = _normalize_direction(direction)
+    lines: list[str] = [f"flowchart {mermaid_dir}"]
     for g, rids in sorted(groups.items()):
         title = g.upper() if g.islower() else g
         lines.append(f"subgraph {title}[{title}]")
@@ -4999,6 +5099,7 @@ def _render_cfn_diagram(
     render: Any,
 ) -> None:
     """Render CloudFormation diagram with same professional quality as Terraform."""
+    cfn_direction = _normalize_direction(cfn_direction)
     outformat = out_path.suffix.lstrip(".").lower() or "png"
     filename_no_ext = str(out_path.with_suffix(""))
 
@@ -5115,6 +5216,7 @@ def _render_cfn_diagram(
                     }[provider]
                     with Cluster(
                         f"{provider_name} Cloud",
+                        direction=cfn_direction,
                         graph_attr={
                             "bgcolor": _provider_tint(provider_name) or "#f8f9fa",
                             "fillcolor": _provider_tint(provider_name) or "#f8f9fa",
@@ -5136,6 +5238,7 @@ def _render_cfn_diagram(
                             if category in provider_resources:
                                 with Cluster(
                                     category,
+                                    direction=cfn_direction,
                                     graph_attr={
                                         "bgcolor": "#FFFFFF",
                                         "fillcolor": "#e9ecef",
@@ -5165,7 +5268,7 @@ def _render_cfn_diagram(
                         "fontname": render.fontname,
                     }
 
-                    with Cluster(category, graph_attr=cluster_attrs):
+                    with Cluster(category, direction=cfn_direction, graph_attr=cluster_attrs):
                         for rid in sorted(grouped_resources[category]):
                             _create_cfn_node(rid, cfn_resources, node_by_res, render)
 
@@ -5315,8 +5418,7 @@ def _render_generic_iac_diagram(
 
     grouped_simple = {"IaC": {"Mixed": list(resources.keys())}}
     complexity = _analyze_diagram_complexity(resources, edges, grouped_simple)
-    if direction.upper() == "AUTO":
-        direction = _determine_optimal_direction(complexity, grouped_simple, "providers")
+    direction = _normalize_direction(direction)
     spacing = _calculate_dynamic_spacing(complexity, render, direction)
     final_pad = spacing["pad"] if render.pad == "auto" else float(render.pad)
     final_nodesep = (
@@ -5393,7 +5495,7 @@ def _render_generic_iac_diagram(
                 "labelloc": "t",
                 "labeljust": "l",
             }
-            with Cluster(provider_label, graph_attr=provider_attrs):
+            with Cluster(provider_label, direction=direction, graph_attr=provider_attrs):
                 by_category: dict[str, list[str]] = {}
                 for rid in providers[provider]:
                     by_category.setdefault(_tf_category(tf_names[rid]), []).append(rid)
@@ -5411,7 +5513,7 @@ def _render_generic_iac_diagram(
                         "fontname": "Helvetica-Bold",
                         "color": "#CCCCCC",
                     }
-                    with Cluster(category, graph_attr=category_attrs):
+                    with Cluster(category, direction=direction, graph_attr=category_attrs):
                         for rid in rids:
                             icon = icons.get(rid) or _generic_icon_for_kind(
                                 category.lower()
@@ -6564,9 +6666,7 @@ def main() -> int:
         (args.direction or os.getenv("AUTO_ARCH_DIRECTION") or "").strip().upper()
     )
     if direction_override:
-        if direction_override not in {"LR", "RL", "TB", "BT", "AUTO"}:
-            direction_override = "LR"
-        direction = direction_override
+        direction = _normalize_direction(direction_override)
 
     # Merge CLI parameters into RenderConfig
     render = RenderConfig(

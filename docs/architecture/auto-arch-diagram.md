@@ -125,21 +125,21 @@ Rendered diagram: available as workflow artifact
 
 *Reviewed by `gemini:gemini-3.1-flash-lite` (quality score: 4/10).*
 
-The architecture implements a robust, event-driven ML pipeline. Data flows from Kinesis through Lambda-based preprocessing into S3, triggering Step Functions for orchestration. The design leverages EKS for scalable training and SageMaker for model lifecycle management. Security is enforced via IAM roles, VPC isolation, and KMS encryption. Scalability is achieved through decoupled storage (S3) and compute (EKS/Lambda). To improve, consider consolidating the 'Other' category into functional domains to reduce visual clutter.
+The architecture implements a robust MLOps lifecycle. Data flows from Kinesis into S3, where Glue jobs perform feature engineering. The Step Functions state machine orchestrates the training pipeline, utilizing EKS for compute-intensive tasks and SageMaker for model hosting. Security is enforced via IAM roles and VPC-level isolation (Private subnets, Security Groups). Scalability is addressed through managed services (EKS, SageMaker, Kinesis). Recommendation: Decouple the 'Security' and 'Other' blocks to reduce visual clutter and improve readability.
 
 **Context hints**
-- `[KMS]` Centralized encryption via KMS key for all data at rest.
+- `[S3]` Data lifecycle managed across raw, processed, and curated buckets with versioning.
+- `[KMS]` Centralized encryption key management for all data-at-rest resources.
 - `[COMPUTE]` Hybrid compute using EKS for training and Lambda for event-driven orchestration.
-- `[DATA]` Multi-tier S3 storage architecture for raw, processed, and curated datasets.
-- `[NETWORK]` Isolated VPC with private subnets and NAT gateway for secure egress.
+- `[NETWORK]` Private subnets with NAT gateway for secure egress and isolated resource access.
 
-**Contextual labels applied:** `eks_cluster` → ML Kubernetes Cluster, `sagemaker_domain` → SageMaker ML Studio, `lambda_function_preprocess` → Data Preprocessing Lambda, `sfn_state_machine` → Pipeline Orchestrator, `rds_cluster` → Feature Store DB, `kinesis_stream` → Ingestion Stream (+4 more)
+**Contextual labels applied:** `eks_cluster` → ML Training Cluster, `sagemaker_domain` → SageMaker Studio Domain, `s3_bucket` → Data Lake Storage, `lambda_function` → Event Processing Lambda, `rds_cluster` → Feature Store DB, `kinesis_stream` → Ingestion Stream (+2 more)
 
 **Review notes**
-- [layout] Extreme vertical aspect ratio makes the diagram difficult to read on standard displays.
-- [grouping] The 'Other' category contains too many disparate resources, obscuring functional relationships.
-- [edge-routing] High density of crossing lines between the Security column and the rest of the diagram.
+- [layout] Diagram is overly vertical and cluttered, causing excessive edge overlapping.
+- [edge-routing] Security/Access edges (red) cross over data flow lines, creating significant visual noise.
+- [grouping] The 'Other' category is a catch-all that lacks logical cohesion.
 
-Feedback iterations: iter0: 4/10
+Feedback iterations: iter0: 4/10, iter1: 4/10, iter2: 4/10
 
 **AI-refined diagram files** (include legend and review hints): architecture-ai.png, architecture-ai.jpg, architecture-ai.svg, architecture-ai.html, architecture-ai.drawio
