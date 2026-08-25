@@ -29,7 +29,7 @@ inputs:
   render_layout:
     description: Icon render layout (lanes|providers).
     required: false
-    default: lanes
+    default: providers
   render_bg:
     description: PNG/SVG background (transparent|white). JPEG is always white.
     required: false

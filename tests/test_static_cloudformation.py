@@ -62,3 +62,7 @@ Resources:
     assert "Bucket" in mermaid
     assert summary
     assert assumptions
+
+    # AUTO direction should normalize to LR
+    mermaid_auto, _, _ = _static_cloudformation_mermaid([tpl], "AUTO", Limits())
+    assert mermaid_auto.startswith("flowchart LR")
