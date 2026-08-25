@@ -130,10 +130,12 @@ def test_critique_diagram_gemini_mocked(tmp_path):
         assert "gemini-1.5-flash:generateContent?key=mock-gemini-key" in call_url
 
 
-def test_run_feedback_loop_gemini_fallback(monkeypatch):
+def test_run_feedback_loop_gemini_fallback(monkeypatch: pytest.MonkeyPatch) -> None:
+    import gemini_client
     monkeypatch.delenv("GEMINI_API_KEY", raising=False)
     monkeypatch.delenv("GOOGLE_API_KEY", raising=False)
     monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
+    monkeypatch.setattr(gemini_client, "load_gemini_key", lambda: None)
 
     from generate_arch_diagram import RenderConfig
 

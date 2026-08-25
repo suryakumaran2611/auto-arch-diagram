@@ -16,6 +16,7 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "tools"))
 
 import openrouter_client as orc
+import gemini_client
 import diagram_feedback as feedback
 import generate_arch_diagram as gen
 
@@ -276,7 +277,10 @@ def test_flip_direction() -> None:
 
 def test_run_feedback_loop_without_key_is_noop(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
+    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
+    monkeypatch.delenv("GOOGLE_API_KEY", raising=False)
     monkeypatch.setattr(orc, "load_api_key", lambda: None)
+    monkeypatch.setattr(gemini_client, "load_gemini_key", lambda: None)
     render = gen.RenderConfig()
     out = feedback.run_feedback_loop({}, set(), direction="LR", render=render, title="t")
     assert out[0] is render
@@ -286,6 +290,7 @@ def test_run_feedback_loop_without_key_is_noop(monkeypatch: pytest.MonkeyPatch) 
 
 
 def test_run_feedback_loop_stops_on_target_score(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(gemini_client, "load_gemini_key", lambda: None)
     monkeypatch.setattr(orc, "load_api_key", lambda: "k")
     monkeypatch.setattr(
         orc,
@@ -297,6 +302,7 @@ def test_run_feedback_loop_stops_on_target_score(monkeypatch: pytest.MonkeyPatch
 
     def fake_render(resources, edges, *, out_path, title, direction, render):
         rendered.append(str(out_path))
+        out_path.write_text("fake-png")
         return None
 
     critiques = iter(
@@ -314,6 +320,7 @@ def test_run_feedback_loop_stops_on_target_score(monkeypatch: pytest.MonkeyPatch
         direction="LR",
         render=render,
         title="t",
+        backend="openrouter",
     )
     assert len(history) == 1  # target score reached on first iteration
     assert critique["score"] == 9
@@ -323,13 +330,19 @@ def test_run_feedback_loop_stops_on_target_score(monkeypatch: pytest.MonkeyPatch
 
 
 def test_run_feedback_loop_applies_suggestions_then_plateaus(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(gemini_client, "load_gemini_key", lambda: None)
     monkeypatch.setattr(orc, "load_api_key", lambda: "k")
     monkeypatch.setattr(
         orc,
         "ranked_free_vision_models",
         lambda override_model=None: [{"id": "test/vision:free"}],
     )
-    monkeypatch.setattr(gen, "_render_icon_diagram_from_terraform", lambda *a, **k: None)
+
+    def fake_render(resources, edges, *, out_path, title, direction, render):
+        out_path.write_text("fake-png")
+        return None
+
+    monkeypatch.setattr(gen, "_render_icon_diagram_from_terraform", fake_render)
 
     # Constant mediocre scores: stagnation counter must stop after two
     # non-improving iterations (not immediately after the second render).
@@ -348,7 +361,7 @@ def test_run_feedback_loop_applies_suggestions_then_plateaus(monkeypatch: pytest
     monkeypatch.setattr(orc, "critique_diagram", fake_critique)
 
     _, _, _, history = feedback.run_feedback_loop(
-        {"aws_s3_bucket.a": {}}, set(), direction="LR", render=gen.RenderConfig(), title="t"
+        {"aws_s3_bucket.a": {}}, set(), direction="LR", render=gen.RenderConfig(), title="t", backend="openrouter"
     )
     assert [h["score"] for h in history] == [5, 5, 5]
 
