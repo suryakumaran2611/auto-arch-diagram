@@ -235,6 +235,7 @@ jobs:
       direction: AUTO                 # Intelligent layout
       image_formats: png,svg
       comment_on_pr: true
+      runner: ubuntu-latest           # Optional; defaults to ubuntu-latest
       edge_color: "#4B5563"
       edge_penwidth: "1.3"
       edge_arrowsize: "0.8"

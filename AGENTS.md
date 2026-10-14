@@ -187,6 +187,11 @@ When working on this project, ALWAYS:
 
 ## Key Project Commands and Arguments
 
+### Reusable GitHub Actions Workflow
+- `.github/workflows/reusable-auto-arch-diagram.yml` accepts an optional `runner` input for selecting the runner label for its jobs.
+- The `runner` input defaults to `ubuntu-latest`.
+- Example caller configuration: `with: { runner: self-hosted }`.
+
 ### 1. Generate Architecture Diagrams
 - **Script:** `tools/generate_arch_diagram.py`
 - **Functionality:** Generates Mermaid, PNG, SVG, JPG, Markdown, `.drawio`, and interactive HTML architecture diagrams from IaC files.

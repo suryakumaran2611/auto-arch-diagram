@@ -226,6 +226,11 @@ on:
         required: false
         type: boolean
         default: false
+      runner:
+        description: "Runner label to use for all workflow jobs."
+        required: false
+        type: string
+        default: ubuntu-latest
     secrets:
       GEMINI_API_KEY:
         description: "Google Gemini API key for AI vision refinement. Get at aistudio.google.com. Skipped if unset."
@@ -245,7 +250,7 @@ permissions:
 
 jobs:
   diagram:
-    runs-on: linux-x64-small
+    runs-on: ${{ inputs.runner }}
     permissions:
       contents: read
       pull-requests: write
@@ -660,7 +665,7 @@ jobs:
 
   diagram_pr:
     if: ${{ inputs.create_diagram_pr }}
-    runs-on: ubuntu-latest
+    runs-on: ${{ inputs.runner }}
     permissions:
       contents: write
       pull-requests: write
@@ -887,7 +892,7 @@ jobs:
   commit_artifacts:
     if: ${{ inputs.auto_commit_artifacts && !inputs.create_diagram_pr }}
     needs: diagram
-    runs-on: ubuntu-latest
+    runs-on: ${{ inputs.runner }}
     permissions:
       contents: write
       pull-requests: write

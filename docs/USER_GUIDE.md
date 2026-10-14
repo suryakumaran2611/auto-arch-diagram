@@ -268,7 +268,10 @@ jobs:
       direction: AUTO
       image_formats: png,svg,drawio,html
       comment_on_pr: true
+      runner: ubuntu-latest  # Optional; defaults to ubuntu-latest
 ```
+
+    The reusable workflow's `runner` input selects the runner for each job and defaults to `ubuntu-latest`. Set it to a runner label such as `self-hosted` to use a self-hosted runner.
 
 ---
 
