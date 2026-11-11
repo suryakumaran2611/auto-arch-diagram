@@ -23,6 +23,11 @@ from typing import Any
 
 import requests
 
+try:  # package import (tests, MCP server)
+    from .url_utils import redact_secrets
+except ImportError:  # direct script execution with tools/ on sys.path
+    from url_utils import redact_secrets
+
 GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/models"
 KEY_FILE_PATH = Path.home() / ".config" / "auto-arch-diagram" / "gemini_key"
 ALT_KEY_FILE_PATH = Path.home() / ".config" / "auto-arch-diagram" / "google_key"
@@ -207,7 +212,7 @@ def critique_diagram_gemini(
 
     last_error: Exception | None = None
     for target_model in models_to_try:
-        url = f"{GEMINI_BASE_URL}/{target_model}:generateContent?key={key}"
+        url = f"{GEMINI_BASE_URL}/{target_model}:generateContent"
         payload = {
             "contents": [
                 {
@@ -230,23 +235,41 @@ def critique_diagram_gemini(
         }
 
         try:
-            resp = requests.post(url, json=payload, headers={"Content-Type": "application/json"}, timeout=(10, timeout))
+            # The API key travels in a header, never the URL: ``requests`` embeds
+            # the full URL in exception messages, and logs would then leak it.
+            resp = requests.post(
+                url,
+                json=payload,
+                headers={"Content-Type": "application/json", "x-goog-api-key": key},
+                timeout=(10, timeout),
+            )
         except Exception as err:
-            last_error = err
-            print(f"[ai-enhance:gemini] Request failed for {target_model}: {err}", flush=True)
+            last_error = GeminiError(redact_secrets(str(err), (key,)))
+            print(
+                "[ai-enhance:gemini] Request failed for "
+                f"{target_model}: {redact_secrets(str(err), (key,))}",
+                flush=True,
+            )
             continue
 
         if resp.status_code != 200:
+            detail = redact_secrets(resp.text[:300], (key,))
             last_error = GeminiError(
-                f"HTTP {resp.status_code} from Gemini ({target_model}): {resp.text[:300]}"
+                f"HTTP {resp.status_code} from Gemini ({target_model}): {detail}"
             )
-            print(f"[ai-enhance:gemini] Model {target_model} returned HTTP {resp.status_code}; trying fallback...", flush=True)
+            print(
+                f"[ai-enhance:gemini] Model {target_model} returned HTTP "
+                f"{resp.status_code}; trying fallback...",
+                flush=True,
+            )
             continue
 
         resp_json = resp.json()
         candidates = resp_json.get("candidates") or []
         if not candidates:
-            last_error = GeminiError(f"Empty candidates from Gemini: {resp.text[:200]}")
+            last_error = GeminiError(
+                f"Empty candidates from Gemini: {redact_secrets(resp.text[:200], (key,))}"
+            )
             continue
 
         content_parts = (
@@ -262,7 +285,12 @@ def critique_diagram_gemini(
             return critique, f"gemini:{target_model}"
         except Exception as parse_err:
             last_error = parse_err
-            print(f"[ai-enhance:gemini] Failed to parse output from {target_model}: {parse_err}")
+            print(
+                f"[ai-enhance:gemini] Failed to parse output from {target_model}: "
+                f"{redact_secrets(str(parse_err), (key,))}"
+            )
             continue
 
-    raise GeminiError(f"All Gemini models failed: {last_error}")
+    raise GeminiError(
+        redact_secrets(f"All Gemini models failed: {last_error}", (key,))
+    ) from None

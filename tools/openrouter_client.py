@@ -21,6 +21,11 @@ from typing import Any
 
 import requests
 
+try:  # package import (tests, MCP server)
+    from .url_utils import redact_secrets
+except ImportError:  # direct script execution with tools/ on sys.path
+    from url_utils import redact_secrets
+
 OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
 KEY_FILE_PATH = Path.home() / ".config" / "auto-arch-diagram" / "openrouter_key"
 
@@ -218,10 +223,16 @@ def chat_completion(
             timeout=(5, timeout),
         )
     except Exception as req_err:
-        raise OpenRouterError(f"OpenRouter request failed: {req_err}") from req_err
+        raise OpenRouterError(
+            redact_secrets(f"OpenRouter request failed: {req_err}")
+        ) from None
 
     if resp.status_code != 200:
-        raise OpenRouterError(f"OpenRouter request failed: HTTP {resp.status_code}: {resp.text[:300]}")
+        raise OpenRouterError(
+            redact_secrets(
+                f"OpenRouter request failed: HTTP {resp.status_code}: {resp.text[:300]}"
+            )
+        )
     choice = (resp.json().get("choices") or [{}])[0]
     content = (choice.get("message") or {}).get("content") or ""
     if not content.strip():
@@ -275,11 +286,14 @@ def chat_completion_with_fallback(
         except Exception as exc:
             if model_id == preferred:
                 _save_preferred_model(None)
-            print(f"[ai-enhance] {model_id} failed ({exc}); trying next free model")
+            print(
+                f"[ai-enhance] {model_id} failed ({redact_secrets(str(exc))}); "
+                "trying next free model"
+            )
             last_error = exc
             continue
     raise OpenRouterError(
-        f"All candidate free models failed: {last_error}"
+        redact_secrets(f"All candidate free models failed: {last_error}")
     ) if last_error else OpenRouterError("No candidate models provided.")
 
 

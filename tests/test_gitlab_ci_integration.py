@@ -9,12 +9,15 @@ from __future__ import annotations
 
 import os
 import re
+import shlex
 import shutil
 import subprocess
 from pathlib import Path
 
 import pytest
 import yaml
+
+from tools.url_utils import redact_url
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 COMPONENT_TEMPLATE = REPO_ROOT / "templates" / "auto-arch-diagram" / "template.yml"
@@ -240,6 +243,53 @@ def test_gitlab_scripts_parse_with_bash(script_path: Path):
     assert result.returncode == 0, result.stderr
 
 
+def _shell_function_source(name: str) -> str:
+    text = GENERATE_SCRIPT.read_text(encoding="utf-8")
+    match = re.search(
+        rf"^{re.escape(name)}\(\) \{{\n.*?^\}}\n", text, re.MULTILINE | re.DOTALL
+    )
+    assert match, f"shell function {name} not found"
+    return match.group(0)
+
+
+def test_shell_redacts_source_urls_in_logs_and_summary():
+    text = GENERATE_SCRIPT.read_text(encoding="utf-8")
+
+    assert "redact_url()" in text, "shell runner must define a redact_url helper"
+    assert 'redacted_source="$(redact_url "${AUTO_ARCH_SOURCE}")"' in text
+    assert "clone and scan ${AUTO_ARCH_SOURCE}" not in text, (
+        "the raw source URL must not be logged"
+    )
+    assert 'CHANGE_SUMMARY="the remote source \\`${redacted_source}\\`"' in text, (
+        "the summary artifact must use the redacted source URL"
+    )
+
+
+def test_shell_redact_url_matches_python_implementation():
+    bash = shutil.which("bash")
+    if not bash:
+        pytest.skip("bash is not available on this platform")
+
+    urls = [
+        "https://user:token@gitlab.example.com/group/repo.git",
+        "https://glpat-secret@gitlab.example.com/group/repo.git?private_token=abc",
+        "https://gitlab.example.com/group/repo.git",
+        "git@gitlab.example.com:group/repo.git",
+    ]
+    function = _shell_function_source("redact_url")
+    script = "\n".join(
+        [function, *(f'printf \'%s\\n\' "$(redact_url {shlex.quote(u)})"' for u in urls)]
+    )
+
+    result = subprocess.run(
+        [bash, "-s"], input=script.encode("utf-8"), capture_output=True
+    )
+    assert result.returncode == 0, result.stderr.decode("utf-8", "replace")
+    assert result.stdout.decode("utf-8", "replace").splitlines() == [
+        redact_url(url) for url in urls
+    ]
+
+
 def test_generate_script_supports_key_configuration():
     text = GENERATE_SCRIPT.read_text(encoding="utf-8")
     for variable in (
@@ -343,6 +393,26 @@ def test_tool_ref_matches_the_component_version():
     assert pins, "no AUTO_ARCH_TOOL_REF pin found in examples or docs"
     stale = {path: sorted(values) for path, values in pins.items() if values != {expected}}
     assert not stale, f"AUTO_ARCH_TOOL_REF must be {expected}: {stale}"
+
+
+INLINE_CREDENTIALS_RE = re.compile(
+    r"(?:deploy-token|oauth2|gitlab-ci-token):\$\{|:\$\{AUTO_ARCH_[A-Z_]+\}@"
+)
+
+
+def test_examples_and_docs_do_not_embed_credentials_in_urls():
+    offenders = []
+    for path in [
+        *EXAMPLES_DIR.rglob("*.md"),
+        *EXAMPLES_DIR.rglob("*.yml"),
+        GITLAB_DOCS,
+    ]:
+        for match in INLINE_CREDENTIALS_RE.finditer(path.read_text(encoding="utf-8")):
+            offenders.append(f"{path.relative_to(REPO_ROOT)}: {match.group(0)}")
+
+    assert not offenders, (
+        "credentials must come from a Git credential helper, not a URL: " + ", ".join(offenders)
+    )
 
 
 def test_each_example_documents_the_main_branch_fallback():
