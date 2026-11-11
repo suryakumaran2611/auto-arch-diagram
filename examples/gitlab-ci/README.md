@@ -122,6 +122,12 @@ component. Bump both values together when a new release ships.
 All AI integrations degrade gracefully: missing keys or exhausted quotas leave
 the standard outputs intact and do not fail the job.
 
+> **Never embed credentials in a URL.** `AUTO_ARCH_SOURCE` and
+> `tool-repository` are cloned by Git, and clone errors can echo the full URL.
+> Use a credential helper backed by a masked variable instead. The runner
+> redacts userinfo and query strings in logs and in `gitlab-ci-summary.md` as
+> defence in depth, but logs and artifacts are still retained by GitLab.
+
 ---
 
 ## All component inputs

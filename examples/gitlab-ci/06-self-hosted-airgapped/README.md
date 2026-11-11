@@ -72,14 +72,39 @@ auto-arch-diagram:comment:
 
 ## Private tool repository
 
-The template performs a plain `git clone`. Use one of:
+The template performs a plain `git clone`, so use the runner's Git credential
+mechanism instead of putting a token in the URL.
 
-- A read-only deploy token embedded in the URL:
-  `https://deploy-token:${AUTO_ARCH_DEPLOY_TOKEN}@gitlab.example.com/...`
-- A runner-level credential helper.
-- A pre-cloned tool checkout mounted into the image, with
-  `AUTO_ARCH_TOOL_DIR` pointed at it (the template clones only when the directory
-  is absent).
+**Recommended - credential helper backed by a masked variable:**
+
+```bash
+# In the job before_script, or in the runner's global config.
+git config --global credential.helper \
+  '!f() { echo "username=deploy-token"; echo "password=${AUTO_ARCH_DEPLOY_TOKEN}"; }; f'
+```
+
+```yaml
+variables:
+  AUTO_ARCH_TOOL_REPOSITORY: https://gitlab.example.com/platform/auto-arch-diagram.git
+```
+
+- `AUTO_ARCH_DEPLOY_TOKEN` must be **masked** and **protected**.
+- The helper keeps the token out of the command line, the clone URL and any Git
+  error output.
+
+**Offline - mirror the repository inside the image:**
+
+```yaml
+variables:
+  AUTO_ARCH_TOOL_REPOSITORY: file:///opt/auto-arch-diagram.git
+  AUTO_ARCH_TOOL_REF: v2.1.3
+```
+
+A `file://` mirror needs no credentials at all and works on air-gapped runners.
+
+> Never embed a token in `AUTO_ARCH_TOOL_REPOSITORY` or `AUTO_ARCH_SOURCE`:
+> clone errors and job logs are retained by GitLab, and masking only hides
+> variables, not literal strings copied into a URL.
 
 ## Air-gapped checklist
 

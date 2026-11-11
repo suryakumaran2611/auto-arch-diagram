@@ -9,6 +9,7 @@ import math
 import os
 import re
 import shutil
+import subprocess
 import tempfile
 from dataclasses import dataclass
 from functools import lru_cache
@@ -36,6 +37,9 @@ from cloud_icons_util import load_cloud_icons, load_public_cloud_icons
 from layout_postprocess import run_gvpr_postprocess, python_postprocess_dot
 from html_exporter import export_interactive_html
 from render_config import load_provider_config
+
+# URL redaction keeps credentials out of logs and error messages
+from url_utils import redact_text, redact_url, split_git_source
 
 # Import the BulletproofMapper for improved icon mapping
 from refined_bulletproof_mapper import RefinedBulletproofMapper as BulletproofMapper
@@ -1050,13 +1054,47 @@ def _align_provider_clusters(
 
 
 def _handle_git_source(source_url: str) -> tuple[Path, Optional[tempfile.TemporaryDirectory]]:
-    """Clone remote Git source repo to temporary directory."""
+    """Clone a remote Git source into a temporary directory.
+
+    Accepts ``https://host/org/repo.git``, ``https://host/org/repo.git//subdir``,
+    ``git@host:org/repo.git`` and local paths. Credentials embedded in the URL are
+    redacted from every log line and error message so they cannot leak into job
+    logs or uploaded artifacts.
+    """
     if not any(source_url.startswith(pfx) for pfx in ("http://", "https://", "git@", "git://")):
         return Path(source_url), None
+
+    repo_url, subfolder = split_git_source(source_url)
     temp_dir = tempfile.TemporaryDirectory()
-    repo_part, _, subfolder = source_url.partition("//")
-    subprocess.run(["git", "clone", "--depth", "1", repo_part, temp_dir.name], check=True, capture_output=True)
-    res_path = Path(temp_dir.name) / subfolder if subfolder else Path(temp_dir.name)
+    try:
+        subprocess.run(
+            ["git", "clone", "--depth", "1", repo_url, temp_dir.name],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+    except FileNotFoundError as exc:
+        temp_dir.cleanup()
+        raise RuntimeError("git is required to clone a --source repository") from exc
+    except subprocess.CalledProcessError as exc:
+        temp_dir.cleanup()
+        detail = redact_text((exc.stderr or "").strip())
+        message = f"git clone failed for {redact_url(source_url)}"
+        if detail:
+            message = f"{message}: {detail}"
+        # Suppress the chained exception: its ``cmd`` attribute contains the raw
+        # URL, credentials included.
+        raise RuntimeError(message) from None
+
+    root = Path(temp_dir.name).resolve()
+    if subfolder:
+        res_path = (root / subfolder).resolve()
+        if res_path != root and root not in res_path.parents:
+            temp_dir.cleanup()
+            raise RuntimeError(f"Subfolder '{subfolder}' escapes the cloned repository")
+    else:
+        res_path = root
+
     return res_path, temp_dir
 
 

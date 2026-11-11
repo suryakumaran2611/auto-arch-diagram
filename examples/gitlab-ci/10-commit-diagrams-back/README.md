@@ -31,7 +31,10 @@ commit-diagrams:
     - git add "$AUTO_ARCH_OUT_DIR"
     - git diff --cached --quiet && exit 0
     - git commit -m "chore: update architecture diagrams [skip ci]"
-    - git push "https://oauth2:${AUTO_ARCH_PUSH_TOKEN}@${CI_SERVER_HOST}/${CI_PROJECT_PATH}.git" "HEAD:${CI_COMMIT_BRANCH}"
+    # The token goes in an auth header, never in the remote URL.
+    - |
+      git -c http.extraHeader="Authorization: Bearer ${AUTO_ARCH_PUSH_TOKEN}" \
+        push "https://${CI_SERVER_HOST}/${CI_PROJECT_PATH}.git" "HEAD:${CI_COMMIT_BRANCH}"
 ```
 
 ## Required CI/CD variable

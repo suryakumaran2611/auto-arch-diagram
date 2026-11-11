@@ -86,8 +86,20 @@ reading variables.
 
 `source` clones the repository during generation and auto-discovers its `.tf`
 files. Change detection is skipped for that run; `iac-root` and `changed-files`
-do not apply. For private repositories, embed a read-only deploy token in the URL
-or configure a runner credential helper.
+do not apply.
+
+For private repositories, use a runner credential helper rather than a token in
+the URL:
+
+```bash
+git config --global credential.helper \
+  '!f() { echo "username=deploy-token"; echo "password=${AUTO_ARCH_DEPLOY_TOKEN}"; }; f'
+```
+
+`AUTO_ARCH_DEPLOY_TOKEN` must be masked and protected. The runner logs and the
+`gitlab-ci-summary.md` artifact only ever contain the redacted URL
+(`https://***@host/...`), and clone errors are redacted too - but keeping the
+token out of the URL entirely is still the safer pattern.
 
 ## Precedence rules
 

@@ -246,6 +246,31 @@ errors are logged as warnings and the job continues.
 > `CI_JOB_TOKEN` cannot create merge request notes, which is why a dedicated
 > `api`-scoped token is used.
 
+### Private repositories and credentials
+
+Never paste a token into `source` or `tool-repository`. Those URLs are cloned by
+Git, and clone errors can echo them in full. Use a credential helper backed by a
+masked variable instead:
+
+```bash
+git config --global credential.helper \
+  '!f() { echo "username=deploy-token"; echo "password=${AUTO_ARCH_DEPLOY_TOKEN}"; }; f'
+```
+
+- `AUTO_ARCH_DEPLOY_TOKEN`: masked, protected, `read_repository` scope.
+- For the tool repository, the helper applies to `AUTO_ARCH_TOOL_REPOSITORY`.
+- For a remote `source`, the same helper applies to the cloned repository.
+
+The runner and generator redact userinfo, query strings and fragments from every
+URL before writing logs or `gitlab-ci-summary.md`, and clone failures are
+reported with the redacted URL. Redaction is defence in depth, not a licence to
+embed secrets: GitLab retains job logs and artifacts for the whole retention
+period.
+
+> Redaction only covers what this integration writes. Git itself, or any other
+> tool in the job, may still print a URL that contains credentials - which is
+> why the URL should stay clean in the first place.
+
 ---
 
 ## Consuming the outputs
@@ -319,7 +344,10 @@ commit-diagrams:
     - git add "$AUTO_ARCH_OUT_DIR"
     - git diff --cached --quiet && exit 0
     - git commit -m "chore: update architecture diagrams"
-    - git push "https://oauth2:${AUTO_ARCH_PUSH_TOKEN}@${CI_SERVER_HOST}/${CI_PROJECT_PATH}.git" "HEAD:${CI_COMMIT_BRANCH}"
+    # Token in an auth header, never in the URL.
+    - |
+      git -c http.extraHeader="Authorization: Bearer ${AUTO_ARCH_PUSH_TOKEN}" \
+        push "https://${CI_SERVER_HOST}/${CI_PROJECT_PATH}.git" "HEAD:${CI_COMMIT_BRANCH}"
 ```
 
 ---
@@ -365,8 +393,8 @@ separate `--varfile` flag.
 
 `source` clones the repository during generation and auto-discovers its `.tf`
 files. Change detection is skipped for that run (the pipeline logs
-`AUTO_ARCH_SOURCE is set`). Use a read-only deploy token in the URL or a runner
-credential helper for private repositories.
+`AUTO_ARCH_SOURCE is set`). For private repositories use a credential helper -
+see [Private repositories and credentials](#private-repositories-and-credentials).
 
 ### Numbered flow annotations
 
@@ -425,9 +453,12 @@ variables:
   AUTO_ARCH_TOOL_REF: v2.1.3
 ```
 
-For private mirrors, embed a read-only deploy token in the clone URL or configure
-a runner-level credential helper. The template uses a plain `git clone`, so any
-standard Git credential mechanism works.
+For private mirrors, configure a runner-level credential helper backed by a
+masked deploy token (see
+[Private repositories and credentials](#private-repositories-and-credentials)).
+Avoid embedding the token in `AUTO_ARCH_TOOL_REPOSITORY`: the template uses a
+plain `git clone`, so any standard Git credential mechanism works and keeps the
+token out of the URL.
 
 ---
 

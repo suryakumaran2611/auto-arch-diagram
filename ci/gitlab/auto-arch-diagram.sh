@@ -23,6 +23,32 @@ is_true() {
   esac
 }
 
+# Strip credentials, query strings and fragments before a URL reaches job logs or
+# the uploaded summary artifact. Mirrors tools/url_utils.py:redact_url().
+redact_url() {
+  local url="${1:-}"
+  local scheme="" rest="" authority="" tail=""
+
+  if [[ "${url}" == *"://"* ]]; then
+    scheme="${url%%://*}://"
+    rest="${url#*://}"
+    if [[ "${rest}" == */* ]]; then
+      authority="${rest%%/*}"
+      tail="/${rest#*/}"
+    else
+      authority="${rest}"
+    fi
+    if [[ "${authority}" == *"@"* ]]; then
+      authority="***@${authority##*@}"
+    fi
+    tail="${tail%%\?*}"
+    tail="${tail%%\#*}"
+    printf '%s%s%s' "${scheme}" "${authority}" "${tail}"
+  else
+    printf '%s' "${url%%\?*}"
+  fi
+}
+
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 TOOL_ROOT="${AUTO_ARCH_TOOL_DIR:-$(cd -- "${SCRIPT_DIR}/../.." >/dev/null 2>&1 && pwd)}"
 PYTHON="${PYTHON:-python3}"
@@ -229,8 +255,9 @@ PY
 file_count=""
 CHANGED_IAC_FILES=""
 if [ -n "${AUTO_ARCH_SOURCE:-}" ]; then
-  log "AUTO_ARCH_SOURCE is set - the generator will clone and scan ${AUTO_ARCH_SOURCE}"
-  CHANGE_SUMMARY="the remote source \`${AUTO_ARCH_SOURCE}\`"
+  redacted_source="$(redact_url "${AUTO_ARCH_SOURCE}")"
+  log "AUTO_ARCH_SOURCE is set - the generator will clone and scan ${redacted_source}"
+  CHANGE_SUMMARY="the remote source \`${redacted_source}\`"
   export CHANGED_IAC_FILES
 else
   file_count="$(grep -c . "${selected}" 2>/dev/null || true)"
