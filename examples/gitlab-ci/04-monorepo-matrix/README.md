@@ -7,14 +7,14 @@ component once per module with a unique `job-prefix` and output folder.
 
 ```yaml
 include:
-  - component: $CI_SERVER_FQDN/platform/auto-arch-diagram/auto-arch-diagram@1.0.0
+  - component: $CI_SERVER_FQDN/platform/auto-arch-diagram/auto-arch-diagram@2.1.3
     inputs:
       job-prefix: network-diagram
       iac-root: infra/network
       out-dir: artifacts/network
       mr-comment: false
 
-  - component: $CI_SERVER_FQDN/platform/auto-arch-diagram/auto-arch-diagram@1.0.0
+  - component: $CI_SERVER_FQDN/platform/auto-arch-diagram/auto-arch-diagram@2.1.3
     inputs:
       job-prefix: data-diagram
       iac-root: infra/data
@@ -75,6 +75,24 @@ summary:
   script:
     - find artifacts -name 'ci.env' -print
 ```
+
+## Which version should I use?
+
+This example pins the current release (`@2.1.3`). If you are not sure which
+version to use, reference the `main` branch instead:
+
+```yaml
+include:
+  - component: $CI_SERVER_FQDN/platform/auto-arch-diagram/auto-arch-diagram@main
+    inputs:
+      # ...same inputs as above
+```
+
+`@main` always picks up the latest code and works without publishing a release
+tag to your mirror, so it is the easiest way to get started. It is not
+reproducible, though: pipeline behaviour can change without a commit in your
+repository. Move to a release tag (or a commit SHA) before you depend on it in
+production.
 
 ## Related examples
 

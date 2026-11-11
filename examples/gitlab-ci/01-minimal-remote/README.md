@@ -72,3 +72,19 @@ artifacts/architecture/
 ├── gitlab-ci-summary.md
 └── ci.env
 ```
+
+## Which version should I use?
+
+The remote include above already tracks the `main` branch, so there is nothing to
+pin and no tag to publish - this is the recommended starting point.
+
+When you need reproducible pipelines, point the same `include` at a release tag
+instead:
+
+```yaml
+include:
+  - remote: https://raw.githubusercontent.com/suryakumaran2611/auto-arch-diagram/v2.1.3/ci/gitlab/auto-arch-diagram.gitlab-ci.yml
+```
+
+Or vendor the template into your repository and review it like application code
+(see [06 - Self-hosted / air-gapped](../06-self-hosted-airgapped/)).

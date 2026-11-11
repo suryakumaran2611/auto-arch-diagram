@@ -7,9 +7,10 @@
 stages:
   - build
 
+# Pinned to v2.1.3. Not sure which version to use? Reference @main instead - see README.md.
 include:
   # A. Build from a pre-generated `terraform show -json` plan.
-  - component: $CI_SERVER_FQDN/platform/auto-arch-diagram/auto-arch-diagram@1.0.0
+  - component: $CI_SERVER_FQDN/platform/auto-arch-diagram/auto-arch-diagram@2.1.3
     inputs:
       job-prefix: diagram-planfile
       iac-root: infra
@@ -19,7 +20,7 @@ include:
       mr-comment: false
 
   # B. Build from a pre-generated `terraform graph` DOT file.
-  - component: $CI_SERVER_FQDN/platform/auto-arch-diagram/auto-arch-diagram@1.0.0
+  - component: $CI_SERVER_FQDN/platform/auto-arch-diagram/auto-arch-diagram@2.1.3
     inputs:
       job-prefix: diagram-graphfile
       iac-root: infra
@@ -29,7 +30,7 @@ include:
       mr-comment: false
 
   # C. Variable files + workspace + numbered flow annotations.
-  - component: $CI_SERVER_FQDN/platform/auto-arch-diagram/auto-arch-diagram@1.0.0
+  - component: $CI_SERVER_FQDN/platform/auto-arch-diagram/auto-arch-diagram@2.1.3
     inputs:
       job-prefix: diagram-varfiles
       iac-root: infra
@@ -43,7 +44,7 @@ include:
       mr-comment: false
 
   # D. Clone and diagram a remote repository.
-  - component: $CI_SERVER_FQDN/platform/auto-arch-diagram/auto-arch-diagram@1.0.0
+  - component: $CI_SERVER_FQDN/platform/auto-arch-diagram/auto-arch-diagram@2.1.3
     inputs:
       job-prefix: diagram-remote-source
       source: https://gitlab.example.com/platform/landing-zone.git//terraform

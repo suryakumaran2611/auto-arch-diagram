@@ -90,6 +90,25 @@ ADVANCED_VARIABLES = (
 
 SCENARIO_PIPELINES = sorted(EXAMPLES_DIR.glob("*/.gitlab-ci.yml"))
 
+# Current GitHub release. Component references use the plain semantic version,
+# tool checkouts use the matching Git tag (v<version>). Update both together when
+# cutting a release; the tests below fail if examples or docs lag behind.
+CURRENT_RELEASE = "2.1.3"
+
+COMPONENT_REF_RE = re.compile(r"auto-arch-diagram@([0-9][0-9A-Za-z.\-]*)")
+TOOL_REF_RE = re.compile(r"AUTO_ARCH_TOOL_REF:\s*(v?[0-9][0-9A-Za-z.\-]*)")
+
+VERSION_REFERENCE_FILES = sorted(
+    [
+        *EXAMPLES_DIR.rglob("*.yml"),
+        *EXAMPLES_DIR.rglob("*.md"),
+        GITLAB_DOCS,
+        REPO_ROOT / "docs" / "USER_GUIDE.md",
+        REPO_ROOT / "README.md",
+        COMPONENT_TEMPLATE,
+    ]
+)
+
 # Global keywords are explicitly discouraged in CI/CD components because they
 # leak into every job of the consumer pipeline.
 FORBIDDEN_COMPONENT_KEYWORDS = {
@@ -299,6 +318,47 @@ def test_scenario_pipelines_parse_and_include_a_template(pipeline: Path):
 
     text = pipeline.read_text(encoding="utf-8")
     assert "$[[ inputs." not in text, "consumer pipelines must not use component interpolation"
+
+
+def test_examples_and_docs_pin_the_current_release():
+    offenders = []
+    for path in VERSION_REFERENCE_FILES:
+        for version in COMPONENT_REF_RE.findall(path.read_text(encoding="utf-8")):
+            if version != CURRENT_RELEASE:
+                offenders.append(f"{path.relative_to(REPO_ROOT)} -> @{version}")
+
+    assert not offenders, (
+        f"component references must pin the current release {CURRENT_RELEASE}: {offenders}"
+    )
+
+
+def test_tool_ref_matches_the_component_version():
+    expected = f"v{CURRENT_RELEASE}"
+    pins = {}
+    for path in VERSION_REFERENCE_FILES:
+        found = set(TOOL_REF_RE.findall(path.read_text(encoding="utf-8")))
+        if found:
+            pins[str(path.relative_to(REPO_ROOT))] = found
+
+    assert pins, "no AUTO_ARCH_TOOL_REF pin found in examples or docs"
+    stale = {path: sorted(values) for path, values in pins.items() if values != {expected}}
+    assert not stale, f"AUTO_ARCH_TOOL_REF must be {expected}: {stale}"
+
+
+def test_each_example_documents_the_main_branch_fallback():
+    problems = []
+    for readme in sorted(EXAMPLES_DIR.glob("*/README.md")):
+        text = readme.read_text(encoding="utf-8")
+        if "## Which version should I use?" not in text:
+            problems.append(f"{readme.parent.name}: missing version guidance section")
+        elif "main" not in text:
+            problems.append(f"{readme.parent.name}: does not mention the main branch")
+
+    index = (EXAMPLES_DIR / "README.md").read_text(encoding="utf-8")
+    if "Not sure? Use the `main` branch." not in index:
+        problems.append("gallery index: missing 'Not sure? Use the main branch' guidance")
+
+    assert not problems, "; ".join(problems)
 
 
 def test_component_inputs_are_documented():

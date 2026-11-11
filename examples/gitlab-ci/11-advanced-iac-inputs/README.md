@@ -42,7 +42,7 @@ prepare-plan:
     paths: [plan.json]
 
 include:
-  - component: $CI_SERVER_FQDN/platform/auto-arch-diagram/auto-arch-diagram@1.0.0
+  - component: $CI_SERVER_FQDN/platform/auto-arch-diagram/auto-arch-diagram@2.1.3
     inputs:
       planfile: plan.json
       stage: build
@@ -116,6 +116,24 @@ flows:
 See the full input reference in
 [`docs/GITLAB_CI.md`](../../../docs/GITLAB_CI.md#component-inputs) and the
 [layout example](../12-layout-tuning/).
+
+## Which version should I use?
+
+This example pins the current release (`@2.1.3`). If you are not sure which
+version to use, reference the `main` branch instead:
+
+```yaml
+include:
+  - component: $CI_SERVER_FQDN/platform/auto-arch-diagram/auto-arch-diagram@main
+    inputs:
+      # ...same inputs as above
+```
+
+`@main` always picks up the latest code and works without publishing a release
+tag to your mirror, so it is the easiest way to get started. It is not
+reproducible, though: pipeline behaviour can change without a commit in your
+repository. Move to a release tag (or a commit SHA) before you depend on it in
+production.
 
 ## Related examples
 

@@ -7,7 +7,7 @@ on the default branch.
 
 ```yaml
 include:
-  - component: $CI_SERVER_FQDN/platform/auto-arch-diagram/auto-arch-diagram@1.0.0
+  - component: $CI_SERVER_FQDN/platform/auto-arch-diagram/auto-arch-diagram@2.1.3
     inputs:
       iac-root: infra
       out-dir: docs/architecture
@@ -92,6 +92,24 @@ Replace the `git push` with a branch + MR creation using the GitLab API. The
 `AUTO_ARCH_GITLAB_TOKEN` from example 03 can create the MR; the push token still
 handles the branch. This avoids direct commits to protected branches and gives
 reviewers a diff.
+
+## Which version should I use?
+
+This example pins the current release (`@2.1.3`). If you are not sure which
+version to use, reference the `main` branch instead:
+
+```yaml
+include:
+  - component: $CI_SERVER_FQDN/platform/auto-arch-diagram/auto-arch-diagram@main
+    inputs:
+      # ...same inputs as above
+```
+
+`@main` always picks up the latest code and works without publishing a release
+tag to your mirror, so it is the easiest way to get started. It is not
+reproducible, though: pipeline behaviour can change without a commit in your
+repository. Move to a release tag (or a commit SHA) before you depend on it in
+production.
 
 ## Related examples
 
