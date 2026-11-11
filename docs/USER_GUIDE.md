@@ -128,13 +128,16 @@ Or pin the versioned component after mirroring the repository to GitLab:
 
 ```yaml
 include:
-  - component: $CI_SERVER_FQDN/platform/auto-arch-diagram/auto-arch-diagram@1.0.0
+  - component: $CI_SERVER_FQDN/platform/auto-arch-diagram/auto-arch-diagram@2.1.3
     inputs:
       iac-root: infra
       out-dir: artifacts/architecture
       ai-enhance: true
       ai-backend: gemini
 ```
+
+Unsure which version to use? Reference `@main` instead of `@2.1.3`: it always
+follows the latest code but is not reproducible, so pin a release for production.
 
 Outputs are uploaded as job artifacts, a `ci.env` dotenv report exposes
 `AUTO_ARCH_MD`, `AUTO_ARCH_PNG`, `AUTO_ARCH_HTML`, and friends to later jobs, and

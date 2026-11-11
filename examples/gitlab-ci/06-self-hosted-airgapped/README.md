@@ -11,7 +11,7 @@ include:
 
 variables:
   AUTO_ARCH_TOOL_REPOSITORY: https://gitlab.example.com/platform/auto-arch-diagram.git
-  AUTO_ARCH_TOOL_REF: v2.1.2
+  AUTO_ARCH_TOOL_REF: v2.1.3
   AUTO_ARCH_IMAGE: registry.example.com/platform/python:3.12-graphviz
   AUTO_ARCH_INSTALL_SYSTEM_PACKAGES: "false"
   AUTO_ARCH_IAC_ROOT: terraform
@@ -45,10 +45,10 @@ auto-arch-diagram:comment:
 
    ```yaml
    include:
-     - component: $CI_SERVER_FQDN/platform/auto-arch-diagram/auto-arch-diagram@2.1.2
+     - component: $CI_SERVER_FQDN/platform/auto-arch-diagram/auto-arch-diagram@2.1.3
        inputs:
          tool-repository: https://gitlab.example.com/platform/auto-arch-diagram.git
-         tool-ref: v2.1.2
+         tool-ref: v2.1.3
          job-tags: [self-hosted, docker]
    ```
 
@@ -114,3 +114,17 @@ images.
 
 See the [full GitLab guide](../../../docs/GITLAB_CI.md#self-hosted-gitlab-and-air-gapped-runners)
 for additional details.
+
+## Which version should I use?
+
+This example pins `AUTO_ARCH_TOOL_REF` to the current release (`v2.1.3`). If you
+are not sure which version to use, point it at the `main` branch of your mirror:
+
+```yaml
+variables:
+  AUTO_ARCH_TOOL_REF: main
+```
+
+`main` tracks the latest code without needing a release tag on the mirror, which
+is handy while you are evaluating the tool. It is not reproducible, so pin a tag
+or commit SHA before relying on it in production.

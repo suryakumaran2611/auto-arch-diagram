@@ -6,9 +6,10 @@
 stages:
   - build
 
+# Pinned to v2.1.3. Not sure which version to use? Reference @main instead - see README.md.
 include:
   # Executive / board-level view.
-  - component: $CI_SERVER_FQDN/platform/auto-arch-diagram/auto-arch-diagram@1.0.0
+  - component: $CI_SERVER_FQDN/platform/auto-arch-diagram/auto-arch-diagram@2.1.3
     inputs:
       job-prefix: diagram-executive
       iac-root: infra
@@ -24,7 +25,7 @@ include:
       mr-comment: false
 
   # Detailed engineering view.
-  - component: $CI_SERVER_FQDN/platform/auto-arch-diagram/auto-arch-diagram@1.0.0
+  - component: $CI_SERVER_FQDN/platform/auto-arch-diagram/auto-arch-diagram@2.1.3
     inputs:
       job-prefix: diagram-detailed
       iac-root: infra

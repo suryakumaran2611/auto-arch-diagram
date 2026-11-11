@@ -263,7 +263,7 @@ Versioned component flavour (mirror the repo to GitLab, then pin a release):
 
 ```yaml
 include:
-  - component: $CI_SERVER_FQDN/platform/auto-arch-diagram/auto-arch-diagram@1.0.0
+  - component: $CI_SERVER_FQDN/platform/auto-arch-diagram/auto-arch-diagram@2.1.3
     inputs:
       iac-root: infra
       out-dir: artifacts/architecture
@@ -272,6 +272,9 @@ include:
       mr-comment: true            # needs AUTO_ARCH_GITLAB_TOKEN (api scope)
       ai-enhance: false
 ```
+
+Not sure which version to use? Reference `@main` instead of `@2.1.3` to always
+follow the latest code (not reproducible; pin a release for production).
 
 - Diagrams are published as job artifacts plus a `ci.env` dotenv report
   (`AUTO_ARCH_MD`, `AUTO_ARCH_PNG`, `AUTO_ARCH_HTML`, ...).

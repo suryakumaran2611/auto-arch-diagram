@@ -7,13 +7,14 @@
 stages:
   - build
 
+# Pinned to v2.1.3. Not sure which version to use? Set AUTO_ARCH_TOOL_REF to main - see README.md.
 include:
   - local: ci/gitlab/auto-arch-diagram.gitlab-ci.yml
 
 variables:
   # Internal mirror of this repository, pinned to a release tag.
   AUTO_ARCH_TOOL_REPOSITORY: https://gitlab.example.com/platform/auto-arch-diagram.git
-  AUTO_ARCH_TOOL_REF: v2.1.2
+  AUTO_ARCH_TOOL_REF: v2.1.3
 
   # Pre-baked image with Graphviz, fonts and Python dependencies.
   AUTO_ARCH_IMAGE: registry.example.com/platform/python:3.12-graphviz

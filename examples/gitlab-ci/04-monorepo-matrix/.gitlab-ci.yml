@@ -7,8 +7,9 @@
 stages:
   - build
 
+# Pinned to v2.1.3. Not sure which version to use? Reference @main instead - see README.md.
 include:
-  - component: $CI_SERVER_FQDN/platform/auto-arch-diagram/auto-arch-diagram@1.0.0
+  - component: $CI_SERVER_FQDN/platform/auto-arch-diagram/auto-arch-diagram@2.1.3
     inputs:
       job-prefix: network-diagram
       iac-root: infra/network
@@ -16,7 +17,7 @@ include:
       image-formats: png,svg,drawio,html
       mr-comment: false
 
-  - component: $CI_SERVER_FQDN/platform/auto-arch-diagram/auto-arch-diagram@1.0.0
+  - component: $CI_SERVER_FQDN/platform/auto-arch-diagram/auto-arch-diagram@2.1.3
     inputs:
       job-prefix: data-diagram
       iac-root: infra/data
@@ -24,7 +25,7 @@ include:
       image-formats: png,svg,drawio,html
       mr-comment: false
 
-  - component: $CI_SERVER_FQDN/platform/auto-arch-diagram/auto-arch-diagram@1.0.0
+  - component: $CI_SERVER_FQDN/platform/auto-arch-diagram/auto-arch-diagram@2.1.3
     inputs:
       job-prefix: observability-diagram
       iac-root: infra/observability

@@ -59,6 +59,10 @@ the default branch and manual runs. Diagrams are uploaded as job artifacts, and
 `auto-arch-diagram:comment` posts a sticky merge request note when
 `AUTO_ARCH_GITLAB_TOKEN` is configured.
 
+The URL above tracks the `main` branch. For reproducible pipelines, replace
+`main` with a release tag, for example
+`.../auto-arch-diagram/v2.1.3/ci/gitlab/auto-arch-diagram.gitlab-ci.yml`.
+
 ### Option B - CI/CD component
 
 Mirror this repository into a GitLab group (for example
@@ -67,7 +71,7 @@ component:
 
 ```yaml
 include:
-  - component: $CI_SERVER_FQDN/platform/auto-arch-diagram/auto-arch-diagram@1.0.0
+  - component: $CI_SERVER_FQDN/platform/auto-arch-diagram/auto-arch-diagram@2.1.3
     inputs:
       stage: build
       iac-root: infra
@@ -79,6 +83,27 @@ include:
 Component inputs are validated when the pipeline is created, which makes
 misconfiguration obvious before a runner starts. Set the component project as a
 **CI/CD Catalog project** to make releases discoverable.
+
+**Not sure which version to use?** Reference the `main` branch. It needs no
+release tag on your mirror and always tracks the latest code:
+
+```yaml
+include:
+  - component: $CI_SERVER_FQDN/platform/auto-arch-diagram/auto-arch-diagram@main
+    inputs:
+      iac-root: infra
+```
+
+`main` is a moving target. Pin a release once the pipeline matters: the component
+version is the release's semantic version without the `v` prefix (`@2.1.3`),
+while `tool-ref` uses the Git tag (`v2.1.3`). When mirroring, push both tags:
+
+```bash
+git push mirror v2.1.3          # tool-ref
+git push mirror v2.1.3:2.1.3    # component version
+```
+
+A commit SHA (`@<sha>`) also works and is the most reproducible option.
 
 ### Option C - vendored template
 
@@ -307,7 +332,7 @@ These inputs cover scenarios that go beyond diff-based HCL generation.
 
 ```yaml
 include:
-  - component: $CI_SERVER_FQDN/platform/auto-arch-diagram/auto-arch-diagram@1.0.0
+  - component: $CI_SERVER_FQDN/platform/auto-arch-diagram/auto-arch-diagram@2.1.3
     inputs:
       planfile: plan.json        # terraform show -json plan.tfplan > plan.json
       # graphfile: graph.dot     # terraform graph > graph.dot
@@ -397,7 +422,7 @@ detection entirely, for example from a scheduler script.
 ```yaml
 variables:
   AUTO_ARCH_TOOL_REPOSITORY: https://gitlab.example.com/platform/auto-arch-diagram.git
-  AUTO_ARCH_TOOL_REF: v2.1.2
+  AUTO_ARCH_TOOL_REF: v2.1.3
 ```
 
 For private mirrors, embed a read-only deploy token in the clone URL or configure

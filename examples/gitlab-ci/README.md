@@ -60,10 +60,54 @@ The component reference uses your own GitLab instance:
 
 ```yaml
 include:
-  - component: $CI_SERVER_FQDN/<group>/auto-arch-diagram/auto-arch-diagram@1.0.0
+  - component: $CI_SERVER_FQDN/<group>/auto-arch-diagram/auto-arch-diagram@2.1.3
 ```
 
-Replace `<group>` and the version with your mirror and release tag.
+Replace `<group>` with your mirror's group.
+
+### Which version should I use?
+
+**Not sure? Use the `main` branch.** It needs no release tag on your mirror and
+always tracks the latest code:
+
+```yaml
+include:
+  - component: $CI_SERVER_FQDN/<group>/auto-arch-diagram/auto-arch-diagram@main
+```
+
+With the `include: remote` template, `main` is already the default:
+
+```yaml
+include:
+  - remote: https://raw.githubusercontent.com/suryakumaran2611/auto-arch-diagram/main/ci/gitlab/auto-arch-diagram.gitlab-ci.yml
+```
+
+`main` is the quickest way to evaluate the tool, but it is a moving target.
+Once the pipeline matters, pin a version:
+
+| Reference | Example | Reproducible | Use when |
+| --- | --- | --- | --- |
+| `main` branch | `@main`, `tool-ref: main` | No | Trying it out, personal projects |
+| Release tag | `@2.1.3`, `tool-ref: v2.1.3` | Yes | Production pipelines (recommended) |
+| Commit SHA | `@<40-char-sha>` | Yes | Maximum supply-chain safety |
+
+The examples pin the current release, **v2.1.3**:
+
+| Reference | Value | Why |
+| --- | --- | --- |
+| Component version | `@2.1.3` | GitLab component versions are plain semantic versions. |
+| `tool-ref` / `AUTO_ARCH_TOOL_REF` | `v2.1.3` | The GitHub release tag, used for the tool checkout. |
+
+GitLab requires semantic-version tags for catalog components, and semver has no
+`v` prefix, so mirror the release under both names:
+
+```bash
+git push mirror v2.1.3          # release tag, used by tool-ref
+git push mirror v2.1.3:2.1.3    # component version used by include: component
+```
+
+Ignore the second tag if you use the `include: remote` template instead of the
+component. Bump both values together when a new release ships.
 
 ### Secrets (masked CI/CD variables)
 
