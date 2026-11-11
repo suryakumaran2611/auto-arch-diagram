@@ -197,7 +197,7 @@ When working on this project, ALWAYS:
 - **Include template:** `ci/gitlab/auto-arch-diagram.gitlab-ci.yml` (GitLab 14.x+) configured with `AUTO_ARCH_*` variables; supports `include: remote`, `include: local` and `include: project`.
 - **Shared runner:** `ci/gitlab/auto-arch-diagram.sh` — detects changed IaC files (MR diff base, commit before SHA, or full scan), builds the generator arguments, validates outputs and writes `$AUTO_ARCH_OUT_DIR/ci.env` (dotenv: `AUTO_ARCH_HAS_CHANGES`, `AUTO_ARCH_MD/MMD/PNG/JPG/SVG/DRAWIO/HTML`).
 - **Merge request notes:** `ci/gitlab/comment_on_merge_request.sh` posts/updates a sticky note; requires masked `AUTO_ARCH_GITLAB_TOKEN` with `api` scope, otherwise it warns and the job passes (`allow_failure: true`).
-- **Docs/examples:** `docs/GITLAB_CI.md`, `examples/gitlab-ci/.gitlab-ci.yml`.
+- **Docs/examples:** `docs/GITLAB_CI.md`, `examples/gitlab-ci/` (12 scenario pipelines with per-scenario READMEs), `examples/gitlab-ci/README.md` (index + all inputs/variables).
 - **Tests:** `tests/test_gitlab_ci_integration.py` validates YAML structure, declared vs. referenced component inputs, absence of global keywords in the component, script syntax and docs linkage.
 - When changing GitLab templates or scripts, run `pytest tests/test_gitlab_ci_integration.py -v` and keep `docs/GITLAB_CI.md` in sync.
 

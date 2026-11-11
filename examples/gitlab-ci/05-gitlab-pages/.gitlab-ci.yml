@@ -1,0 +1,35 @@
+# 05 — GitLab Pages
+#
+# Generates diagrams with the component, then publishes the interactive HTML
+# studio and static images through GitLab Pages.
+# Full walkthrough: README.md
+# ---------------------------------------------------------------------------
+stages:
+  - build
+  - deploy
+
+include:
+  - component: $CI_SERVER_FQDN/platform/auto-arch-diagram/auto-arch-diagram@1.0.0
+    inputs:
+      iac-root: infra
+      out-dir: artifacts/architecture
+      image-formats: png,svg
+      mr-comment: true
+
+pages:
+  stage: deploy
+  needs:
+    - job: auto-arch-diagram
+      artifacts: true
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+    - if: $CI_PIPELINE_SOURCE == "web"
+  script:
+    - mkdir -p public
+    - cp "$AUTO_ARCH_HTML" public/index.html
+    - cp "$AUTO_ARCH_PNG" public/architecture.png
+    - cp "$AUTO_ARCH_SVG" public/architecture.svg
+    - cp "$AUTO_ARCH_DRAWIO" public/architecture.drawio
+  artifacts:
+    paths:
+      - public

@@ -1,0 +1,23 @@
+# 09 — Scheduled full scan
+#
+# Runs on Pipeline Schedules only, regenerating every tracked IaC file.
+# Full walkthrough: README.md
+# ---------------------------------------------------------------------------
+stages:
+  - build
+
+include:
+  - component: $CI_SERVER_FQDN/platform/auto-arch-diagram/auto-arch-diagram@1.0.0
+    inputs:
+      iac-root: infra
+      out-dir: artifacts/architecture
+      image-formats: png,svg,drawio,html
+      force-full: true
+      always-run: true
+      mr-comment: false
+      artifacts-expire-in: 30 days
+
+# The component adds a rule for every pipeline; narrow the job to schedules.
+auto-arch-diagram:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule"

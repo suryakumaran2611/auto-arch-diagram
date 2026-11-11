@@ -1,0 +1,92 @@
+# 02 — Every component input
+#
+# Reference pipeline: every input is listed explicitly at its default (or a
+# realistic value). Replace the component path and tag before use.
+# Full walkthrough: README.md
+# ---------------------------------------------------------------------------
+stages:
+  - build
+
+include:
+  - component: $CI_SERVER_FQDN/platform/auto-arch-diagram/auto-arch-diagram@1.0.0
+    inputs:
+      # --- Job placement and tooling -------------------------------------
+      job-prefix: auto-arch-diagram
+      stage: build
+      image: python:3.12
+      install-system-packages: true
+      job-tags: []
+      tool-repository: https://github.com/suryakumaran2611/auto-arch-diagram.git
+      tool-ref: main
+
+      # --- Change detection ----------------------------------------------
+      changed-files: ''
+      iac-globs: |
+        **/*.tf
+        **/*.tfvars
+        **/*.hcl
+        **/*.bicep
+        **/*.cfn.yaml
+        **/*.cfn.yml
+        **/*.cfn.json
+        **/template.yaml
+        **/template.yml
+        **/Pulumi.*.yaml
+        **/Pulumi.*.yml
+        **/Pulumi.yaml
+        **/Pulumi.yml
+        **/Pulumi.*.json
+        **/Pulumi.*.ts
+        **/Pulumi.*.py
+        **/*.cdk.ts
+        **/*.cdk.py
+      iac-root: infra
+      force-full: false
+      always-run: false
+
+      # --- Outputs --------------------------------------------------------
+      out-dir: artifacts/architecture
+      image-formats: png,jpg,svg
+      out-md: ''
+      out-mmd: ''
+      out-png: ''
+      out-jpg: ''
+      out-svg: ''
+      out-drawio: ''
+      out-html: ''
+      artifacts-expire-in: 1 week
+
+      # --- Rendering ------------------------------------------------------
+      direction: AUTO
+      render-layout: lanes
+      render-bg: transparent
+      edge-color: '#4B5563'
+      edge-penwidth: '1.3'
+      edge-arrowsize: '0.8'
+      fontsize: ''
+      iconsize: ''
+      render-engine: auto
+
+      # --- Model shape ----------------------------------------------------
+      simplified: false
+      expand-badges: false
+      no-consolidate: false
+
+      # --- Advanced IaC inputs (empty = unused) ---------------------------
+      planfile: ''
+      graphfile: ''
+      varfile: ''
+      workspace: default
+      source: ''
+      annotate: ''
+
+      # --- AI vision refinement -------------------------------------------
+      ai-enhance: false
+      ai-backend: auto
+      gemini-model: gemini-3.8-flash
+      openrouter-model: ''
+      ollama-model: llama3
+      ai-iterations: ''
+
+      # --- Merge request note ---------------------------------------------
+      mr-comment: true

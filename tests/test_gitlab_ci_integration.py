@@ -22,12 +22,15 @@ INCLUDE_TEMPLATE = REPO_ROOT / "ci" / "gitlab" / "auto-arch-diagram.gitlab-ci.ym
 GENERATE_SCRIPT = REPO_ROOT / "ci" / "gitlab" / "auto-arch-diagram.sh"
 COMMENT_SCRIPT = REPO_ROOT / "ci" / "gitlab" / "comment_on_merge_request.sh"
 GITLAB_DOCS = REPO_ROOT / "docs" / "GITLAB_CI.md"
-EXAMPLE_PIPELINE = REPO_ROOT / "examples" / "gitlab-ci" / ".gitlab-ci.yml"
+EXAMPLES_DIR = REPO_ROOT / "examples" / "gitlab-ci"
+EXAMPLE_PIPELINE = EXAMPLES_DIR / ".gitlab-ci.yml"
 
 EXPECTED_INPUTS = {
     "job-prefix",
     "stage",
     "image",
+    "install-system-packages",
+    "job-tags",
     "tool-repository",
     "tool-ref",
     "changed-files",
@@ -35,14 +38,57 @@ EXPECTED_INPUTS = {
     "iac-root",
     "out-dir",
     "image-formats",
+    "out-md",
+    "out-mmd",
+    "out-png",
+    "out-jpg",
+    "out-svg",
+    "out-drawio",
+    "out-html",
     "direction",
     "render-layout",
     "render-bg",
+    "edge-color",
+    "edge-penwidth",
+    "edge-arrowsize",
+    "fontsize",
+    "iconsize",
+    "render-engine",
+    "simplified",
+    "expand-badges",
+    "no-consolidate",
+    "planfile",
+    "graphfile",
+    "varfile",
+    "workspace",
+    "source",
+    "annotate",
     "ai-enhance",
     "ai-backend",
+    "gemini-model",
+    "openrouter-model",
+    "ollama-model",
+    "ai-iterations",
     "force-full",
+    "always-run",
     "mr-comment",
+    "artifacts-expire-in",
 }
+
+ADVANCED_VARIABLES = (
+    "AUTO_ARCH_RENDER_ENGINE",
+    "AUTO_ARCH_SIMPLIFIED",
+    "AUTO_ARCH_EXPAND_BADGES",
+    "AUTO_ARCH_NO_CONSOLIDATE",
+    "AUTO_ARCH_PLANFILE",
+    "AUTO_ARCH_GRAPHFILE",
+    "AUTO_ARCH_VARFILE",
+    "AUTO_ARCH_WORKSPACE",
+    "AUTO_ARCH_SOURCE",
+    "AUTO_ARCH_ANNOTATE",
+)
+
+SCENARIO_PIPELINES = sorted(EXAMPLES_DIR.glob("*/.gitlab-ci.yml"))
 
 # Global keywords are explicitly discouraged in CI/CD components because they
 # leak into every job of the consumer pipeline.
@@ -128,6 +174,8 @@ def test_include_template_defines_variables_and_jobs():
     assert base_variables["AUTO_ARCH_TOOL_REPOSITORY"].endswith("auto-arch-diagram.git")
     assert base_variables["GIT_DEPTH"] == "0"
     assert config[".auto-arch-diagram-base"]["extends"] == ".auto-arch-diagram-vars"
+    for variable in ADVANCED_VARIABLES:
+        assert variable in base_variables, f"include template is missing {variable}"
 
     generate = config["auto-arch-diagram:generate"]
     assert generate["artifacts"]["reports"]["dotenv"] == "$AUTO_ARCH_OUT_DIR/ci.env"
@@ -184,8 +232,22 @@ def test_generate_script_supports_key_configuration():
         "AUTO_ARCH_DIRECTION",
         "AUTO_ARCH_AI_ENHANCE",
         "AUTO_ARCH_FORCE_FULL",
+        *ADVANCED_VARIABLES,
     ):
         assert variable in text
+    for flag in (
+        "--render-engine",
+        "--simplified",
+        "--expand-badges",
+        "--no-consolidate",
+        "--planfile",
+        "--graphfile",
+        "--varfile",
+        "--workspace",
+        "--source",
+        "--annotate",
+    ):
+        assert flag in text
     assert "CI_MERGE_REQUEST_DIFF_BASE_SHA" in text
     assert "ci.env" in text
 
@@ -205,3 +267,66 @@ def test_documentation_and_example_exist():
         for entry in include
         if isinstance(entry, dict)
     ), "example pipeline should include the remote GitLab template"
+
+
+def test_example_gallery_covers_all_scenarios():
+    scenarios = sorted(path for path in EXAMPLES_DIR.iterdir() if path.is_dir())
+    assert len(scenarios) >= 12, f"expected at least 12 scenarios, found {len(scenarios)}"
+
+    for scenario in scenarios:
+        assert (scenario / ".gitlab-ci.yml").is_file(), f"{scenario.name} has no pipeline"
+        assert (scenario / "README.md").is_file(), f"{scenario.name} has no README"
+
+    index = (EXAMPLES_DIR / "README.md").read_text(encoding="utf-8")
+    for scenario in scenarios:
+        assert scenario.name in index, f"{scenario.name} is missing from the gallery index"
+
+
+@pytest.mark.parametrize(
+    "pipeline", SCENARIO_PIPELINES, ids=[path.parent.name for path in SCENARIO_PIPELINES]
+)
+def test_scenario_pipelines_parse_and_include_a_template(pipeline: Path):
+    config = yaml.safe_load(pipeline.read_text(encoding="utf-8"))
+    assert isinstance(config, dict), f"{pipeline} is not a YAML mapping"
+
+    includes = config.get("include")
+    assert includes, f"{pipeline} does not include a template"
+    for entry in includes:
+        assert isinstance(entry, dict), f"{pipeline} include entries must be mappings"
+        assert {"remote", "component", "local", "project"}.intersection(entry), (
+            f"{pipeline} has an unsupported include entry: {entry}"
+        )
+
+    text = pipeline.read_text(encoding="utf-8")
+    assert "$[[ inputs." not in text, "consumer pipelines must not use component interpolation"
+
+
+def test_component_inputs_are_documented():
+    spec, _ = _component_documents()
+    docs = GITLAB_DOCS.read_text(encoding="utf-8")
+    missing = [
+        name for name in spec["spec"]["inputs"] if f"`{name}`" not in docs
+    ]
+    assert not missing, f"component inputs missing from docs/GITLAB_CI.md: {sorted(missing)}"
+
+
+def test_component_maps_advanced_inputs_to_variables():
+    _, jobs = _component_documents()
+    generate = jobs["$[[ inputs.job-prefix ]]"]
+    variables = generate["variables"]
+
+    expected_mapping = {
+        "render-engine": "AUTO_ARCH_RENDER_ENGINE",
+        "simplified": "AUTO_ARCH_SIMPLIFIED",
+        "expand-badges": "AUTO_ARCH_EXPAND_BADGES",
+        "no-consolidate": "AUTO_ARCH_NO_CONSOLIDATE",
+        "planfile": "AUTO_ARCH_PLANFILE",
+        "graphfile": "AUTO_ARCH_GRAPHFILE",
+        "varfile": "AUTO_ARCH_VARFILE",
+        "workspace": "AUTO_ARCH_WORKSPACE",
+        "source": "AUTO_ARCH_SOURCE",
+        "annotate": "AUTO_ARCH_ANNOTATE",
+    }
+    for input_name, variable in expected_mapping.items():
+        assert variables[variable] == f"$[[ inputs.{input_name} ]]"
+
