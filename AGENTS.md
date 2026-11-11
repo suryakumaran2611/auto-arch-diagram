@@ -192,6 +192,15 @@ When working on this project, ALWAYS:
 - The `runner` input defaults to `ubuntu-latest`.
 - Example caller configuration: `with: { runner: self-hosted }`.
 
+### Reusable GitLab CI/CD Pipeline
+- **Component:** `templates/auto-arch-diagram/template.yml` (GitLab 16.9+) with typed `spec:inputs`, jobs `$[[ inputs.job-prefix ]]` and `$[[ inputs.job-prefix ]]-comment`.
+- **Include template:** `ci/gitlab/auto-arch-diagram.gitlab-ci.yml` (GitLab 14.x+) configured with `AUTO_ARCH_*` variables; supports `include: remote`, `include: local` and `include: project`.
+- **Shared runner:** `ci/gitlab/auto-arch-diagram.sh` — detects changed IaC files (MR diff base, commit before SHA, or full scan), builds the generator arguments, validates outputs and writes `$AUTO_ARCH_OUT_DIR/ci.env` (dotenv: `AUTO_ARCH_HAS_CHANGES`, `AUTO_ARCH_MD/MMD/PNG/JPG/SVG/DRAWIO/HTML`).
+- **Merge request notes:** `ci/gitlab/comment_on_merge_request.sh` posts/updates a sticky note; requires masked `AUTO_ARCH_GITLAB_TOKEN` with `api` scope, otherwise it warns and the job passes (`allow_failure: true`).
+- **Docs/examples:** `docs/GITLAB_CI.md`, `examples/gitlab-ci/.gitlab-ci.yml`.
+- **Tests:** `tests/test_gitlab_ci_integration.py` validates YAML structure, declared vs. referenced component inputs, absence of global keywords in the component, script syntax and docs linkage.
+- When changing GitLab templates or scripts, run `pytest tests/test_gitlab_ci_integration.py -v` and keep `docs/GITLAB_CI.md` in sync.
+
 ### 1. Generate Architecture Diagrams
 - **Script:** `tools/generate_arch_diagram.py`
 - **Functionality:** Generates Mermaid, PNG, SVG, JPG, Markdown, `.drawio`, and interactive HTML architecture diagrams from IaC files.
@@ -219,7 +228,7 @@ When working on this project, ALWAYS:
   - `--expand-badges`: Expand security group shield badges into standalone nodes
   - `--no-consolidate`: Disable automatic resource instance consolidation
   - `--ai-backend <auto|gemini|openrouter|ollama|bedrock|restapi>`: AI refinement backend (default `auto`)
-  - `--gemini-model <model>`: Gemini vision model (default `gemini-1.5-flash`)
+  - `--gemini-model <model>`: Gemini vision model (default `gemini-3.8-flash`, free tier)
   - `--openrouter-model <model>`: OpenRouter vision model override
   - `--ollama-model <model>`: Model name when using `--ai-backend ollama`
   - `--ai-enhance`: Vision-assisted refinement (Gemini or OpenRouter free models); writes `*-ai.*` outputs
@@ -228,7 +237,7 @@ When working on this project, ALWAYS:
   - `OPENROUTER_API_KEY` or key file `~/.config/auto-arch-diagram/openrouter_key` (chmod 600)
   - `AUTO_ARCH_AI_ENHANCE=true` - env equivalent of `--ai-enhance`
   - `AUTO_ARCH_AI_BACKEND=gemini` - env equivalent of `--ai-backend`
-  - `GEMINI_MODEL=gemini-1.5-flash` - Gemini model override
+  - `GEMINI_MODEL=gemini-3.8-flash` - Gemini model override
   - `AUTO_ARCH_AI_ITERATIONS` - max feedback iterations 1-5 (plateau early-stop built in)
 - **Example:**
   ```bash

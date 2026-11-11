@@ -1,0 +1,143 @@
+# ---------------------------------------------------------------------------
+# Auto Architecture Diagram - reusable GitLab CI/CD template
+# ---------------------------------------------------------------------------
+# Generates Mermaid, Markdown, PNG, JPEG, SVG, draw.io and interactive HTML
+# architecture diagrams from changed IaC files (Terraform, Bicep, CloudFormation,
+# Pulumi, CDK) and exposes them as GitLab job artifacts. Merge request pipelines
+# can also receive a sticky note with the generated diagram.
+#
+# Quick start (no mirror required, GitLab 16.x+):
+#
+#   include:
+#     - remote: https://raw.githubusercontent.com/suryakumaran2611/auto-arch-diagram/main/ci/gitlab/auto-arch-diagram.gitlab-ci.yml
+#
+#   variables:
+#     AUTO_ARCH_IAC_ROOT: infra
+#     AUTO_ARCH_OUT_DIR: artifacts/architecture
+#
+# Or vendor this file into your repository and use `include: local`.
+#
+# Every setting is an AUTO_ARCH_* variable and can be overridden globally or per
+# job. The template only defines AUTO_ARCH_* variables, so it will not clash with
+# application variables.
+#
+# Full documentation: docs/GITLAB_CI.md
+# ---------------------------------------------------------------------------
+
+.auto-arch-diagram-vars:
+  variables:
+    # Runner / tooling
+    AUTO_ARCH_IMAGE: python:3.12
+    AUTO_ARCH_INSTALL_SYSTEM_PACKAGES: "true"
+    AUTO_ARCH_TOOL_REPOSITORY: https://github.com/suryakumaran2611/auto-arch-diagram.git
+    AUTO_ARCH_TOOL_REF: main
+    AUTO_ARCH_TOOL_DIR: .auto-arch-diagram-tool
+    GIT_DEPTH: "0"                    # full history so MR/commit diffs resolve
+    PIP_CACHE_DIR: $CI_PROJECT_DIR/.cache/pip
+
+    # Pipeline placement
+    AUTO_ARCH_STAGE: build
+    AUTO_ARCH_ALWAYS_RUN: "false"     # set "true" to run on every pipeline
+
+    # Inputs
+    AUTO_ARCH_IAC_ROOT: "."
+    AUTO_ARCH_OUT_DIR: artifacts
+    AUTO_ARCH_IMAGE_FORMATS: png,jpg,svg
+    AUTO_ARCH_FORCE_FULL: "false"
+
+    # Rendering
+    AUTO_ARCH_DIRECTION: AUTO
+    AUTO_ARCH_RENDER_LAYOUT: lanes
+    AUTO_ARCH_RENDER_BG: transparent
+    AUTO_ARCH_EDGE_COLOR: "#4B5563"
+    AUTO_ARCH_EDGE_PENWIDTH: "1.3"
+    AUTO_ARCH_EDGE_ARROWSIZE: "0.8"
+
+    # AI vision refinement (requires GEMINI_API_KEY or OPENROUTER_API_KEY)
+    AUTO_ARCH_AI_ENHANCE: "false"
+    AUTO_ARCH_AI_BACKEND: auto
+    AUTO_ARCH_GEMINI_MODEL: gemini-3.8-flash
+
+    # Artifacts
+    AUTO_ARCH_ARTIFACTS_EXPIRE_IN: 1 week
+
+    # Merge request note (set AUTO_ARCH_MR_COMMENT to "false" to disable)
+    AUTO_ARCH_MR_COMMENT: "true"
+
+# ---------------------------------------------------------------------------
+# Generate diagrams
+# ---------------------------------------------------------------------------
+.auto-arch-diagram-base:
+  extends: .auto-arch-diagram-vars
+  image: $AUTO_ARCH_IMAGE
+  cache:
+    key: auto-arch-diagram-pip
+    paths:
+      - .cache/pip
+  before_script:
+    - |
+      set -euo pipefail
+      if [ "${AUTO_ARCH_INSTALL_SYSTEM_PACKAGES}" = "true" ]; then
+        apt-get update
+        apt-get install -y --no-install-recommends graphviz fonts-open-sans
+        fc-cache -f >/dev/null 2>&1 || true
+      fi
+      rm -rf "${AUTO_ARCH_TOOL_DIR}"
+      if ! git clone --depth 1 --branch "${AUTO_ARCH_TOOL_REF}" \
+        "${AUTO_ARCH_TOOL_REPOSITORY}" "${AUTO_ARCH_TOOL_DIR}" 2>/dev/null; then
+        git clone "${AUTO_ARCH_TOOL_REPOSITORY}" "${AUTO_ARCH_TOOL_DIR}"
+        git -C "${AUTO_ARCH_TOOL_DIR}" checkout "${AUTO_ARCH_TOOL_REF}"
+      fi
+      python -m pip install --upgrade pip
+      pip install -r "${AUTO_ARCH_TOOL_DIR}/requirements.txt"
+      if [ "${AUTO_ARCH_AI_ENHANCE}" = "true" ] \
+        && [ -f "${AUTO_ARCH_TOOL_DIR}/requirements-ai.txt" ]; then
+        pip install -r "${AUTO_ARCH_TOOL_DIR}/requirements-ai.txt" || true
+      fi
+
+auto-arch-diagram:generate:
+  extends: .auto-arch-diagram-base
+  stage: $AUTO_ARCH_STAGE
+  interruptible: true
+  script:
+    - bash "${AUTO_ARCH_TOOL_DIR}/ci/gitlab/auto-arch-diagram.sh"
+  artifacts:
+    when: always
+    expire_in: $AUTO_ARCH_ARTIFACTS_EXPIRE_IN
+    paths:
+      - $AUTO_ARCH_OUT_DIR/
+    reports:
+      dotenv: $AUTO_ARCH_OUT_DIR/ci.env
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+    - if: $CI_PIPELINE_SOURCE == "web"
+    - if: $AUTO_ARCH_ALWAYS_RUN == "true"
+
+# ---------------------------------------------------------------------------
+# Sticky merge request note (optional)
+# ---------------------------------------------------------------------------
+# Requires a masked project/group CI/CD variable named AUTO_ARCH_GITLAB_TOKEN
+# with the `api` scope. Without it the job succeeds and only logs a warning.
+auto-arch-diagram:comment:
+  extends: .auto-arch-diagram-vars
+  stage: $AUTO_ARCH_STAGE
+  image: $AUTO_ARCH_IMAGE
+  needs:
+    - job: auto-arch-diagram:generate
+      artifacts: true
+  allow_failure: true
+  interruptible: true
+  before_script:
+    - |
+      set -euo pipefail
+      rm -rf "${AUTO_ARCH_TOOL_DIR}"
+      if ! git clone --depth 1 --branch "${AUTO_ARCH_TOOL_REF}" \
+        "${AUTO_ARCH_TOOL_REPOSITORY}" "${AUTO_ARCH_TOOL_DIR}" 2>/dev/null; then
+        git clone "${AUTO_ARCH_TOOL_REPOSITORY}" "${AUTO_ARCH_TOOL_DIR}"
+        git -C "${AUTO_ARCH_TOOL_DIR}" checkout "${AUTO_ARCH_TOOL_REF}"
+      fi
+  script:
+    - bash "${AUTO_ARCH_TOOL_DIR}/ci/gitlab/comment_on_merge_request.sh"
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event" && $AUTO_ARCH_MR_COMMENT != "false"

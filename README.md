@@ -72,7 +72,7 @@
 
 **Enterprise Scalable MLOps (Gemini AI-Enhanced)**
 [![Integration Example AI-Enhanced](docs/images/integration-example-ai.png)](https://suryakumaran2611.github.io/auto-arch-diagram/demos/integration-example-ai.html)
-*✨ Vision-refined via Gemini 3.1 Flash Lite with executive titles, operational subtitles, tooltips & flow paths.*
+*✨ Vision-refined via Gemini 3.8 Flash with executive titles, operational subtitles, tooltips & flow paths.*
 
 [🌐 Live AI HTML Studio ↗](https://suryakumaran2611.github.io/auto-arch-diagram/demos/integration-example-ai.html) • [📊 Open in draw.io ↗](https://viewer.diagrams.net/?highlight=0000ff&edit=_blank&layers=1&nav=1#Uhttps%3A%2F%2Fraw.githubusercontent.com%2Fsuryakumaran2611%2Fauto-arch-diagram%2Fmain%2Fdocs%2Fdemos%2Fintegration-example-ai.drawio) • [💾 .drawio](docs/demos/integration-example-ai.drawio) • [📐 .svg](docs/demos/integration-example-ai.svg)
 
@@ -105,7 +105,7 @@
 - **AWS Group Frames & Centered Legend**: Official `mxgraph.aws4.group` containers with bottom-centered legend cards.
 
 ### 🤖 3. AI-Enhanced Multi-Format Suite (`--ai-enhance`)
-- **Vision-Assisted Layout Refinement**: Evaluates diagram layout and density using **Google Gemini Vision** (`gemini-1.5-flash`, `gemini-2.0-flash`) or **OpenRouter Free Models** to eliminate visual clutter.
+- **Vision-Assisted Layout Refinement**: Evaluates diagram layout and density using **Google Gemini Vision** (`gemini-3.8-flash`, `gemini-3.6-flash`, `gemini-3.5-flash-lite`) or **OpenRouter Free Models** to eliminate visual clutter.
 - **Executive Titles & Numbered Flows**: Enriches diagrams with executive subtitles, numbered operational flow badges, and IaC review hints.
 - **Dedicated Output Suite**: Emits `*-ai.png`, `*-ai.svg`, `*-ai.html`, `*-ai.drawio`, and `*-ai.md` alongside deterministic base outputs.
 
@@ -148,7 +148,7 @@ Now you can ask your AI assistant:
 Run locally with your preferred vision provider:
 
 ```bash
-# With Google Gemini (Default: gemini-3.1-flash-lite):
+# With Google Gemini (Default: gemini-3.8-flash, free tier):
 export GEMINI_API_KEY="your-gemini-key"
 python tools/generate_arch_diagram.py --changed-files path/to/main.tf \
   --out-png out/architecture.png --out-html out/architecture.html --out-drawio out/architecture.drawio \
@@ -161,7 +161,7 @@ python tools/generate_arch_diagram.py --changed-files path/to/main.tf \
   --ai-enhance --ai-backend openrouter
 ```
 
-- **Google Gemini**: Get free keys from [Google AI Studio](https://aistudio.google.com). Fast, high-throughput multimodal analysis defaulting to `gemini-3.1-flash-lite` with fallback to `gemini-3.5-flash`, `gemini-2.5-flash`, and `gemini-flash-latest`.
+- **Google Gemini**: Get free keys from [Google AI Studio](https://aistudio.google.com). Fast, high-throughput multimodal analysis defaulting to `gemini-3.8-flash` (free tier) with free fallbacks to `gemini-3.6-flash`, `gemini-3.5-flash-lite`, `gemini-3.1-flash-lite`, and `gemini-flash-latest`.
 - **OpenRouter Free Tier**: $0 budget model ranking filter (`OPENROUTER_API_KEY`).
 - **Outputs**: Generates dedicated `*-ai.png`, `*-ai.svg`, `*-ai.html`, `*-ai.drawio`, `*-ai.md` with operational step annotations and review insights.
 
@@ -242,9 +242,51 @@ jobs:
       force_full: ${{ github.event.inputs.force_update || false }}  # Force generation if manually triggered
 ```
 
+### Using GitLab CI/CD
+
+GitLab users get the same reusable workflow through a **CI/CD component** or a
+one-line remote include. Nothing needs to be copied into your repository:
+
+```yaml
+# .gitlab-ci.yml
+stages: [build]
+
+include:
+  - remote: https://raw.githubusercontent.com/suryakumaran2611/auto-arch-diagram/main/ci/gitlab/auto-arch-diagram.gitlab-ci.yml
+
+variables:
+  AUTO_ARCH_IAC_ROOT: infra
+  AUTO_ARCH_OUT_DIR: artifacts/architecture
+```
+
+Versioned component flavour (mirror the repo to GitLab, then pin a release):
+
+```yaml
+include:
+  - component: $CI_SERVER_FQDN/platform/auto-arch-diagram/auto-arch-diagram@1.0.0
+    inputs:
+      iac-root: infra
+      out-dir: artifacts/architecture
+      image-formats: png,jpg,svg
+      direction: AUTO
+      mr-comment: true            # needs AUTO_ARCH_GITLAB_TOKEN (api scope)
+      ai-enhance: false
+```
+
+- Diagrams are published as job artifacts plus a `ci.env` dotenv report
+  (`AUTO_ARCH_MD`, `AUTO_ARCH_PNG`, `AUTO_ARCH_HTML`, ...).
+- Merge request notes use a masked `AUTO_ARCH_GITLAB_TOKEN` variable with `api`
+  scope; without it the job still succeeds.
+- AI refinement uses the standard `GEMINI_API_KEY` / `OPENROUTER_API_KEY`
+  masked variables.
+- Diff detection works out of the box (`GIT_DEPTH: "0"`), with `force-full`
+  available for scheduled pipelines.
+
+📖 **Full GitLab guide (inputs, secrets, Pages, troubleshooting, GitHub→GitLab migration): [docs/GITLAB_CI.md](docs/GITLAB_CI.md)**
+
 ### 🚀 Smart Confluence (AI-Enhanced Architecture Documentation Portal)
 
-Transform any Confluence page into a rich, living architecture portal updated automatically on every IaC change. **Smart Confluence** generates an executive-ready documentation suite directly from Terraform, CloudFormation, Bicep, or Pulumi using Google Gemini 3.1 Flash Lite or OpenRouter vision models:
+Transform any Confluence page into a rich, living architecture portal updated automatically on every IaC change. **Smart Confluence** generates an executive-ready documentation suite directly from Terraform, CloudFormation, Bicep, or Pulumi using Google Gemini 3.8 Flash or OpenRouter vision models:
 
 - **Executive Architecture Header & Status Badges**: Environment badges (`PRODUCTION`, `STAGING`), cloud provider tags (`AWS`, `AZURE`, `GCP`), IaC tool, and Git commit metadata.
 - **Embedded Architecture Canvas**: High-res PNG/JPG with centered connectors & type legend.

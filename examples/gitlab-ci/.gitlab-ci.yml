@@ -1,0 +1,35 @@
+# ---------------------------------------------------------------------------
+# Example consumer pipeline for the reusable auto-arch-diagram GitLab template.
+#
+# Copy this file to the root of your own repository as `.gitlab-ci.yml`, then
+# adjust AUTO_ARCH_IAC_ROOT / AUTO_ARCH_OUT_DIR to match your layout.
+#
+# The remote include works without mirroring the tool into GitLab. For air-gapped
+# or private setups, vendor `ci/gitlab/auto-arch-diagram.gitlab-ci.yml` into your
+# repository and use `include: local` or `include: project` instead.
+# ---------------------------------------------------------------------------
+stages:
+  - build
+
+include:
+  - remote: https://raw.githubusercontent.com/suryakumaran2611/auto-arch-diagram/main/ci/gitlab/auto-arch-diagram.gitlab-ci.yml
+
+variables:
+  # Where the IaC lives and where diagrams should be written.
+  AUTO_ARCH_IAC_ROOT: infra
+  AUTO_ARCH_OUT_DIR: artifacts/architecture
+
+  # Rendering options.
+  AUTO_ARCH_IMAGE_FORMATS: png,jpg,svg
+  AUTO_ARCH_DIRECTION: AUTO
+  AUTO_ARCH_RENDER_LAYOUT: lanes
+  AUTO_ARCH_EDGE_COLOR: "#4B5563"
+
+  # Optional: AI vision refinement. Add GEMINI_API_KEY (or OPENROUTER_API_KEY)
+  # as a masked CI/CD variable, then uncomment:
+  # AUTO_ARCH_AI_ENHANCE: "true"
+  # AUTO_ARCH_AI_BACKEND: gemini
+
+  # Optional: sticky merge request notes. Add AUTO_ARCH_GITLAB_TOKEN as a masked
+  # CI/CD variable with the `api` scope.
+  # AUTO_ARCH_MR_COMMENT: "true"

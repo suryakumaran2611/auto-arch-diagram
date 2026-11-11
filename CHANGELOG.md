@@ -17,6 +17,7 @@ The format is based on Keep a Changelog, and this project follows Semantic Versi
 - **Flow Annotations (`--annotate`)**: Step-by-step numbered data flow badges on nodes and edges with an interactive legend.
 - **Remote Git Source (`--source`)**: Shallow clone and direct diagramming of remote git repositories.
 - **Multi-Cloud Excellence**: Single-canvas multi-cloud diagrams (AWS, Azure, GCP, OCI, IBM) with brand accents and tint backgrounds.
+- **GitLab CI/CD Integration**: Reusable GitLab component (`templates/auto-arch-diagram/template.yml`) and `include: remote` template (`ci/gitlab/auto-arch-diagram.gitlab-ci.yml`) with MR-aware change detection, dotenv artifact reports, optional sticky merge request notes, and AI refinement via masked CI/CD variables. See `docs/GITLAB_CI.md`.
 
 ### Changed
 - Node cards standardized with uniform dimensions and proportional font/icon scaling via `--fontsize` and `--iconsize`.
