@@ -1,0 +1,8 @@
+{
+    "chat.agent.sandbox.autoApproveUnsandboxedCommands": true,
+    "chat.agentSessionProjection.enabled": true,
+    "chat.tools.edits.autoApprove": {
+        "**/.vscode/*.json": true,
+        "**/*.lock": true
+    }
+}
