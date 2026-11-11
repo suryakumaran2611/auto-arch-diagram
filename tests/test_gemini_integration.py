@@ -6,6 +6,7 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
+import yaml
 
 import sys
 repo_root = Path(__file__).resolve().parent.parent
@@ -13,6 +14,7 @@ sys.path.insert(0, str(repo_root / "tools"))
 
 from gemini_client import (
     DEFAULT_GEMINI_MODEL,
+    FALLBACK_GEMINI_MODELS,
     GeminiError,
     critique_diagram_gemini,
     load_gemini_key,
@@ -156,3 +158,44 @@ def test_run_feedback_loop_gemini_fallback(monkeypatch: pytest.MonkeyPatch) -> N
     assert res_dir == "LR"
     assert critique == {}
     assert history == []
+
+
+def test_default_gemini_model_is_free_tier_and_in_sync() -> None:
+    """The free-tier default must match every workflow/action/template entrypoint."""
+    repo_root = Path(__file__).resolve().parent.parent
+
+    assert DEFAULT_GEMINI_MODEL == "gemini-3.8-flash"
+    assert DEFAULT_GEMINI_MODEL in FALLBACK_GEMINI_MODELS
+    # Free tier only: no paid aliases and no deprecated 2.5 models.
+    assert all("pro" not in model for model in FALLBACK_GEMINI_MODELS)
+    assert all("gemini-2.5" not in model for model in FALLBACK_GEMINI_MODELS)
+
+    action = yaml.safe_load((repo_root / "action.yml").read_text(encoding="utf-8"))
+    assert action["inputs"]["gemini_model"]["default"] == DEFAULT_GEMINI_MODEL
+
+    workflow = yaml.safe_load(
+        (repo_root / ".github/workflows/reusable-auto-arch-diagram.yml").read_text(encoding="utf-8")
+    )
+    # PyYAML resolves the `on:` key to the boolean True under YAML 1.1.
+    workflow_triggers = workflow.get("on") or workflow.get(True)
+    assert workflow_triggers["workflow_call"]["inputs"]["gemini_model"]["default"] == DEFAULT_GEMINI_MODEL
+
+    component_docs = [
+        doc
+        for doc in yaml.safe_load_all(
+            (repo_root / "templates/auto-arch-diagram/template.yml").read_text(encoding="utf-8")
+        )
+        if doc
+    ]
+    assert component_docs[0]["spec"]["inputs"]["gemini-model"]["default"] == DEFAULT_GEMINI_MODEL
+
+    include_template = yaml.safe_load(
+        (repo_root / "ci/gitlab/auto-arch-diagram.gitlab-ci.yml").read_text(encoding="utf-8")
+    )
+    assert (
+        include_template[".auto-arch-diagram-vars"]["variables"]["AUTO_ARCH_GEMINI_MODEL"]
+        == DEFAULT_GEMINI_MODEL
+    )
+
+    cli_source = (repo_root / "tools/generate_arch_diagram.py").read_text(encoding="utf-8")
+    assert f'default="{DEFAULT_GEMINI_MODEL}"' in cli_source

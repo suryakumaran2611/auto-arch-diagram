@@ -5,8 +5,9 @@ ergonomics, generate executive titles and summaries, operational flow steps,
 contextual display labels, and review insights.
 
 Design goals:
-- Defaults to the fastest and cheapest vision model: 'gemini-1.5-flash'
-  (with optional override via GEMINI_MODEL or CLI --gemini-model).
+- Defaults to the latest free-tier Flash vision model: 'gemini-3.8-flash'
+  (with optional override via GEMINI_MODEL or CLI --gemini-model). Every
+  fallback is also free-tier, so refinement never bills a paid model.
 - API key resolution: GEMINI_API_KEY -> GOOGLE_API_KEY -> key file at
   ~/.config/auto-arch-diagram/gemini_key (chmod 600).
 - Standardized critique response format identical to OpenRouter client.
@@ -26,17 +27,16 @@ GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/models"
 KEY_FILE_PATH = Path.home() / ".config" / "auto-arch-diagram" / "gemini_key"
 ALT_KEY_FILE_PATH = Path.home() / ".config" / "auto-arch-diagram" / "google_key"
 
-DEFAULT_GEMINI_MODEL = "gemini-3.1-flash-lite"
+DEFAULT_GEMINI_MODEL = "gemini-3.8-flash"
+# Free-tier only: keep paid-only aliases (e.g. gemini-pro-latest) and deprecated
+# models (gemini-2.5-*) out of the fallback chain.
 FALLBACK_GEMINI_MODELS = [
-    "gemini-3.1-flash-lite",
-    "gemini-3.1-flash-lite-preview",
-    "gemini-3.5-flash",
+    "gemini-3.8-flash",
+    "gemini-3.6-flash",
     "gemini-3.5-flash-lite",
-    "gemini-2.5-flash",
-    "gemini-2.5-flash-lite",
+    "gemini-3.1-flash-lite",
     "gemini-flash-latest",
     "gemini-flash-lite-latest",
-    "gemini-pro-latest",
 ]
 
 _TIMEOUT_SECONDS = 45

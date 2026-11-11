@@ -9,6 +9,7 @@ Transform Infrastructure-as-Code (Terraform, CloudFormation, Bicep, Pulumi) into
 1. [Platform Overview](#-platform-overview)
 2. [Quick Start](#-quick-start)
    - [GitHub Actions Workflow](#1-github-actions-reusable-workflow-recommended)
+   - [GitLab CI/CD](#gitlab-cicd)
    - [Local CLI Generation](#2-local-cli-generation)
 3. [Output Formats Matrix](#-output-formats-matrix)
    - [Interactive HTML Studio (`.html`)](#1-interactive-html-architecture-studio---out-html)
@@ -104,6 +105,45 @@ jobs:
 
 ---
 
+### GitLab CI/CD
+
+GitLab gets the same capability through a reusable **CI/CD component** or a
+one-line remote include. Add this to `.gitlab-ci.yml`:
+
+```yaml
+stages: [build]
+
+include:
+  - remote: https://raw.githubusercontent.com/suryakumaran2611/auto-arch-diagram/main/ci/gitlab/auto-arch-diagram.gitlab-ci.yml
+
+variables:
+  AUTO_ARCH_IAC_ROOT: infra
+  AUTO_ARCH_OUT_DIR: artifacts/architecture
+  AUTO_ARCH_IMAGE_FORMATS: png,jpg,svg
+  AUTO_ARCH_DIRECTION: AUTO
+  AUTO_ARCH_MR_COMMENT: "true"      # needs a masked AUTO_ARCH_GITLAB_TOKEN (api scope)
+```
+
+Or pin the versioned component after mirroring the repository to GitLab:
+
+```yaml
+include:
+  - component: $CI_SERVER_FQDN/platform/auto-arch-diagram/auto-arch-diagram@1.0.0
+    inputs:
+      iac-root: infra
+      out-dir: artifacts/architecture
+      ai-enhance: true
+      ai-backend: gemini
+```
+
+Outputs are uploaded as job artifacts, a `ci.env` dotenv report exposes
+`AUTO_ARCH_MD`, `AUTO_ARCH_PNG`, `AUTO_ARCH_HTML`, and friends to later jobs, and
+merge request pipelines receive a sticky note with the diagram.
+
+📖 Full reference: [GitLab CI/CD guide](GITLAB_CI.md).
+
+---
+
 ### 2. Local CLI Generation
 
 #### Environment Setup (WSL Ubuntu / Linux / macOS)
@@ -166,7 +206,7 @@ Generates native `.drawio` files using official vector shape packs that can be e
 Runs an optional vision critique loop using **Google Gemini** or **OpenRouter free models** to critique layout density, generate executive subtitles, and add operational context.
 
 - **Dual Provider Support**:
-  - **Google Gemini Vision** (`--ai-backend gemini`): Uses Google's fast, free-tier vision models (`gemini-1.5-flash` by default, or `gemini-2.0-flash`, `gemini-1.5-flash-8b`, `gemini-1.5-pro`). Get your free API key at [Google AI Studio](https://aistudio.google.com).
+  - **Google Gemini Vision** (`--ai-backend gemini`): Uses Google's free-tier vision models (`gemini-3.8-flash` by default, or `gemini-3.6-flash`, `gemini-3.5-flash-lite`, `gemini-3.1-flash-lite`). Get your free API key at [Google AI Studio](https://aistudio.google.com).
   - **OpenRouter Free Tier** (`--ai-backend openrouter`): Strict $0 budget ranking that loops through active free vision models.
 - **Vision-Assisted Layout Refinement**: Vision models inspect diagram density and suggest ranksep/nodesep adjustments to eliminate visual clutter.
 - **Executive Titles & Numbered Flows**: Enriches diagrams with executive subtitles, numbered operational flow badges, and IaC review hints.
@@ -177,7 +217,7 @@ Runs an optional vision critique loop using **Google Gemini** or **OpenRouter fr
 export GEMINI_API_KEY="your-gemini-api-key"
 python tools/generate_arch_diagram.py --changed-files path/to/main.tf \
   --out-png out/architecture.png --out-html out/architecture.html --out-drawio out/architecture.drawio \
-  --ai-enhance --ai-backend gemini --gemini-model gemini-1.5-flash
+  --ai-enhance --ai-backend gemini --gemini-model gemini-3.8-flash
 
 # Run with OpenRouter:
 export OPENROUTER_API_KEY="your-openrouter-key"
@@ -335,7 +375,7 @@ Transform any Confluence documentation page into a living, executive-ready archi
 1. **Executive Header & Status Badges**: Environment badges (`PRODUCTION`, `STAGING`), cloud provider tags (`AWS`, `AZURE`, `GCP`, `MULTI-CLOUD`), IaC engine (`Terraform`), and Git commit SHA.
 2. **Embedded Visual Diagram**: High-definition raster diagram (`.png` / `.jpg`) with centered connectors and classification legend.
 3. **Multi-Format Attachment Vault**: Uploads native editable `.drawio` (compatible with the Confluence Draw.io plugin), standalone offline `.html` studio, scalable `.svg`, and `.png` as direct page attachments.
-4. **AI-Synthesized Workload Narrative**: Comprehensive 3-4 paragraph architectural summary generated via Google Gemini 3.1 Flash Lite or OpenRouter.
+4. **AI-Synthesized Workload Narrative**: Comprehensive 3-4 paragraph architectural summary generated via Google Gemini 3.8 Flash or OpenRouter.
 5. **💰 Projected Cost Analysis & FinOps Insights**: Estimated monthly run-rate range, primary cost drivers (GPU compute, Multi-AZ databases, NAT gateways), and actionable savings plan recommendations.
 6. **🛡️ Well-Architected Framework Assessment**: Security & governance controls (KMS CMK envelope encryption, IAM least-privilege, private subnet isolation) and reliability (Multi-AZ failover, DLQ retry streams).
 7. **🛠️ Prioritized Improvements Backlog**: Actionable P0/P1/P2 recommendations with concrete Terraform code remediation steps.
@@ -437,7 +477,7 @@ usage: generate_arch_diagram.py [-h] [--changed-files FILES] [--iac-root DIR]
 - `--out-drawio <file>`: Output path for native editable draw.io diagrams.
 - `--ai-enhance`: Enable vision-assisted layout critique loop (Gemini or OpenRouter free models).
 - `--ai-backend <auto|gemini|openrouter|ollama|bedrock>`: Vision provider backend (default `auto`).
-- `--gemini-model <model>`: Google Gemini vision model name (default: `gemini-1.5-flash`).
+- `--gemini-model <model>`: Google Gemini vision model name (default: `gemini-3.8-flash`, free tier).
 - `--openrouter-model <model>`: OpenRouter vision model override.
 
 ---

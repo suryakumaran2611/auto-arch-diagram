@@ -85,9 +85,9 @@ inputs:
     required: false
     default: auto
   gemini_model:
-    description: Google Gemini model name (default gemini-1.5-flash).
+    description: Google Gemini model name (default gemini-3.8-flash, free tier).
     required: false
-    default: gemini-1.5-flash
+    default: gemini-3.8-flash
   gemini_api_key:
     description: Google Gemini API key.
     required: false

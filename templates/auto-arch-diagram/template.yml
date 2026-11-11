@@ -1,0 +1,278 @@
+# ---------------------------------------------------------------------------
+# Auto Architecture Diagram - GitLab CI/CD component
+# ---------------------------------------------------------------------------
+# Generates Mermaid, Markdown, PNG, JPEG, SVG, draw.io and interactive HTML
+# architecture diagrams from changed IaC files (Terraform, Bicep, CloudFormation,
+# Pulumi, CDK), uploads them as job artifacts and optionally posts a sticky merge
+# request note.
+#
+# Usage:
+#
+#   include:
+#     - component: $CI_SERVER_FQDN/<group>/auto-arch-diagram/auto-arch-diagram@1.0.0
+#       inputs:
+#         iac-root: infra
+#         out-dir: artifacts/architecture
+#
+# Full documentation: docs/GITLAB_CI.md
+# ---------------------------------------------------------------------------
+spec:
+  description: "Generate architecture diagrams (Mermaid/Markdown/PNG/JPG/SVG/draw.io/HTML) from IaC changes."
+  inputs:
+    job-prefix:
+      description: "Prefix used for the generated job names."
+      default: auto-arch-diagram
+    stage:
+      description: "Pipeline stage for the generate and comment jobs."
+      default: build
+    image:
+      description: "Container image used for the jobs. Must include git and python3."
+      default: python:3.12
+    install-system-packages:
+      description: "Install Graphviz and the Open Sans font with apt-get (Debian/Ubuntu images only)."
+      type: boolean
+      default: true
+    job-tags:
+      description: "Runner tags for the jobs (for example [\"self-hosted\", \"docker\"])."
+      type: array
+      default: []
+    tool-repository:
+      description: "Git URL of the auto-arch-diagram tool repository."
+      default: https://github.com/suryakumaran2611/auto-arch-diagram.git
+    tool-ref:
+      description: "Branch, tag or commit SHA of the tool repository to use."
+      default: main
+
+    changed-files:
+      description: "Explicit space/newline-separated IaC file list. Leave empty to auto-detect from the pipeline diff."
+      default: ''
+    iac-globs:
+      description: "Glob patterns (one per line) used to select changed IaC files."
+      default: |
+        **/*.tf
+        **/*.tfvars
+        **/*.hcl
+        **/*.bicep
+        **/*.cfn.yaml
+        **/*.cfn.yml
+        **/*.cfn.json
+        **/template.yaml
+        **/template.yml
+        **/Pulumi.*.yaml
+        **/Pulumi.*.yml
+        **/Pulumi.yaml
+        **/Pulumi.yml
+        **/Pulumi.*.json
+        **/Pulumi.*.ts
+        **/Pulumi.*.py
+        **/*.cdk.ts
+        **/*.cdk.py
+    iac-root:
+      description: "Root directory to scan for IaC files (for example 'infra')."
+      default: '.'
+    out-dir:
+      description: "Directory for generated artifacts."
+      default: artifacts
+    image-formats:
+      description: "Comma-separated raster/vector formats to generate: png, jpg, svg. Use 'none' for Mermaid/Markdown only."
+      default: png,jpg,svg
+    out-md:
+      description: "Custom Markdown output path. Empty uses <out-dir>/architecture-diagram.md."
+      default: ''
+    out-mmd:
+      description: "Custom Mermaid output path. Empty uses <out-dir>/architecture-diagram.mmd."
+      default: ''
+    out-png:
+      description: "Custom PNG output path. Empty uses <out-dir>/architecture-diagram.png."
+      default: ''
+    out-jpg:
+      description: "Custom JPEG output path. Empty uses <out-dir>/architecture-diagram.jpg."
+      default: ''
+    out-svg:
+      description: "Custom SVG output path. Empty uses <out-dir>/architecture-diagram.svg."
+      default: ''
+    out-drawio:
+      description: "Custom draw.io output path. Empty uses <out-dir>/architecture-diagram.drawio; set to '__disabled__' to skip."
+      default: ''
+    out-html:
+      description: "Custom interactive HTML output path. Empty uses <out-dir>/architecture-diagram.html; set to '__disabled__' to skip."
+      default: ''
+
+    direction:
+      description: "Diagram direction."
+      type: string
+      options: [AUTO, LR, RL, TB, BT]
+      default: AUTO
+    render-layout:
+      description: "Layout mode."
+      options: [lanes, providers]
+      default: lanes
+    render-bg:
+      description: "Background for PNG/SVG."
+      options: [transparent, white]
+      default: transparent
+    edge-color:
+      description: "Edge line colour (any Graphviz colour)."
+      default: '#4B5563'
+    edge-penwidth:
+      description: "Edge line width."
+      default: '1.3'
+    edge-arrowsize:
+      description: "Edge arrow head size."
+      default: '0.8'
+    fontsize:
+      description: "Base font size override (integer). Leave empty for the default."
+      default: ''
+    iconsize:
+      description: "Icon size override in pixels (integer). Leave empty for the default."
+      default: ''
+
+    ai-enhance:
+      description: "Enable AI vision refinement (*-ai.* outputs). Requires GEMINI_API_KEY or OPENROUTER_API_KEY."
+      type: boolean
+      default: false
+    ai-backend:
+      description: "AI vision backend."
+      options: [auto, gemini, openrouter, ollama, bedrock, restapi]
+      default: auto
+    gemini-model:
+      description: "Google Gemini vision model (free tier)."
+      default: gemini-3.8-flash
+    openrouter-model:
+      description: "OpenRouter model override (leave empty for the backend default)."
+      default: ''
+    ollama-model:
+      description: "Ollama model, used when ai-backend is ollama."
+      default: llama3
+    ai-iterations:
+      description: "Maximum AI refinement iterations (1-5). Empty uses the tool default."
+      default: ''
+
+    force-full:
+      description: "Regenerate from every tracked IaC file instead of only changed files."
+      type: boolean
+      default: false
+    always-run:
+      description: "Run the generate job on every pipeline, not only merge requests, the default branch and manual runs."
+      type: boolean
+      default: false
+    mr-comment:
+      description: "Post/update a sticky merge request note. Requires the AUTO_ARCH_GITLAB_TOKEN CI variable with 'api' scope."
+      type: boolean
+      default: true
+    artifacts-expire-in:
+      description: "Artifact expiry, for example '1 week' or '30 days'."
+      default: 1 week
+---
+
+# ---------------------------------------------------------------------------
+# Generate diagrams
+# ---------------------------------------------------------------------------
+"$[[ inputs.job-prefix ]]":
+  stage: $[[ inputs.stage ]]
+  image: $[[ inputs.image ]]
+  tags: $[[ inputs.job-tags ]]
+  interruptible: true
+  variables:
+    GIT_DEPTH: "0"
+    PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
+    AUTO_ARCH_TOOL_DIR: .auto-arch-diagram-tool
+    AUTO_ARCH_CHANGED_FILES: "$[[ inputs.changed-files ]]"
+    AUTO_ARCH_IAC_GLOBS: "$[[ inputs.iac-globs ]]"
+    AUTO_ARCH_IAC_ROOT: "$[[ inputs.iac-root ]]"
+    AUTO_ARCH_OUT_DIR: "$[[ inputs.out-dir ]]"
+    AUTO_ARCH_IMAGE_FORMATS: "$[[ inputs.image-formats ]]"
+    AUTO_ARCH_OUT_MD: "$[[ inputs.out-md ]]"
+    AUTO_ARCH_OUT_MMD: "$[[ inputs.out-mmd ]]"
+    AUTO_ARCH_OUT_PNG: "$[[ inputs.out-png ]]"
+    AUTO_ARCH_OUT_JPG: "$[[ inputs.out-jpg ]]"
+    AUTO_ARCH_OUT_SVG: "$[[ inputs.out-svg ]]"
+    AUTO_ARCH_OUT_DRAWIO: "$[[ inputs.out-drawio ]]"
+    AUTO_ARCH_OUT_HTML: "$[[ inputs.out-html ]]"
+    AUTO_ARCH_DIRECTION: "$[[ inputs.direction ]]"
+    AUTO_ARCH_RENDER_LAYOUT: "$[[ inputs.render-layout ]]"
+    AUTO_ARCH_RENDER_BG: "$[[ inputs.render-bg ]]"
+    AUTO_ARCH_EDGE_COLOR: "$[[ inputs.edge-color ]]"
+    AUTO_ARCH_EDGE_PENWIDTH: "$[[ inputs.edge-penwidth ]]"
+    AUTO_ARCH_EDGE_ARROWSIZE: "$[[ inputs.edge-arrowsize ]]"
+    AUTO_ARCH_FONTSIZE: "$[[ inputs.fontsize ]]"
+    AUTO_ARCH_ICONSIZE: "$[[ inputs.iconsize ]]"
+    AUTO_ARCH_AI_ENHANCE: "$[[ inputs.ai-enhance ]]"
+    AUTO_ARCH_AI_BACKEND: "$[[ inputs.ai-backend ]]"
+    AUTO_ARCH_GEMINI_MODEL: "$[[ inputs.gemini-model ]]"
+    AUTO_ARCH_OPENROUTER_MODEL: "$[[ inputs.openrouter-model ]]"
+    AUTO_ARCH_OLLAMA_MODEL: "$[[ inputs.ollama-model ]]"
+    AUTO_ARCH_AI_ITERATIONS: "$[[ inputs.ai-iterations ]]"
+    AUTO_ARCH_FORCE_FULL: "$[[ inputs.force-full ]]"
+    AUTO_ARCH_ALWAYS_RUN: "$[[ inputs.always-run ]]"
+    AUTO_ARCH_MR_COMMENT: "$[[ inputs.mr-comment ]]"
+    GEMINI_MODEL: "$[[ inputs.gemini-model ]]"
+    OPENROUTER_MODEL: "$[[ inputs.openrouter-model ]]"
+  cache:
+    key: auto-arch-diagram-pip
+    paths:
+      - .cache/pip
+  before_script:
+    - |
+      set -euo pipefail
+      if [ "$[[ inputs.install-system-packages ]]" = "true" ]; then
+        apt-get update
+        apt-get install -y --no-install-recommends graphviz fonts-open-sans
+        fc-cache -f >/dev/null 2>&1 || true
+      fi
+      rm -rf "${AUTO_ARCH_TOOL_DIR}"
+      if ! git clone --depth 1 --branch "$[[ inputs.tool-ref ]]" \
+        "$[[ inputs.tool-repository ]]" "${AUTO_ARCH_TOOL_DIR}" 2>/dev/null; then
+        git clone "$[[ inputs.tool-repository ]]" "${AUTO_ARCH_TOOL_DIR}"
+        git -C "${AUTO_ARCH_TOOL_DIR}" checkout "$[[ inputs.tool-ref ]]"
+      fi
+      python -m pip install --upgrade pip
+      pip install -r "${AUTO_ARCH_TOOL_DIR}/requirements.txt"
+      if [ "$[[ inputs.ai-enhance ]]" = "true" ] \
+        && [ -f "${AUTO_ARCH_TOOL_DIR}/requirements-ai.txt" ]; then
+        pip install -r "${AUTO_ARCH_TOOL_DIR}/requirements-ai.txt" || true
+      fi
+  script:
+    - bash "${AUTO_ARCH_TOOL_DIR}/ci/gitlab/auto-arch-diagram.sh"
+  artifacts:
+    when: always
+    expire_in: "$[[ inputs.artifacts-expire-in ]]"
+    paths:
+      - "$[[ inputs.out-dir ]]/"
+    reports:
+      dotenv: "$[[ inputs.out-dir ]]/ci.env"
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+    - if: $CI_PIPELINE_SOURCE == "web"
+    - if: $AUTO_ARCH_ALWAYS_RUN == "true"
+
+# ---------------------------------------------------------------------------
+# Sticky merge request note (optional)
+# ---------------------------------------------------------------------------
+"$[[ inputs.job-prefix ]]-comment":
+  stage: $[[ inputs.stage ]]
+  image: $[[ inputs.image ]]
+  tags: $[[ inputs.job-tags ]]
+  needs:
+    - job: "$[[ inputs.job-prefix ]]"
+      artifacts: true
+  allow_failure: true
+  interruptible: true
+  variables:
+    AUTO_ARCH_TOOL_DIR: .auto-arch-diagram-tool
+    AUTO_ARCH_OUT_DIR: "$[[ inputs.out-dir ]]"
+    AUTO_ARCH_MR_COMMENT: "$[[ inputs.mr-comment ]]"
+  before_script:
+    - |
+      set -euo pipefail
+      rm -rf "${AUTO_ARCH_TOOL_DIR}"
+      if ! git clone --depth 1 --branch "$[[ inputs.tool-ref ]]" \
+        "$[[ inputs.tool-repository ]]" "${AUTO_ARCH_TOOL_DIR}" 2>/dev/null; then
+        git clone "$[[ inputs.tool-repository ]]" "${AUTO_ARCH_TOOL_DIR}"
+        git -C "${AUTO_ARCH_TOOL_DIR}" checkout "$[[ inputs.tool-ref ]]"
+      fi
+  script:
+    - bash "${AUTO_ARCH_TOOL_DIR}/ci/gitlab/comment_on_merge_request.sh"
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event" && $AUTO_ARCH_MR_COMMENT == "true"

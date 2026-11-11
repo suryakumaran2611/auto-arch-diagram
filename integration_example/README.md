@@ -11,7 +11,7 @@ Confluence page automatically in sync using the reusable workflow.
 | [![Standard Diagram](docs/architecture.png)](docs/architecture.html) | [![AI-Enhanced Diagram](docs/architecture-ai.png)](docs/architecture-ai.html) |
 | [🌐 Standard HTML Studio ↗](docs/architecture.html) • [💾 .drawio](docs/architecture.drawio) • [📐 .svg](docs/architecture.svg) | [🌐 AI-Enhanced Studio ↗](docs/architecture-ai.html) • [💾 .drawio](docs/architecture-ai.drawio) • [📐 .svg](docs/architecture-ai.svg) |
 
-**AI Enhancements (Gemini 3.1 Flash Lite):**
+**AI Enhancements (Gemini 3.8 Flash):**
 - **Executive Framing:** Adds *"Enterprise Scalable MLOps Data Platform"* title and operational subtitle.
 - **Operational Flows:** Numbered step annotations detailing data ingestion, feature store access, and model training.
 - **Context Badges:** Highlights KMS CMK encryption, auto-scaling boundaries, and data retention policies.
@@ -86,13 +86,13 @@ After the first push, check:
     confluence_page_id: ${{ vars.CONFLUENCE_PAGE_ID }}
     ai_enhance: true                 # AI Vision Refinement
     ai_backend: gemini               # gemini | openrouter
-    gemini_model: gemini-3.1-flash-lite
+    gemini_model: gemini-3.8-flash
 ```
 
 Key inputs (all crystal-clear in the reusable):
 
 - **Outputs:** `out_dir`, `out_*`, `image_formats` — seven core formats plus `*-ai.*` when `ai_enhance: true`.
-- **AI Vision Refinement:** `ai_enhance`, `ai_backend` (`gemini`/`openrouter`/`ollama`/`bedrock`/`restapi`), `gemini_model` (`gemini-3.1-flash-lite`), `ai_iterations` — automated visual ergonomics & flow annotations.
+- **AI Vision Refinement:** `ai_enhance`, `ai_backend` (`gemini`/`openrouter`/`ollama`/`bedrock`/`restapi`), `gemini_model` (`gemini-3.8-flash`, free tier), `ai_iterations` — automated visual ergonomics & flow annotations.
 - **Smart Confluence:** `publish_confluence`, `confluence_smart`, `confluence_page_id`, `confluence_replace` — publishes living architecture wiki portal with FinOps and Well-Architected reviews.
 - **Rendering:** `direction`, `render_layout` (`lanes`/`providers`), `render_bg`, `edge_color`/`edge_penwidth`/`edge_arrowsize`, `fontsize`/`iconsize`.
 
@@ -116,7 +116,7 @@ python tools/generate_arch_diagram.py \
   --out-html integration_example/docs/architecture.html \
   --ai-enhance \
   --ai-backend gemini \
-  --gemini-model gemini-3.1-flash-lite
+  --gemini-model gemini-3.8-flash
 ```
 
 ## Customising

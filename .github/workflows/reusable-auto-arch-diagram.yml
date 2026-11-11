@@ -132,10 +132,10 @@ on:
         type: string
         default: auto
       gemini_model:
-        description: "Google Gemini vision model name (default: gemini-1.5-flash)."
+        description: "Google Gemini vision model name (default: gemini-3.8-flash, free tier)."
         required: false
         type: string
-        default: gemini-1.5-flash
+        default: gemini-3.8-flash
       ollama_model:
         description: "Ollama model name (only when ai_backend=ollama, e.g. 'llama3', 'mistral')."
         required: false

@@ -37,6 +37,9 @@ _EXCLUDED_NAME_FRAGMENTS = (
     "whisper",
     "tts",
     "transcribe",
+    "lyria",
+    "music",
+    "audio",
 )
 
 _TIMEOUT_SECONDS = 45

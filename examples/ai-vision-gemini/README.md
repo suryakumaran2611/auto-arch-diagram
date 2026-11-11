@@ -25,7 +25,7 @@ python tools/generate_arch_diagram.py \
   --out-html examples/ai-vision-gemini/architecture.html \
   --ai-enhance \
   --ai-backend gemini \
-  --gemini-model gemini-1.5-flash
+  --gemini-model gemini-3.8-flash
 ```
 
 ---
@@ -34,10 +34,10 @@ python tools/generate_arch_diagram.py \
 
 | Model | Description | Cost / Tier |
 |:---|:---|:---:|
-| `gemini-1.5-flash` *(Default)* | Ultra-fast multimodal model with high quality visual reasoning. | **Free Tier (15 RPM)** |
-| `gemini-1.5-flash-8b` | Lightweight high-throughput vision model for rapid iteration. | **Free Tier** |
-| `gemini-2.0-flash` | Next-generation multimodal model with enhanced spatial layout understanding. | **Free Tier** |
-| `gemini-1.5-pro` | Flagship reasoning model for highly complex multi-cloud topologies. | Paid / Free Tier |
+| `gemini-3.8-flash` *(Default)* | Latest free-tier Flash model with strong visual reasoning and flow extraction. | **Free Tier** |
+| `gemini-3.6-flash` | Previous free-tier Flash release; used automatically as a fallback. | **Free Tier** |
+| `gemini-3.5-flash-lite` | Lightweight high-throughput vision model for rapid iteration. | **Free Tier** |
+| `gemini-3.1-flash-lite` | Older free-tier lite model kept as a final fallback. | **Free Tier** |
 
 ---
 
@@ -65,7 +65,7 @@ jobs:
       direction: AUTO
       ai_enhance: true
       ai_backend: gemini
-      gemini_model: gemini-1.5-flash
+      gemini_model: gemini-3.8-flash
       comment_on_pr: true
     secrets:
       GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
