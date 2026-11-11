@@ -1,0 +1,46 @@
+# 08 — Output formats
+#
+# Three independent jobs: Mermaid-only, complete suite, and custom output paths.
+# Full walkthrough: README.md
+# ---------------------------------------------------------------------------
+stages:
+  - build
+
+include:
+  # A. Mermaid + Markdown only.
+  - component: $CI_SERVER_FQDN/platform/auto-arch-diagram/auto-arch-diagram@1.0.0
+    inputs:
+      job-prefix: diagram-mermaid-only
+      iac-root: infra
+      out-dir: artifacts/mermaid
+      image-formats: none
+      out-drawio: __disabled__
+      out-html: __disabled__
+      mr-comment: false
+
+  # B. Complete suite with default paths.
+  - component: $CI_SERVER_FQDN/platform/auto-arch-diagram/auto-arch-diagram@1.0.0
+    inputs:
+      job-prefix: diagram-full
+      iac-root: infra
+      out-dir: artifacts/full
+      image-formats: png,jpg,svg
+      out-drawio: ''
+      out-html: ''
+      mr-comment: false
+
+  # C. Custom paths. Keep every path inside out-dir so artifacts upload them.
+  - component: $CI_SERVER_FQDN/platform/auto-arch-diagram/auto-arch-diagram@1.0.0
+    inputs:
+      job-prefix: diagram-custom-paths
+      iac-root: infra
+      out-dir: artifacts/custom
+      image-formats: png,jpg,svg
+      out-md: artifacts/custom/docs/architecture.md
+      out-mmd: artifacts/custom/docs/architecture.mmd
+      out-png: artifacts/custom/images/architecture.png
+      out-jpg: artifacts/custom/images/architecture.jpg
+      out-svg: artifacts/custom/images/architecture.svg
+      out-drawio: artifacts/custom/editable/architecture.drawio
+      out-html: artifacts/custom/studio/index.html
+      mr-comment: false

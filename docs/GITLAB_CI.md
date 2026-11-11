@@ -14,6 +14,26 @@ The integration ships in two flavours:
 Both call the same logic in `ci/gitlab/auto-arch-diagram.sh`, so features and
 outputs are identical.
 
+## Example gallery
+
+Every scenario below is a complete, copy-pasteable pipeline in
+[`examples/gitlab-ci/`](../examples/gitlab-ci/README.md):
+
+| # | Scenario | Folder | Highlights |
+| --- | --- | --- | --- |
+| 01 | Minimal remote include | [`01-minimal-remote`](../examples/gitlab-ci/01-minimal-remote/) | One `include: remote`, zero tool publishing |
+| 02 | Every component input | [`02-component-all-inputs`](../examples/gitlab-ci/02-component-all-inputs/) | Full annotated reference |
+| 03 | Terraform + Gemini MR review | [`03-terraform-ai-gemini`](../examples/gitlab-ci/03-terraform-ai-gemini/) | AI suite + sticky MR note |
+| 04 | Monorepo matrix | [`04-monorepo-matrix`](../examples/gitlab-ci/04-monorepo-matrix/) | One diagram job per module, no collisions |
+| 05 | GitLab Pages | [`05-gitlab-pages`](../examples/gitlab-ci/05-gitlab-pages/) | Publish the HTML studio |
+| 06 | Self-hosted / air-gapped | [`06-self-hosted-airgapped`](../examples/gitlab-ci/06-self-hosted-airgapped/) | Mirror, runner tags, vendored template |
+| 07 | OpenRouter free models | [`07-openrouter-free`](../examples/gitlab-ci/07-openrouter-free/) | Dynamic $0 vision ranking |
+| 08 | Output formats | [`08-output-formats`](../examples/gitlab-ci/08-output-formats/) | Mermaid-only, full suite, custom paths |
+| 09 | Nightly full scan | [`09-scheduled-full-scan`](../examples/gitlab-ci/09-scheduled-full-scan/) | Force full regeneration on a schedule |
+| 10 | Commit diagrams back | [`10-commit-diagrams-back`](../examples/gitlab-ci/10-commit-diagrams-back/) | Project access token push |
+| 11 | Advanced IaC inputs | [`11-advanced-iac-inputs`](../examples/gitlab-ci/11-advanced-iac-inputs/) | planfile, graphfile, varfiles, workspace, source, annotations |
+| 12 | Layout tuning | [`12-layout-tuning`](../examples/gitlab-ci/12-layout-tuning/) | render engine, simplified view, badges, edge/font/icon sizing |
+
 ---
 
 ## Quick start
@@ -115,6 +135,16 @@ All inputs are optional except the component reference itself.
 | `render-bg` | `transparent` | `transparent` or `white` for PNG/SVG. |
 | `edge-color`, `edge-penwidth`, `edge-arrowsize` | `#4B5563`, `1.3`, `0.8` | Edge styling. |
 | `fontsize`, `iconsize` | empty | Integer overrides. |
+| `render-engine` | `auto` | `auto` (3-stage postprocess + `neato -n2`), `neato`, or `dot`. |
+| `simplified` | `false` | High-level executive view that strips plumbing resources. |
+| `expand-badges` | `false` | Render security groups/NSGs as standalone nodes. |
+| `no-consolidate` | `false` | Keep every repeated resource instance. |
+| `planfile` | `''` | Pre-generated `terraform show -json` plan. Skips HCL parsing. |
+| `graphfile` | `''` | Pre-generated `terraform graph` DOT file. Skips HCL parsing. |
+| `varfile` | `''` | Newline/space-separated Terraform variable files, passed as repeated `--varfile`. |
+| `workspace` | `default` | Terraform workspace name. |
+| `source` | `''` | Clone and diagram a remote Git repo (`https://host/repo.git//subfolder`). |
+| `annotate` | `''` | Custom numbered-flow annotations YAML. |
 | `ai-enhance` | `false` | Generate the extra `*-ai.*` suite. |
 | `ai-backend` | `auto` | `auto`, `gemini`, `openrouter`, `ollama`, `bedrock`, `restapi`. |
 | `gemini-model` | `gemini-3.8-flash` | Gemini vision model (free tier). |
@@ -145,10 +175,19 @@ to an `AUTO_ARCH_*` variable:
 | `AUTO_ARCH_DIRECTION` | `AUTO` |
 | `AUTO_ARCH_RENDER_LAYOUT` | `lanes` |
 | `AUTO_ARCH_RENDER_BG` | `transparent` |
+| `AUTO_ARCH_RENDER_ENGINE` | `auto` |
 | `AUTO_ARCH_EDGE_COLOR` | `#4B5563` |
 | `AUTO_ARCH_EDGE_PENWIDTH` | `1.3` |
 | `AUTO_ARCH_EDGE_ARROWSIZE` | `0.8` |
 | `AUTO_ARCH_FONTSIZE`, `AUTO_ARCH_ICONSIZE` | empty |
+| `AUTO_ARCH_SIMPLIFIED` | `false` |
+| `AUTO_ARCH_EXPAND_BADGES` | `false` |
+| `AUTO_ARCH_NO_CONSOLIDATE` | `false` |
+| `AUTO_ARCH_PLANFILE`, `AUTO_ARCH_GRAPHFILE` | empty |
+| `AUTO_ARCH_VARFILE` | empty |
+| `AUTO_ARCH_WORKSPACE` | `default` |
+| `AUTO_ARCH_SOURCE` | empty |
+| `AUTO_ARCH_ANNOTATE` | empty |
 | `AUTO_ARCH_AI_ENHANCE` | `false` |
 | `AUTO_ARCH_AI_BACKEND` | `auto` |
 | `AUTO_ARCH_GEMINI_MODEL` | `gemini-3.8-flash` |
@@ -257,6 +296,79 @@ commit-diagrams:
     - git commit -m "chore: update architecture diagrams"
     - git push "https://oauth2:${AUTO_ARCH_PUSH_TOKEN}@${CI_SERVER_HOST}/${CI_PROJECT_PATH}.git" "HEAD:${CI_COMMIT_BRANCH}"
 ```
+
+---
+
+## Advanced IaC and layout inputs
+
+These inputs cover scenarios that go beyond diff-based HCL generation.
+
+### Pre-generated Terraform plan or graph
+
+```yaml
+include:
+  - component: $CI_SERVER_FQDN/platform/auto-arch-diagram/auto-arch-diagram@1.0.0
+    inputs:
+      planfile: plan.json        # terraform show -json plan.tfplan > plan.json
+      # graphfile: graph.dot     # terraform graph > graph.dot
+```
+
+Generate the inputs in an earlier job and pass them as artifacts, or commit them
+for scheduled runs. `planfile`/`graphfile` skip HCL parsing, so `iac-root`,
+`changed-files` and `varfile` do not affect the inventory.
+
+### Terraform variable files and workspaces
+
+```yaml
+    inputs:
+      iac-root: infra
+      varfile: |
+        environments/prod/common.tfvars
+        environments/prod/network.tfvars
+      workspace: prod
+```
+
+`varfile` accepts newlines, spaces, commas or semicolons; each entry becomes a
+separate `--varfile` flag.
+
+### Diagram a remote repository
+
+```yaml
+    inputs:
+      source: https://gitlab.example.com/platform/landing-zone.git//terraform
+```
+
+`source` clones the repository during generation and auto-discovers its `.tf`
+files. Change detection is skipped for that run (the pipeline logs
+`AUTO_ARCH_SOURCE is set`). Use a read-only deploy token in the URL or a runner
+credential helper for private repositories.
+
+### Numbered flow annotations
+
+```yaml
+    inputs:
+      annotate: docs/flows.yaml
+```
+
+The file maps numbered flow steps to edges. The complete schema and a working
+example live in
+[`11-advanced-iac-inputs`](../examples/gitlab-ci/11-advanced-iac-inputs/).
+
+### Executive and layout tuning
+
+| Goal | Inputs |
+| --- | --- |
+| Strip plumbing (VPCs, subnets, security groups) | `simplified: true` |
+| Keep security groups as full nodes | `expand-badges: true` |
+| Keep every repeated instance | `no-consolidate: true` |
+| Brand-grouped layout | `render-layout: providers` |
+| White background for slides | `render-bg: white` |
+| Force `dot` instead of the 3-stage pipeline | `render-engine: dot` |
+| Larger labels / icons | `fontsize: 11`, `iconsize: 64` |
+| Fixed direction | `direction: LR` |
+
+See [`12-layout-tuning`](../examples/gitlab-ci/12-layout-tuning/) for a complete
+pipeline using these together.
 
 ---
 

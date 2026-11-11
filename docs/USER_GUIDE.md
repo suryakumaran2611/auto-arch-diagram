@@ -140,7 +140,8 @@ Outputs are uploaded as job artifacts, a `ci.env` dotenv report exposes
 `AUTO_ARCH_MD`, `AUTO_ARCH_PNG`, `AUTO_ARCH_HTML`, and friends to later jobs, and
 merge request pipelines receive a sticky note with the diagram.
 
-📖 Full reference: [GitLab CI/CD guide](GITLAB_CI.md).
+📖 Full reference: [GitLab CI/CD guide](GITLAB_CI.md). Ready-to-copy
+scenarios: [GitLab examples gallery](../examples/gitlab-ci/README.md).
 
 ---
 

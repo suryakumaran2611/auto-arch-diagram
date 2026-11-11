@@ -126,6 +126,42 @@ spec:
     iconsize:
       description: "Icon size override in pixels (integer). Leave empty for the default."
       default: ''
+    render-engine:
+      description: "Graphviz rendering pipeline."
+      options: [auto, neato, dot]
+      default: auto
+
+    simplified:
+      description: "High-level executive view that strips plumbing resources."
+      type: boolean
+      default: false
+    expand-badges:
+      description: "Render security groups/NSGs as standalone nodes instead of corner badges."
+      type: boolean
+      default: false
+    no-consolidate:
+      description: "Disable automatic consolidation of repeated resource instances."
+      type: boolean
+      default: false
+
+    planfile:
+      description: "Path to a pre-generated `terraform show -json` plan. Skips HCL parsing."
+      default: ''
+    graphfile:
+      description: "Path to a pre-generated `terraform graph` DOT file. Skips HCL parsing."
+      default: ''
+    varfile:
+      description: "Newline/space-separated Terraform variable files, passed as repeated --varfile flags."
+      default: ''
+    workspace:
+      description: "Terraform workspace name used when reading variables."
+      default: default
+    source:
+      description: "Clone and diagram a remote Git repository (https://host/repo.git//subfolder). Empty uses the checked-out project."
+      default: ''
+    annotate:
+      description: "Path to a custom numbered-flow annotations YAML file."
+      default: ''
 
     ai-enhance:
       description: "Enable AI vision refinement (*-ai.* outputs). Requires GEMINI_API_KEY or OPENROUTER_API_KEY."
@@ -197,6 +233,16 @@ spec:
     AUTO_ARCH_EDGE_ARROWSIZE: "$[[ inputs.edge-arrowsize ]]"
     AUTO_ARCH_FONTSIZE: "$[[ inputs.fontsize ]]"
     AUTO_ARCH_ICONSIZE: "$[[ inputs.iconsize ]]"
+    AUTO_ARCH_RENDER_ENGINE: "$[[ inputs.render-engine ]]"
+    AUTO_ARCH_SIMPLIFIED: "$[[ inputs.simplified ]]"
+    AUTO_ARCH_EXPAND_BADGES: "$[[ inputs.expand-badges ]]"
+    AUTO_ARCH_NO_CONSOLIDATE: "$[[ inputs.no-consolidate ]]"
+    AUTO_ARCH_PLANFILE: "$[[ inputs.planfile ]]"
+    AUTO_ARCH_GRAPHFILE: "$[[ inputs.graphfile ]]"
+    AUTO_ARCH_VARFILE: "$[[ inputs.varfile ]]"
+    AUTO_ARCH_WORKSPACE: "$[[ inputs.workspace ]]"
+    AUTO_ARCH_SOURCE: "$[[ inputs.source ]]"
+    AUTO_ARCH_ANNOTATE: "$[[ inputs.annotate ]]"
     AUTO_ARCH_AI_ENHANCE: "$[[ inputs.ai-enhance ]]"
     AUTO_ARCH_AI_BACKEND: "$[[ inputs.ai-backend ]]"
     AUTO_ARCH_GEMINI_MODEL: "$[[ inputs.gemini-model ]]"

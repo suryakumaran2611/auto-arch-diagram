@@ -1,0 +1,28 @@
+# 03 — Terraform + Gemini merge request review
+#
+# Requires masked CI/CD variables:
+#   GEMINI_API_KEY          (Google AI Studio, free tier)
+#   AUTO_ARCH_GITLAB_TOKEN  (api scope, for the sticky MR note)
+# Full walkthrough: README.md
+# ---------------------------------------------------------------------------
+stages:
+  - build
+
+include:
+  - component: $CI_SERVER_FQDN/platform/auto-arch-diagram/auto-arch-diagram@1.0.0
+    inputs:
+      iac-root: infra
+      out-dir: artifacts/terraform
+      image-formats: png,svg,drawio,html
+      render-layout: providers
+
+      # AI-refined *-ai.* suite (free Gemini tier)
+      ai-enhance: true
+      ai-backend: gemini
+      gemini-model: gemini-3.8-flash
+      ai-iterations: '3'
+
+      # Sticky merge request note (requires AUTO_ARCH_GITLAB_TOKEN)
+      mr-comment: true
+
+      artifacts-expire-in: 30 days

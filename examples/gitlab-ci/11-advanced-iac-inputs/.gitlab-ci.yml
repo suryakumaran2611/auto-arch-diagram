@@ -1,0 +1,52 @@
+# 11 — Advanced IaC inputs
+#
+# Pre-generated plan/graph, variable files, workspace, annotations and a remote
+# source. Prerequisites are listed in README.md.
+# Full walkthrough: README.md
+# ---------------------------------------------------------------------------
+stages:
+  - build
+
+include:
+  # A. Build from a pre-generated `terraform show -json` plan.
+  - component: $CI_SERVER_FQDN/platform/auto-arch-diagram/auto-arch-diagram@1.0.0
+    inputs:
+      job-prefix: diagram-planfile
+      iac-root: infra
+      out-dir: artifacts/plan
+      planfile: plan.json
+      image-formats: png,svg,html
+      mr-comment: false
+
+  # B. Build from a pre-generated `terraform graph` DOT file.
+  - component: $CI_SERVER_FQDN/platform/auto-arch-diagram/auto-arch-diagram@1.0.0
+    inputs:
+      job-prefix: diagram-graphfile
+      iac-root: infra
+      out-dir: artifacts/graph
+      graphfile: graph.dot
+      image-formats: png,svg
+      mr-comment: false
+
+  # C. Variable files + workspace + numbered flow annotations.
+  - component: $CI_SERVER_FQDN/platform/auto-arch-diagram/auto-arch-diagram@1.0.0
+    inputs:
+      job-prefix: diagram-varfiles
+      iac-root: infra
+      out-dir: artifacts/annotated
+      image-formats: png,svg,drawio,html
+      varfile: |
+        environments/prod/common.tfvars
+        environments/prod/network.tfvars
+      workspace: prod
+      annotate: docs/flows.yaml
+      mr-comment: false
+
+  # D. Clone and diagram a remote repository.
+  - component: $CI_SERVER_FQDN/platform/auto-arch-diagram/auto-arch-diagram@1.0.0
+    inputs:
+      job-prefix: diagram-remote-source
+      source: https://gitlab.example.com/platform/landing-zone.git//terraform
+      out-dir: artifacts/remote
+      image-formats: png,svg
+      mr-comment: false

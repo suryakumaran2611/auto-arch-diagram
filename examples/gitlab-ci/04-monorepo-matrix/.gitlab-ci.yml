@@ -1,0 +1,33 @@
+# 04 — Monorepo matrix
+#
+# One component include per Terraform module. Keep `job-prefix` and `out-dir`
+# unique. Enable `mr-comment` on only one include.
+# Full walkthrough: README.md
+# ---------------------------------------------------------------------------
+stages:
+  - build
+
+include:
+  - component: $CI_SERVER_FQDN/platform/auto-arch-diagram/auto-arch-diagram@1.0.0
+    inputs:
+      job-prefix: network-diagram
+      iac-root: infra/network
+      out-dir: artifacts/network
+      image-formats: png,svg,drawio,html
+      mr-comment: false
+
+  - component: $CI_SERVER_FQDN/platform/auto-arch-diagram/auto-arch-diagram@1.0.0
+    inputs:
+      job-prefix: data-diagram
+      iac-root: infra/data
+      out-dir: artifacts/data
+      image-formats: png,svg,drawio,html
+      mr-comment: false
+
+  - component: $CI_SERVER_FQDN/platform/auto-arch-diagram/auto-arch-diagram@1.0.0
+    inputs:
+      job-prefix: observability-diagram
+      iac-root: infra/observability
+      out-dir: artifacts/observability
+      image-formats: png,svg
+      mr-comment: false

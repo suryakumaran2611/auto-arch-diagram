@@ -1,0 +1,38 @@
+# 10 — Commit diagrams back to the repository
+#
+# Requires a masked, protected project access token with `write_repository`
+# scope, exposed as AUTO_ARCH_PUSH_TOKEN.
+# Full walkthrough: README.md
+# ---------------------------------------------------------------------------
+stages:
+  - build
+  - deploy
+
+include:
+  - component: $CI_SERVER_FQDN/platform/auto-arch-diagram/auto-arch-diagram@1.0.0
+    inputs:
+      iac-root: infra
+      out-dir: docs/architecture
+      image-formats: png,svg
+      mr-comment: true
+
+commit-diagrams:
+  stage: deploy
+  needs:
+    - job: auto-arch-diagram
+      artifacts: true
+  image: alpine:3.20
+  rules:
+    - if: '$CI_COMMIT_MESSAGE =~ /^chore: update architecture diagrams/'
+      when: never
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+    - if: $CI_PIPELINE_SOURCE == "web"
+  before_script:
+    - apk add --no-cache git
+  script:
+    - git config user.name "auto-arch-diagram"
+    - git config user.email "auto-arch-diagram@users.noreply.gitlab.com"
+    - git add "$AUTO_ARCH_OUT_DIR"
+    - git diff --cached --quiet && exit 0
+    - git commit -m "chore: update architecture diagrams [skip ci]"
+    - git push "https://oauth2:${AUTO_ARCH_PUSH_TOKEN}@${CI_SERVER_HOST}/${CI_PROJECT_PATH}.git" "HEAD:${CI_COMMIT_BRANCH}"

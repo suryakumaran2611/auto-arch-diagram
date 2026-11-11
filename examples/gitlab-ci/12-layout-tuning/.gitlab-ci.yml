@@ -1,0 +1,42 @@
+# 12 — Layout tuning
+#
+# Two renders: a simplified executive view and a detailed view.
+# Full walkthrough: README.md
+# ---------------------------------------------------------------------------
+stages:
+  - build
+
+include:
+  # Executive / board-level view.
+  - component: $CI_SERVER_FQDN/platform/auto-arch-diagram/auto-arch-diagram@1.0.0
+    inputs:
+      job-prefix: diagram-executive
+      iac-root: infra
+      out-dir: artifacts/layout/executive
+      image-formats: png,svg
+      simplified: true
+      render-layout: providers
+      direction: LR
+      render-bg: white
+      fontsize: '11'
+      iconsize: '64'
+      render-engine: auto
+      mr-comment: false
+
+  # Detailed engineering view.
+  - component: $CI_SERVER_FQDN/platform/auto-arch-diagram/auto-arch-diagram@1.0.0
+    inputs:
+      job-prefix: diagram-detailed
+      iac-root: infra
+      out-dir: artifacts/layout/detailed
+      image-formats: png,svg,drawio,html
+      simplified: false
+      render-layout: lanes
+      direction: TB
+      expand-badges: true
+      no-consolidate: true
+      render-engine: dot
+      edge-color: '#334155'
+      edge-penwidth: '1.6'
+      edge-arrowsize: '1.0'
+      mr-comment: false

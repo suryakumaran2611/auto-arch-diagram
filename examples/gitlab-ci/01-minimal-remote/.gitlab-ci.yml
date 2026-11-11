@@ -1,0 +1,17 @@
+# 01 — Minimal remote include
+#
+# Copy this file to the root of your repository as `.gitlab-ci.yml`.
+# Full walkthrough: README.md
+# ---------------------------------------------------------------------------
+stages:
+  - build
+
+include:
+  - remote: https://raw.githubusercontent.com/suryakumaran2611/auto-arch-diagram/main/ci/gitlab/auto-arch-diagram.gitlab-ci.yml
+
+variables:
+  # Folder that contains your IaC files.
+  AUTO_ARCH_IAC_ROOT: infra
+
+  # Where diagrams and the dotenv report are written.
+  AUTO_ARCH_OUT_DIR: artifacts/architecture

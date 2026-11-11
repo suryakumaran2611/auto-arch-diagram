@@ -226,12 +226,19 @@ with open(destination, "w", encoding="utf-8") as handle:
 print(f"{len(selected)} IaC file(s) selected")
 PY
 
-file_count="$(grep -c . "${selected}" 2>/dev/null || true)"
-file_count="${file_count:-0}"
+file_count=""
+CHANGED_IAC_FILES=""
+if [ -n "${AUTO_ARCH_SOURCE:-}" ]; then
+  log "AUTO_ARCH_SOURCE is set - the generator will clone and scan ${AUTO_ARCH_SOURCE}"
+  CHANGE_SUMMARY="the remote source \`${AUTO_ARCH_SOURCE}\`"
+  export CHANGED_IAC_FILES
+else
+  file_count="$(grep -c . "${selected}" 2>/dev/null || true)"
+  file_count="${file_count:-0}"
 
-if [ "${file_count}" = "0" ]; then
-  log "No IaC changes detected - skipping diagram generation"
-  cat > "${SUMMARY_FILE}" <<EOF
+  if [ "${file_count}" = "0" ]; then
+    log "No IaC changes detected - skipping diagram generation"
+    cat > "${SUMMARY_FILE}" <<EOF
 # Architecture diagram
 
 No IaC files matched this pipeline's change set, so no diagram was generated.
@@ -240,15 +247,17 @@ No IaC files matched this pipeline's change set, so no diagram was generated.
 - Diff base: \`${diff_base:-none (full scan)}\`
 - Pipeline: ${CI_PIPELINE_URL:-local run}
 EOF
-  write_dotenv false
-  exit 0
+    write_dotenv false
+    exit 0
+  fi
+
+  CHANGED_IAC_FILES="$(tr '\n' ' ' < "${selected}" | sed 's/[[:space:]]*$//')"
+  export CHANGED_IAC_FILES
+  CHANGE_SUMMARY="${file_count} changed IaC file(s)"
+
+  log "Changed IaC files (${file_count}):"
+  printf '%s\n' "${CHANGED_IAC_FILES}" | tr ' ' '\n' | sed '/^$/d; s/^/  - /'
 fi
-
-CHANGED_IAC_FILES="$(tr '\n' ' ' < "${selected}" | sed 's/[[:space:]]*$//')"
-export CHANGED_IAC_FILES
-
-log "Changed IaC files (${file_count}):"
-printf '%s\n' "${CHANGED_IAC_FILES}" | tr ' ' '\n' | sed '/^$/d; s/^/  - /'
 
 # ---------------------------------------------------------------------------
 # Resolve output paths
@@ -304,6 +313,12 @@ if [ -n "${AUTO_ARCH_ICONSIZE:-}" ]; then
     warn "Ignoring non-numeric AUTO_ARCH_ICONSIZE='${AUTO_ARCH_ICONSIZE}'"
   fi
 fi
+if [ -n "${AUTO_ARCH_RENDER_ENGINE:-}" ]; then
+  case "${AUTO_ARCH_RENDER_ENGINE}" in
+    auto|neato|dot) args+=(--render-engine "${AUTO_ARCH_RENDER_ENGINE}") ;;
+    *) warn "Ignoring unsupported AUTO_ARCH_RENDER_ENGINE='${AUTO_ARCH_RENDER_ENGINE}' (auto|neato|dot)" ;;
+  esac
+fi
 if is_true "${AUTO_ARCH_SIMPLIFIED:-false}"; then
   args+=(--simplified)
 fi
@@ -315,6 +330,17 @@ if is_true "${AUTO_ARCH_NO_CONSOLIDATE:-false}"; then
 fi
 if [ -n "${AUTO_ARCH_PLANFILE:-}" ]; then args+=(--planfile "${AUTO_ARCH_PLANFILE}"); fi
 if [ -n "${AUTO_ARCH_GRAPHFILE:-}" ]; then args+=(--graphfile "${AUTO_ARCH_GRAPHFILE}"); fi
+if [ -n "${AUTO_ARCH_VARFILE:-}" ]; then
+  while IFS= read -r varfile; do
+    if [ -n "${varfile}" ]; then args+=(--varfile "${varfile}"); fi
+  done < <(printf '%s' "${AUTO_ARCH_VARFILE}" | tr ',;' '\n\n' | tr -s '[:space:]' '\n')
+fi
+if [ -n "${AUTO_ARCH_WORKSPACE:-}" ]; then
+  args+=(--workspace "${AUTO_ARCH_WORKSPACE}")
+fi
+if [ -n "${AUTO_ARCH_SOURCE:-}" ]; then
+  args+=(--source "${AUTO_ARCH_SOURCE}")
+fi
 if [ -n "${AUTO_ARCH_ANNOTATE:-}" ]; then args+=(--annotate "${AUTO_ARCH_ANNOTATE}"); fi
 
 if is_true "${AUTO_ARCH_AI_ENHANCE:-false}"; then
@@ -358,7 +384,7 @@ done
 cat > "${SUMMARY_FILE}" <<EOF
 # Architecture diagram
 
-Generated $(date -u +"%Y-%m-%dT%H:%M:%SZ") from ${file_count} changed IaC file(s).
+Generated $(date -u +"%Y-%m-%dT%H:%M:%SZ") from ${CHANGE_SUMMARY}.
 
 - IaC root: \`${AUTO_ARCH_IAC_ROOT}\`
 - Direction: \`${AUTO_ARCH_DIRECTION}\`

@@ -1,0 +1,30 @@
+# 06 — Self-hosted / air-gapped
+#
+# Vendor `ci/gitlab/auto-arch-diagram.gitlab-ci.yml` into your repository and
+# point it at an internal mirror + pre-baked image.
+# Full walkthrough: README.md
+# ---------------------------------------------------------------------------
+stages:
+  - build
+
+include:
+  - local: ci/gitlab/auto-arch-diagram.gitlab-ci.yml
+
+variables:
+  # Internal mirror of this repository, pinned to a release tag.
+  AUTO_ARCH_TOOL_REPOSITORY: https://gitlab.example.com/platform/auto-arch-diagram.git
+  AUTO_ARCH_TOOL_REF: v2.1.2
+
+  # Pre-baked image with Graphviz, fonts and Python dependencies.
+  AUTO_ARCH_IMAGE: registry.example.com/platform/python:3.12-graphviz
+  AUTO_ARCH_INSTALL_SYSTEM_PACKAGES: "false"
+
+  AUTO_ARCH_IAC_ROOT: terraform
+  AUTO_ARCH_OUT_DIR: artifacts/architecture
+
+# Runner tags for the included jobs.
+auto-arch-diagram:generate:
+  tags: [self-hosted, docker]
+
+auto-arch-diagram:comment:
+  tags: [self-hosted, docker]

@@ -284,6 +284,8 @@ include:
 
 📖 **Full GitLab guide (inputs, secrets, Pages, troubleshooting, GitHub→GitLab migration): [docs/GITLAB_CI.md](docs/GITLAB_CI.md)**
 
+🧪 **Twelve copy-paste scenarios (minimal, monorepo, Pages, AI, scheduled, air-gapped, advanced IaC): [examples/gitlab-ci](examples/gitlab-ci/README.md)**
+
 ### 🚀 Smart Confluence (AI-Enhanced Architecture Documentation Portal)
 
 Transform any Confluence page into a rich, living architecture portal updated automatically on every IaC change. **Smart Confluence** generates an executive-ready documentation suite directly from Terraform, CloudFormation, Bicep, or Pulumi using Google Gemini 3.8 Flash or OpenRouter vision models:
